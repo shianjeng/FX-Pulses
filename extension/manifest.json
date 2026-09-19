@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "FX Pulse — 随手汇率",
+  "version": "2.0.0",
+  "description": "免登录查看人民币、美元和日元的市场中间价、走势与快捷换算。",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage"],
+  "host_permissions": ["http://localhost:8000/*"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "action": {
+    "default_title": "FX Pulse",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html"
+}

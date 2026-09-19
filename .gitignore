@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+backend/fx_pulse.db
+backend/test_fx_pulse.db
+test_fx_pulse.db
+backend/.venv/
+backend/*.egg-info/
+.DS_Store

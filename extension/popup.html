@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FX Pulse</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand"><span>FX</span> Pulse</div>
+      <div class="header-actions"><span class="privacy">免登录</span><button id="settings-button" class="icon" title="设置" aria-label="设置">⚙</button></div>
+    </header>
+
+    <main>
+      <section class="market-head">
+        <div><p class="eyebrow">MARKET MIDPOINT</p><h1>自选行情</h1></div>
+        <button id="refresh-button" class="icon" title="刷新" aria-label="刷新">↻</button>
+      </section>
+      <p id="status" class="status">正在读取行情…</p>
+      <div id="error" class="error hidden"></div>
+      <section id="rates" class="rate-list" aria-live="polite"></section>
+
+      <section class="panel trend-panel">
+        <div class="panel-title"><div><p class="eyebrow">7 DAY TREND</p><h2 id="trend-title">汇率走势</h2></div><span id="trend-change" class="change">—</span></div>
+        <div id="chart" class="chart"><span>载入走势…</span></div>
+        <div class="stats"><span>低 <b id="stat-low">—</b></span><span>高 <b id="stat-high">—</b></span><span>区间 <b id="stat-position">—</b></span></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title"><div><p class="eyebrow">QUICK CONVERTER</p><h2>快捷换算</h2></div><button id="reverse-button" class="mini">⇄ 反转</button></div>
+        <div class="converter">
+          <label><span id="from-label">金额</span><input id="amount" type="number" min="0" step="any" value="1000" /></label>
+          <label><span id="to-label">换算结果</span><output id="converted">—</output></label>
+        </div>
+        <select id="converter-pair" aria-label="换算货币对"></select>
+        <p class="hint">按市场中间价估算，不包含银行手续费与点差。</p>
+      </section>
+
+      <details class="panel collapsible">
+        <summary><span>目标价状态</span><small>仅打开插件时检查</small></summary>
+        <form id="target-form">
+          <div class="form-row"><select id="target-pair"></select><select id="target-direction"><option value="above">高于或等于</option><option value="below">低于或等于</option></select></div>
+          <input id="target-value" type="number" min="0" step="any" placeholder="输入目标中间价" required />
+          <button class="primary" type="submit">保存到本机</button>
+          <p id="target-message" class="target-message"></p>
+        </form>
+      </details>
+
+      <details class="panel collapsible">
+        <summary><span>管理自选</span><small>设置保存在本机</small></summary>
+        <div id="watchlist-options" class="watchlist-options"></div>
+      </details>
+
+      <footer><span>Midpoint = (Bid + Ask) ÷ 2</span><button id="copy-button">复制当前汇率</button></footer>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

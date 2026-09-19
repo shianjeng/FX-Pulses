@@ -1,0 +1,1 @@
+"""FX Pulse application package."""
