@@ -150,6 +150,7 @@ FX Pulse 是一款免登录的汇率浏览器插件。点击浏览器工具栏�
 ## Author
 
 Hank
+
 GitHub: https://github.com/shianjeng
 
 ## License
