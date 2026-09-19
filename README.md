@@ -147,6 +147,11 @@ FX Pulse 是一款免登录的汇率浏览器插件。点击浏览器工具栏�
 
 这里的“中间价”特指市场买入价与卖出价的算术平均值，并不是中国人民银行公布的人民币汇率中间价，也不代表最终成交价。
 
+## Author
+
+Hank
+GitHub: https://github.com/shianjeng
+
 ## License
 
 [MIT](LICENSE)
