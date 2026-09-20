@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
 
@@ -40,13 +40,19 @@ class AlphaVantageProvider:
             "apikey": self.api_key,
         }
         async with httpx.AsyncClient(timeout=15) as client:
-            response = await client.get(self.url, params=params)
+            try:
+                response = await client.get(self.url, params=params)
+            except httpx.RequestError:
+                # Request exceptions may embed the full URL, including the secret key.
+                raise ProviderError("Alpha Vantage network request failed") from None
             if response.is_error:
                 raise ProviderError(f"Provider HTTP status {response.status_code}")
             try:
                 payload = response.json()
             except ValueError as exc:
                 raise ProviderError("Alpha Vantage returned invalid JSON") from exc
+        if not isinstance(payload, dict):
+            raise ProviderError("Alpha Vantage returned an invalid response structure")
         data = payload.get("Realtime Currency Exchange Rate")
         if not data:
             if payload.get("Error Message"):
@@ -62,7 +68,7 @@ class AlphaVantageProvider:
             ).astimezone(timezone.utc)
             if not bid.is_finite() or not ask.is_finite() or not 0 < bid <= ask:
                 raise ValueError("Invalid bid/ask")
-        except (KeyError, ValueError, InvalidOperation) as exc:
+        except (KeyError, ValueError, TypeError, InvalidOperation, ZoneInfoNotFoundError) as exc:
             raise ProviderError("Provider response is missing bid/ask fields") from exc
         return Quote(base, quote, bid, ask, (bid + ask) / 2, "alpha_vantage", refreshed)
 

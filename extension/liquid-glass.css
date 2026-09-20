@@ -20,8 +20,9 @@ header {
   border-bottom: 1px solid #ffffffb3;
   background: #ffffff45;
 }
-.brand { font-size: 20px; letter-spacing: -.8px; }
-.brand span { color: #137964; }
+.brand { display: flex; align-items: center; gap: 8px; font-size: 20px; letter-spacing: -.8px; white-space: nowrap; }
+.brand .brand-logo { width: 32px; height: 32px; flex-shrink: 0; }
+.brand .brand-name { color: inherit; }
 .privacy, .reference-badge {
   color: #42645b;
   border: 1px solid #ffffffd9;
@@ -69,6 +70,10 @@ main { padding: 16px; display: flex; flex-direction: column; }
 .pair { font: 650 12px -apple-system, sans-serif; letter-spacing: .3px; }
 .rate-card strong { margin: 0; font: 650 25px -apple-system, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -.7px; }
 .rate-bottom { grid-column: 1 / -1; font-size: 9px; color: #5c6e81; }
+.quote-time { grid-column: 1 / -1; font-size: 9px; color: var(--muted); }
+.single-point-note { position: absolute; bottom: 0; font-size: 10px; }
+#amount-error { color: var(--red); }
+#converter-status { color: #956100; }
 .change { font: 600 10px -apple-system, sans-serif; font-variant-numeric: tabular-nums; }
 .stale { color: #956100; }
 .trend-panel { order: 4; }

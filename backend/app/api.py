@@ -14,27 +14,29 @@ router = APIRouter()
 
 
 def serialize_rate(db: Session, latest: RateSnapshot) -> RateOut:
-    since = datetime.now(timezone.utc) - timedelta(hours=24)
+    captured_at = latest.captured_at
+    if captured_at.tzinfo is None:
+        captured_at = captured_at.replace(tzinfo=timezone.utc)
+    is_stale = captured_at < datetime.now(timezone.utc) - timedelta(
+        minutes=get_settings().stale_after_minutes
+    )
+    since = captured_at - timedelta(hours=24)
     previous = db.scalar(
         select(RateSnapshot.midpoint)
         .where(
             RateSnapshot.base_currency == latest.base_currency,
             RateSnapshot.quote_currency == latest.quote_currency,
             RateSnapshot.captured_at <= since,
+            RateSnapshot.captured_at >= since - timedelta(hours=6),
             RateSnapshot.provider == latest.provider,
         )
         .order_by(desc(RateSnapshot.captured_at))
         .limit(1)
     )
     result = RateOut.model_validate(latest)
-    result.change_percent = percentage_change(latest.midpoint, previous)
+    result.change_percent = None if is_stale else percentage_change(latest.midpoint, previous)
     result.spread = latest.ask - latest.bid
-    captured_at = latest.captured_at
-    if captured_at.tzinfo is None:
-        captured_at = captured_at.replace(tzinfo=timezone.utc)
-    result.is_stale = captured_at < datetime.now(timezone.utc) - timedelta(
-        minutes=get_settings().stale_after_minutes
-    )
+    result.is_stale = is_stale
     result.captured_at = captured_at
     return result
 

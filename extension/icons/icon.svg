@@ -1,1 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="26" fill="#07120e"/><path d="M24 94V34h36v12H38v12h18v12H38v24zm42-60h15l9 17 9-17h15L98 63l18 31h-16L90 75 80 94H64l18-31z" fill="#56e39f"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="FX Pulse">
+  <defs>
+    <radialGradient id="fx-ice-swap-body" cx="36%" cy="28%" r="74%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="46%" stop-color="#eef2f7"/>
+      <stop offset="100%" stop-color="#a8b1bf"/>
+    </radialGradient>
+    <radialGradient id="fx-ice-swap-spec" cx="30%" cy="20%" r="40%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="58%" stop-color="#ffffff" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fx-ice-swap-rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="52%" stop-color="#d5dbe6" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#6e7686" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="62" fill="url(#fx-ice-swap-body)"/>
+  <circle cx="64" cy="64" r="62" fill="url(#fx-ice-swap-spec)"/>
+  <ellipse cx="46" cy="36" rx="30" ry="16" fill="#fff" fill-opacity="0.5"/>
+  <ellipse cx="64" cy="96" rx="36" ry="16" fill="#0c0d10" fill-opacity="0.08"/>
+  <circle cx="64" cy="64" r="61" fill="none" stroke="#7b8494" stroke-width="1.5"/>
+  <circle cx="64" cy="64" r="58" fill="none" stroke="url(#fx-ice-swap-rim)" stroke-width="4"/>
+  <g fill="none" stroke="#1a1c22" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 50h54l-16-16"/>
+    <path d="M96 78H42l16 16"/>
+  </g>
+</svg>
