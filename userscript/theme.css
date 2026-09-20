@@ -1,0 +1,127 @@
+/* FX Pulse Hover · 报纸风视觉层。构建脚本会把图像内嵌到独立 userscript。 */
+:host{
+  --fxph-bg:#fffaf0;--fxph-fg:#28231e;--fxph-accent:#8b341f;
+  --fxph-accent-weak:#684b3b;--fxph-muted:#63594f;--fxph-border:#a9967e;
+  --fxph-warn:#805018;--fxph-danger:#922d2d;--fxph-radius:3px;
+  --fxph-pad:14px;--fxph-gap:8px;
+  --fxph-font:Georgia,"Songti SC","Noto Serif CJK SC",serif;
+  --fxph-font-mono:ui-monospace,SFMono-Regular,Consolas,"Noto Sans Mono CJK SC",monospace;
+  --fxph-shadow:0 12px 30px rgba(36,27,18,.22);
+}
+:host([data-palette="ink"]){
+  --fxph-bg:#1a2022;--fxph-fg:#f2eee3;--fxph-accent:#d0e4df;
+  --fxph-accent-weak:#becfca;--fxph-muted:#b0bdb7;--fxph-border:#7b8d89;
+  --fxph-warn:#f1cb80;--fxph-danger:#ffb0a8;
+  --fxph-shadow:0 14px 32px rgba(0,0,0,.48);
+}
+:host([data-palette="marine"]){
+  --fxph-bg:#f2f8f8;--fxph-fg:#1c323a;--fxph-accent:#075b70;
+  --fxph-accent-weak:#365f6a;--fxph-muted:#4e6770;--fxph-border:#86a7ad;
+  --fxph-warn:#83501a;--fxph-danger:#9b3037;
+}
+:host([data-palette="sage"]){
+  --fxph-bg:#f5f7ed;--fxph-fg:#263128;--fxph-accent:#356b3d;
+  --fxph-accent-weak:#4c6851;--fxph-muted:#536459;--fxph-border:#92a392;
+  --fxph-warn:#825316;--fxph-danger:#983b33;
+}
+:host([data-palette="clay"]){
+  --fxph-bg:#fff4ed;--fxph-fg:#372820;--fxph-accent:#a13c2b;
+  --fxph-accent-weak:#775243;--fxph-muted:#70584b;--fxph-border:#bb9b86;
+  --fxph-warn:#855018;--fxph-danger:#a02c34;
+}
+
+[data-part="card"], [data-part="settings"]{
+  border:1px solid var(--fxph-border);border-top:3px double var(--fxph-fg);
+  border-radius:var(--fxph-radius);background:var(--fxph-bg);color:var(--fxph-fg);
+  box-shadow:var(--fxph-shadow);font-family:var(--fxph-font);
+}
+[data-part="card"]{
+  width:min(var(--fxph-max-width),calc(100vw - 16px));max-width:calc(100vw - 16px);
+  padding:calc(var(--fxph-pad) * var(--fxph-scale));padding-top:calc(45px * var(--fxph-scale));
+  line-height:1.45;overflow:hidden;overflow-wrap:anywhere;
+}
+[data-part="card"]::before{
+  content:"FX PULSE  /  外汇快讯";position:absolute;left:calc(var(--fxph-pad) * var(--fxph-scale));
+  right:calc(var(--fxph-pad) * var(--fxph-scale));top:8px;height:27px;
+  border-bottom:1px solid var(--fxph-border);font:700 calc(12px * var(--fxph-scale))/25px var(--fxph-font);
+  letter-spacing:.08em;color:var(--fxph-fg);padding-right:43px;
+}
+[data-part="card"]::after{
+  content:"";position:absolute;right:calc(var(--fxph-pad) * var(--fxph-scale));top:4px;
+  width:36px;height:33px;background:url("./assets/exchange-globe.png") center/contain no-repeat;
+  opacity:.78;
+}
+:host([data-palette="ink"]) [data-part="card"]::after{filter:brightness(0) invert(1);opacity:.68}
+[data-part="card"]:hover{border-color:var(--fxph-accent)}
+[data-part="card"][data-state~="pinned"]{border-left:4px solid var(--fxph-accent)}
+[data-part="card"][data-state~="pinned"]::before{content:"FX PULSE  /  已钉住"}
+[data-part="card"][data-state~="offline"]{border-style:dashed}
+[data-part="card"][data-size="s"]{padding-top:39px}
+[data-part="card"][data-size="s"] [data-part="target-select"],
+[data-part="card"][data-size="s"] [data-part="origin-select"],
+[data-part="card"][data-size="s"] [data-part="rate-line"],
+[data-part="card"][data-size="s"] [data-part="multi-list"],
+[data-part="card"][data-size="s"] [data-part="evidence"],
+[data-part="card"][data-size="s"] [data-part="parse-detail"],
+[data-part="card"][data-size="s"] [data-part="actions"]{display:none}
+
+[data-part="amount-main"]{
+  color:var(--fxph-accent);font:700 calc(21px * var(--fxph-scale))/1.2 var(--fxph-font);
+  font-variant-numeric:tabular-nums;letter-spacing:-.025em;white-space:normal;min-width:0;
+}
+[data-part="amount-main-code"]{
+  display:inline-block;margin-left:5px;font:700 calc(10px * var(--fxph-scale))/1 var(--fxph-font-mono);
+  letter-spacing:.09em;color:var(--fxph-accent-weak);vertical-align:middle;
+}
+.row-main{align-items:start;flex-wrap:wrap;gap:5px 10px}
+.row-main [data-part="target-select"]{margin-left:auto}
+[data-part="amount-origin"]{display:inline-block;color:var(--fxph-fg);font:calc(12px * var(--fxph-scale))/1.4 var(--fxph-font-mono);margin-top:0}
+[data-part="amount-origin-code"]{margin-left:7px;color:var(--fxph-accent-weak);font-size:calc(10px * var(--fxph-scale))}
+.row-origin{margin-top:calc(var(--fxph-gap) * .8);padding-top:calc(var(--fxph-gap) * .8);border-top:1px solid var(--fxph-border);align-items:center;flex-wrap:wrap}
+[data-part="card"][data-mode="detail"] > [data-part="amount-origin"]{
+  display:block;margin-top:calc(var(--fxph-gap) * 1.25);padding-top:calc(var(--fxph-gap) * 1.1);
+  border-top:1px solid var(--fxph-border)
+}
+[data-part="card"][data-mode="detail"] > [data-part="amount-origin"]::before{
+  content:"原价  /  ";font:700 calc(10px * var(--fxph-scale))/1.4 var(--fxph-font);
+  letter-spacing:.05em;color:var(--fxph-muted)
+}
+[data-part="multi-list"]{margin-top:calc(var(--fxph-gap) * 1.5);border-top:3px double var(--fxph-border);padding-top:3px}
+[data-part="multi-row"]{margin:0;padding:calc(var(--fxph-gap) * .65) 0;border-bottom:1px solid var(--fxph-border)}
+[data-part="multi-value"]{font:700 calc(13px * var(--fxph-scale))/1.35 var(--fxph-font-mono);color:var(--fxph-fg);font-variant-numeric:tabular-nums}
+[data-part="multi-code"]{font:700 calc(10px * var(--fxph-scale))/1.3 var(--fxph-font-mono);letter-spacing:.07em;color:var(--fxph-accent-weak)}
+[data-part="rate-line"]{border-top:1px solid var(--fxph-border);padding-top:6px;margin-top:8px;color:var(--fxph-accent);font-weight:700;white-space:normal}
+[data-part="timestamp"],[data-part="evidence"],[data-part="parse-detail"]{font-size:calc(10px * var(--fxph-scale));color:var(--fxph-muted);line-height:1.5;overflow-wrap:anywhere}
+[data-part="evidence"]{color:var(--fxph-accent-weak)}
+[data-part="badge-guess"],[data-part="badge-adjust"]{
+  display:inline-block;margin:6px 5px 0 0;padding:2px 6px;border:1px solid currentColor;border-radius:2px;
+  font:700 calc(10px * var(--fxph-scale))/1.3 var(--fxph-font)
+}
+[data-part="badge-guess"]{color:var(--fxph-warn)}
+[data-part="badge-adjust"]{color:var(--fxph-accent)}
+[data-part^="warn-"]{padding:6px 8px;margin-top:8px;border-left:3px solid currentColor;background:rgba(127,92,38,.1);font-weight:700;line-height:1.4}
+[data-part="warn-error"]{background:rgba(150,35,35,.1)}
+[data-part="actions"]{border-top:3px double var(--fxph-border);padding-top:9px;margin-top:12px}
+[data-part="card"] select,[data-part="settings"] select,[data-part="settings"] input:not([type="checkbox"]):not([type="range"]),[data-part="settings"] textarea{
+  color:var(--fxph-fg);background:var(--fxph-bg);border:1px solid var(--fxph-border);border-radius:2px;
+  font-family:var(--fxph-font-mono);padding:4px 6px;max-width:100%;min-height:27px;
+}
+[data-part="card"] select:focus-visible,[data-part="settings"] select:focus-visible,[data-part="settings"] input:focus-visible,[data-part="settings"] textarea:focus-visible,[data-part="card"] button:focus-visible,[data-part="settings"] button:focus-visible{outline:2px solid var(--fxph-accent);outline-offset:2px}
+[data-part="card"] button,[data-part="settings"] button{
+  color:var(--fxph-accent);background:transparent;border:1px solid var(--fxph-border);border-radius:2px;
+  font:700 calc(11px * var(--fxph-scale))/1.2 var(--fxph-font);padding:5px 9px;
+}
+[data-part="card"] button:hover,[data-part="settings"] button:hover{color:var(--fxph-bg);background:var(--fxph-accent);border-color:var(--fxph-accent)}
+[data-part="settings"]{width:min(420px,calc(100vw - 16px));max-height:calc(100vh - 32px);padding:15px;overflow:auto}
+[data-part="settings-head"]{font:700 18px/1.25 var(--fxph-font);border-bottom:3px double var(--fxph-border);padding-bottom:9px;margin-bottom:3px}
+[data-part="settings-row"]{border-color:var(--fxph-border);gap:8px;flex-wrap:wrap}
+[data-part="settings-label"]{color:var(--fxph-fg);font-size:11px;font-weight:700}
+[data-part="settings-control"]{min-width:0;max-width:100%}
+[data-part="settings-memory"]{color:var(--fxph-muted);max-width:100%;text-align:left;overflow-wrap:anywhere}
+[data-part="settings-actions"]{position:sticky;bottom:-15px;background:var(--fxph-bg);border-top:3px double var(--fxph-border);padding:10px 0 5px}
+[data-part="toast"]{padding:5px 8px;border:1px solid var(--fxph-border);background:var(--fxph-bg);box-shadow:var(--fxph-shadow);font-family:var(--fxph-font)}
+@media (max-width:360px){
+  [data-part="card"]{padding:10px;padding-top:40px}
+  [data-part="amount-main"]{font-size:calc(18px * var(--fxph-scale))}
+  [data-part="settings"]{padding:10px}
+}
