@@ -1,14 +1,13 @@
 // 本地浏览器视觉检查；截图写入 .visual-check（不依赖真实汇率网络）。
 import { createRequire } from 'node:module';
-import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const output = resolve('.visual-check');
 mkdirSync(output, { recursive: true });
-const browser = await chromium.launch({ headless: true, executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe' });
+const browser = await chromium.launch({ headless: true, ...(process.env.FX_BROWSER_PATH ? { executablePath: process.env.FX_BROWSER_PATH } : {}) });
 const page = await browser.newPage({ viewport: { width: 1100, height: 760 }, deviceScaleFactor: 1 });
 const pageErrors = [];
 page.on('pageerror', error => pageErrors.push(error.message));
@@ -18,7 +17,13 @@ await page.route('https://open.er-api.com/**', route => route.fulfill({
   headers: { 'access-control-allow-origin': '*', 'content-type': 'application/json' },
   body: JSON.stringify({ rates: { USD: 1, CNY: cnyRate, JPY: 150, EUR: .92, GBP: .8, HKD: 7.8, TWD: 32, KRW: 1300 }, time_last_update_utc: '2026-09-20' }),
 }));
-await page.goto(pathToFileURL(resolve('smoke.html')).href);
+// Instrument a local fixture only. The installed script never exposes this API.
+const script = readFileSync(new URL('./fx-pulse-hover.user.js', import.meta.url), 'utf8')
+  .replace("mode: 'closed'", "mode: 'open'")
+  .replace('function publishApi() {', 'function publishApi() { window.__fxph = api;');
+await page.goto('about:blank');
+await page.setContent(readFileSync(new URL('./smoke.html', import.meta.url), 'utf8').replace(/<script[^>]*src=[^>]*><\/script>/g, ''));
+await page.addScriptTag({ content: script });
 await page.waitForFunction(() => window.__fxph && window.__fxph.rates().table);
 
 async function capture(name, color, mode = 'simple', width = 1100) {

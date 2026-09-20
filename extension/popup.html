@@ -11,7 +11,7 @@
   </head>
   <body>
     <header>
-      <div class="brand"><span>FX</span> Pulse</div>
+      <div class="brand"><img class="brand-logo" src="icons/icon.svg" width="32" height="32" alt="" /><span class="brand-name">FX Pulse</span></div>
       <div class="header-actions"><span class="privacy">免登录</span><button id="settings-button" class="icon" title="设置" aria-label="设置">⚙</button></div>
     </header>
 
@@ -21,6 +21,7 @@
         <button id="refresh-button" class="icon" title="刷新" aria-label="刷新">↻</button>
       </section>
       <p id="status" class="status">正在读取行情…</p>
+      <p class="hint">刷新只重新读取后端数据，不会立即触发上游采集。</p>
       <div id="error" class="error hidden"></div>
       <section id="rates" class="rate-list" aria-live="polite"></section>
 
@@ -46,6 +47,8 @@
           <label><span id="to-label">换算结果</span><output id="converted">—</output></label>
         </div>
         <select id="converter-pair" aria-label="换算货币对"></select>
+        <p id="amount-error" class="hint" role="status"></p>
+        <p id="converter-status" class="hint" role="status"></p>
         <p class="hint">按市场中间价估算，不包含银行手续费与点差。</p>
       </section>
 

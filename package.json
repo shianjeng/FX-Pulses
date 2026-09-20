@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "lint": "eslint extension/*.js tests/*.cjs",
+    "lint": "eslint --no-warn-ignored extension/*.js tests/*.cjs",
     "test": "node --test tests/*.test.cjs"
   },
   "devDependencies": {"eslint": "^9.0.0", "jsdom": "^26.0.0"}

@@ -57,8 +57,6 @@
 [data-part="card"][data-state~="pinned"]::before{content:"FX PULSE  /  已钉住"}
 [data-part="card"][data-state~="offline"]{border-style:dashed}
 [data-part="card"][data-size="s"]{padding-top:39px}
-[data-part="card"][data-size="s"] [data-part="target-select"],
-[data-part="card"][data-size="s"] [data-part="origin-select"],
 [data-part="card"][data-size="s"] [data-part="rate-line"],
 [data-part="card"][data-size="s"] [data-part="multi-list"],
 [data-part="card"][data-size="s"] [data-part="evidence"],
