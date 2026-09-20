@@ -23,3 +23,11 @@ class RateSnapshot(Base):
     midpoint: Mapped[Decimal] = mapped_column(Numeric(20, 8))
     provider: Mapped[str] = mapped_column(String(40))
     captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ProviderRequest(Base):
+    __tablename__ = "provider_requests"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    attempted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, index=True
+    )
