@@ -23,11 +23,20 @@ async function setup({ clipboardFails = false, watchlist = ["USD/CNY"] } = {}) {
       copied = value;
     },
   } });
-  w.fetch = async url => ({ ok: true, json: async () => url.includes("history")
-    ? [{ midpoint: "7.12", captured_at: "2026-09-18T00:00:00Z" }]
-    : [{ base_currency: "USD", quote_currency: "CNY", midpoint: "7.12",
-         bid: "7.119", ask: "7.121", provider: "mock", change_percent: null,
-         captured_at: "2026-09-18T00:00:00Z", is_stale: false }] });
+  w.fetch = async url => ({ ok: true, json: async () => {
+    if (url.includes("history")) {
+      return [{ midpoint: "7.12", captured_at: "2026-09-18T00:00:00Z" }];
+    }
+    if (url.includes("comparisons")) {
+      return { official: [{
+        institution: "European Central Bank", reference_date: "2026-09-18",
+        is_derived: true, rate: "7.10", market_deviation_percent: "0.2817",
+      }] };
+    }
+    return [{ base_currency: "USD", quote_currency: "CNY", midpoint: "7.12",
+      bid: "7.119", ask: "7.121", provider: "mock", change_percent: null,
+      captured_at: "2026-09-18T00:00:00Z", is_stale: false }];
+  } });
   w.eval(script);
   await tick();
   return { w, state, copied: () => copied, close: () => w.close() };
@@ -38,6 +47,7 @@ test("loads Chinese popup and reconciles invalid watchlist", async () => {
   assert.equal(app.w.document.querySelectorAll(".rate-card").length, 1);
   assert.equal(app.state.watchlist[0], "USD/CNY");
   assert.match(app.w.document.getElementById("status").textContent, /模拟数据/);
+  assert.match(app.w.document.getElementById("official-rates").textContent, /欧洲央行/);
   app.close();
 });
 test("clipboard success", async () => {
