@@ -1,54 +1,48 @@
+import time
 from contextlib import asynccontextmanager
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api import router
 from app.config import get_settings
-from app.database import Base, SessionLocal, engine
-from app.seed import seed_demo_history
-from app.services import refresh_all_rates
 
 settings = get_settings()
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
-    scheduler = AsyncIOScheduler(timezone="UTC")
-    Base.metadata.create_all(bind=engine)
-    with SessionLocal() as db:
-        seed_demo_history(db)
-    await refresh_all_rates()
-    scheduler.add_job(
-        refresh_all_rates,
-        "interval",
-        minutes=settings.refresh_interval_minutes,
-        id="refresh-rates",
-        max_instances=1,
-        coalesce=True,
-        replace_existing=True,
-    )
-    scheduler.start()
+async def lifespan(app: FastAPI):
+    # No network I/O, schema mutation, or scheduler in API workers.
+    app.state.request_window = (0, 0)
     yield
-    scheduler.shutdown(wait=False)
 
 
-app = FastAPI(
-    title="FX Pulse API",
-    description="Public, privacy-friendly market midpoint API for the FX Pulse extension.",
-    version="2.0.0",
-    lifespan=lifespan,
-)
+app = FastAPI(title="FX Pulse API", version="2.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[],
-    allow_origin_regex=r"^(chrome-extension|moz-extension)://.*$",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origin_regex=r"^(chrome-extension|moz-extension)://[a-zA-Z0-9-]+$",
+    allow_credentials=False,
+    allow_methods=["GET"],
+    allow_headers=["Content-Type"],
 )
 app.include_router(router, prefix=settings.api_prefix)
+
+
+@app.middleware("http")
+async def limit_reads(request: Request, call_next):
+    if request.url.path.startswith(settings.api_prefix):
+        window = int(time.monotonic() // 60)
+        previous, count = getattr(app.state, "request_window", (window, 0))
+        count = count + 1 if previous == window else 1
+        app.state.request_window = (window, count)
+        if count > settings.api_requests_per_minute:
+            return JSONResponse(
+                {"detail": "Request limit exceeded"}, status_code=429,
+                headers={"Retry-After": "60"},
+            )
+    return await call_next(request)
 
 
 @app.get("/health")

@@ -21,6 +21,7 @@ def serialize_rate(db: Session, latest: RateSnapshot) -> RateOut:
             RateSnapshot.base_currency == latest.base_currency,
             RateSnapshot.quote_currency == latest.quote_currency,
             RateSnapshot.captured_at <= since,
+            RateSnapshot.provider == latest.provider,
         )
         .order_by(desc(RateSnapshot.captured_at))
         .limit(1)
@@ -34,6 +35,7 @@ def serialize_rate(db: Session, latest: RateSnapshot) -> RateOut:
     result.is_stale = captured_at < datetime.now(timezone.utc) - timedelta(
         minutes=get_settings().stale_after_minutes
     )
+    result.captured_at = captured_at
     return result
 
 
@@ -82,6 +84,7 @@ def history(
                 RateSnapshot.base_currency == base,
                 RateSnapshot.quote_currency == quote,
                 RateSnapshot.captured_at >= start,
+                RateSnapshot.provider == get_settings().fx_provider,
             )
             .order_by(RateSnapshot.captured_at)
         ).all()

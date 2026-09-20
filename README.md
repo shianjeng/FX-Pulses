@@ -12,7 +12,10 @@ FX Pulse turns the browser toolbar into a compact exchange-rate dashboard. Open 
 
 ## Preview
 
-![FX Pulse login-free browser extension](docs/screenshots/extension.png)
+The previous promotional render has been removed: it was not a screenshot of the
+Chinese popup and mixed incompatible quote/change periods. See
+[screenshot instructions](docs/SCREENSHOTS.md) to capture the actual installed
+extension against the mock backend. Mock rates are synthetic, not live quotes.
 
 ## Product principles
 
@@ -47,7 +50,10 @@ flowchart LR
     Extension --> Local[Browser local storage]
 ```
 
-The backend collects shared market data; it never receives a user's watchlist or target price. The extension has no service worker, alarm, email integration, or notification permission.
+The standalone collector collects shared market data; it never receives a user's
+watchlist or target price. The extension has no service worker, alarm, email
+integration, or notification permission. Clipboard write permission is used only
+when copying a quote, with a selectable-text fallback if the browser rejects it.
 
 ## Quick start — Docker
 
@@ -86,7 +92,11 @@ pip install -e ".[dev]"
 uvicorn app.main:app --reload
 ```
 
-The default database is SQLite, so PostgreSQL is not required for local development.
+Before starting the API, run `alembic upgrade head` and
+`python -m app.bootstrap` inside `backend`. In a second terminal, activate the
+same environment and run `python -m app.collector`.
+The default database is SQLite; PostgreSQL is optional. Local environment
+variables are read from `backend/.env`, while Compose reads the root `.env`.
 
 ## Use live bid/ask data
 
@@ -109,7 +119,8 @@ Restart the backend afterward. The API key stays on the server and is never incl
 | `GET` | `/api/v1/rates/{base}/{quote}` | Read one quote |
 | `GET` | `/api/v1/rates/{base}/{quote}/history?days=7` | Read 1–90 days of snapshots |
 
-All application endpoints are read-only and require no token.
+All application endpoints are read-only and require no token. Reading rates
+never calls the upstream provider or spends its quota.
 
 ## Configuration
 
@@ -130,7 +141,35 @@ pytest
 ruff check .
 ```
 
-CI repeats both checks on every push and pull request.
+From the project root also run `npm ci && npm run lint && npm test`.
+CI runs backend and extension checks on every push and pull request.
+
+## Operations and live-data limitations
+
+- Run `alembic upgrade head` as a single release step before API/collector startup.
+  The baseline preserves existing v2 snapshots; back up the database first.
+  Old account tables are not automatically deleted.
+- API workers perform no collection. Deploy exactly one collector per database.
+  A file lock prevents duplicate collectors only when they share the same lock
+  path/volume (as in Compose); it is not a distributed lock across independent
+  hosts. Do not scale collector replicas on separate hosts.
+- Collection attempts, including failures, count toward a persisted rolling
+  24-hour budget. Other applications using the same key are outside this budget.
+  Interval configuration is checked against the budget before startup.
+- Snapshots older than `RETENTION_DAYS` (minimum 90) are deleted during collection.
+- Read endpoints have a fixed-window global limit per API process. Multi-worker
+  or public deployments must additionally enforce shared limits at the reverse
+  proxy/gateway. The application does not trust client-supplied forwarded IPs.
+- Docker runs as a non-root user. API healthcheck checks process liveness, not
+  quote freshness. Monitor quote age and collector error logs separately.
+- Alpha Vantage entitlement and limits depend on your plan. The public demo
+  response was inspected, but your own key and the requested pairs still need
+  live verification. Never assume a free key works from the demo response.
+  The adapter uses the provider's `7. Time Zone`, validates bid/ask, and reports
+  unavailable quotes instead of silently substituting mock data.
+- Chromium/Edge are the supported extension targets. Clipboard success/denial
+  are covered by DOM unit tests; actual browser permission/focus behavior
+  must be checked using the manual checklist in `docs/SCREENSHOTS.md`.
 
 ## Scope and limitations
 
@@ -146,12 +185,6 @@ FX Pulse 是一款免登录的汇率浏览器插件。点击浏览器工具栏�
 插件不会在后台持续轮询，也不会收集邮箱、密码、自选列表或目标价。自选与目标价只保存在当前浏览器中，并在用户打开插件时检查。后端仅负责保护第三方行情密钥、缓存公共汇率和提供历史数据。
 
 这里的“中间价”特指市场买入价与卖出价的算术平均值，并不是中国人民银行公布的人民币汇率中间价，也不代表最终成交价。
-
-## Author
-
-Hank
-
-GitHub: https://github.com/shianjeng
 
 ## License
 

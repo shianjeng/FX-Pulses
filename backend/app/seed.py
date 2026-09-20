@@ -17,7 +17,13 @@ def seed_demo_history(db: Session) -> None:
         return
     centers = {"USD/CNY": 7.12, "USD/JPY": 148.4, "CNY/JPY": 20.84}
     now = datetime.now(timezone.utc)
-    for pair, center in centers.items():
+    for pair in get_settings().tracked_pairs:
+        center = centers.get(pair)
+        if center is None:
+            inverse = centers.get("/".join(reversed(pair.split("/"))))
+            if inverse is None:
+                continue
+            center = 1 / inverse
         base, quote = pair.split("/")
         for hours_ago in range(30 * 24, -1, -6):
             timestamp = now - timedelta(hours=hours_ago)

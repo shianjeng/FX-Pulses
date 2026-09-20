@@ -1,3 +1,9 @@
+x-backend: &backend
+  build: ./backend
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql+psycopg://fxpulse:fxpulse@db:5432/fxpulse
+
 services:
   db:
     image: postgres:16-alpine
@@ -12,17 +18,32 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
-  api:
-    build: ./backend
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql+psycopg://fxpulse:fxpulse@db:5432/fxpulse
-    ports:
-      - "8000:8000"
+  migrate:
+    <<: *backend
+    command: ["sh", "-c", "alembic upgrade head && python -m app.bootstrap"]
+    healthcheck:
+      disable: true
     depends_on:
       db:
         condition: service_healthy
+  api:
+    <<: *backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+  collector:
+    <<: *backend
+    command: ["python", "-m", "app.collector"]
+    volumes:
+      - collector_lock:/data
+    healthcheck:
+      disable: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:
+  collector_lock:
