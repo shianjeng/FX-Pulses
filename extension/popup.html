@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>FX Pulse</title>
     <link rel="stylesheet" href="popup.css" />
+    <link rel="stylesheet" href="official.css" />
   </head>
   <body>
     <header>
@@ -20,6 +21,15 @@
       <p id="status" class="status">正在读取行情…</p>
       <div id="error" class="error hidden"></div>
       <section id="rates" class="rate-list" aria-live="polite"></section>
+
+      <section class="panel official-panel">
+        <div class="panel-title">
+          <div><p class="eyebrow">OFFICIAL REFERENCE</p><h2 id="official-title">官方参考价</h2></div>
+          <span class="reference-badge">日更</span>
+        </div>
+        <p id="official-status" class="hint">正在读取官方参考价…</p>
+        <div id="official-rates" class="official-list" aria-live="polite"></div>
+      </section>
 
       <section class="panel trend-panel">
         <div class="panel-title"><div><p class="eyebrow">7 DAY TREND</p><h2 id="trend-title">汇率走势</h2></div><span id="trend-change" class="change">—</span></div>

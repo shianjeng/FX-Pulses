@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, call
 
 import pytest
 from pydantic import ValidationError
@@ -9,7 +9,7 @@ from sqlalchemy import select
 from app.config import Settings, get_settings
 from app.database import SessionLocal
 from app.models import RateSnapshot
-from app.providers import AlphaVantageProvider, Quote
+from app.providers import AlphaVantageProvider, ProviderError, Quote
 from app.services import prune_history, refresh_all_rates, reserve_request, store_quote
 
 
@@ -21,6 +21,11 @@ def test_bad_pairs_fail_at_configuration(pairs):
 
 def test_normalize_and_budget():
     assert Settings(tracked_pairs=" usd/cny ,USD/CNY", _env_file=None).tracked_pairs == ["USD/CNY"]
+    free = Settings(
+        fx_provider="alpha_vantage", alpha_vantage_api_key="test",
+        refresh_interval_minutes=240, _env_file=None,
+    )
+    assert free.provider_daily_budget == 25
     with pytest.raises(ValidationError):
         Settings(fx_provider="alpha_vantage", alpha_vantage_api_key="test",
                  refresh_interval_minutes=1, _env_file=None)
@@ -54,6 +59,25 @@ async def test_provider_errors_logged(monkeypatch, caplog):
     assert "Quote refresh failed" in caplog.text
 
 
+@pytest.mark.asyncio
+async def test_alpha_vantage_pair_requests_are_spaced(monkeypatch):
+    provider = AsyncMock()
+    provider.get_quote.return_value = Quote(
+        "USD", "CNY", Decimal("7"), Decimal("7.2"), Decimal("7.1"),
+        "alpha_vantage", datetime.now(timezone.utc),
+    )
+    sleep = AsyncMock()
+    monkeypatch.setattr(get_settings(), "fx_provider", "alpha_vantage")
+    monkeypatch.setattr(get_settings(), "provider_request_spacing_seconds", 15)
+    monkeypatch.setattr("app.services.get_provider", lambda: provider)
+    monkeypatch.setattr("app.services.asyncio.sleep", sleep)
+
+    result = await refresh_all_rates()
+
+    assert result == {"refreshed": 3, "errors": 0}
+    assert sleep.await_args_list == [call(15), call(15), call(0)]
+
+
 def test_api_start_never_calls_provider(client, monkeypatch):
     provider = AsyncMock()
     monkeypatch.setattr("app.services.get_provider", lambda: provider)
@@ -84,3 +108,19 @@ async def test_provider_timezone(monkeypatch):
     quote = await AlphaVantageProvider("test").get_quote("USD", "CNY")
     assert quote.captured_at.hour == 3
     assert quote.midpoint == Decimal("7.1")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("payload", [
+    {"Note": "API call frequency reached"},
+    {"Information": "This endpoint is unavailable for the current key"},
+])
+async def test_provider_reports_quota_without_echoing_upstream(monkeypatch, payload):
+    import httpx
+    response = httpx.Response(200, json=payload)
+    mock = AsyncMock()
+    mock.__aenter__.return_value = mock
+    mock.get.return_value = response
+    monkeypatch.setattr("app.providers.httpx.AsyncClient", lambda **kwargs: mock)
+    with pytest.raises(ProviderError, match="quota or endpoint entitlement"):
+        await AlphaVantageProvider("secret-key").get_quote("USD", "CNY")

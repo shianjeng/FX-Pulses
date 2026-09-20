@@ -43,10 +43,17 @@ class AlphaVantageProvider:
             response = await client.get(self.url, params=params)
             if response.is_error:
                 raise ProviderError(f"Provider HTTP status {response.status_code}")
-            payload = response.json()
+            try:
+                payload = response.json()
+            except ValueError as exc:
+                raise ProviderError("Alpha Vantage returned invalid JSON") from exc
         data = payload.get("Realtime Currency Exchange Rate")
         if not data:
-            raise ProviderError("Quote unavailable: check provider entitlement and quota")
+            if payload.get("Error Message"):
+                raise ProviderError("Alpha Vantage rejected the currency pair or API key")
+            if payload.get("Note") or payload.get("Information"):
+                raise ProviderError("Alpha Vantage quota or endpoint entitlement was exceeded")
+            raise ProviderError("Alpha Vantage quote is unavailable")
         try:
             bid = Decimal(data["8. Bid Price"])
             ask = Decimal(data["9. Ask Price"])

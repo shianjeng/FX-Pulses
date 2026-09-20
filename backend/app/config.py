@@ -14,9 +14,11 @@ class Settings(BaseSettings):
     alpha_vantage_api_key: str = ""
     tracked_pairs: Annotated[list[str], NoDecode] = ["USD/CNY", "USD/JPY", "CNY/JPY"]
     refresh_interval_minutes: int = Field(default=240, ge=1)
+    provider_request_spacing_seconds: int = Field(default=15, ge=5)
     stale_after_minutes: int = Field(default=360, ge=1)
     retention_days: int = Field(default=90, ge=90)
     provider_daily_budget: int = Field(default=25, ge=1)
+    official_refresh_interval_minutes: int = Field(default=360, ge=60)
     collector_lock_path: str = "./collector.lock"
     api_requests_per_minute: int = Field(default=120, ge=1)
 
