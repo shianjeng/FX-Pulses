@@ -8,6 +8,7 @@ let settings = { ...DEFAULTS };
 let rates = [];
 let selectedPair = "USD/CNY";
 let reversed = false;
+let historyVersion = 0;
 
 const $ = (id) => document.getElementById(id);
 const fmt = (value, digits = 4) => Number(value).toLocaleString("zh-CN", {
@@ -15,6 +16,8 @@ const fmt = (value, digits = 4) => Number(value).toLocaleString("zh-CN", {
   maximumFractionDigits: digits,
 });
 const pairOf = (rate) => `${rate.base_currency}/${rate.quote_currency}`;
+const changeText = (value) => value === null || value === undefined ? "暂无对比" :
+  `${Number(value) >= 0 ? "+" : ""}${Number(value).toFixed(2)}%`;
 
 async function request(path) {
   const response = await fetch(`${settings.apiUrl.replace(/\/$/, "")}${path}`);
@@ -30,7 +33,7 @@ function rateCard(rate) {
   const change = Number(rate.change_percent || 0);
   const digits = pair.includes("JPY") ? 3 : 4;
   return `<button class="rate-card ${pair === selectedPair ? "selected" : ""}" data-pair="${pair}">
-    <div class="rate-top"><span class="pair">${pair}</span><span class="change ${change >= 0 ? "positive" : "negative"}">${change >= 0 ? "+" : ""}${change.toFixed(2)}%</span></div>
+    <div class="rate-top"><span class="pair">${pair}</span><span class="change ${change >= 0 ? "positive" : "negative"}">${changeText(rate.change_percent)}</span></div>
     <strong>${fmt(rate.midpoint, digits)}</strong>
     <div class="rate-bottom"><span>BID ${fmt(rate.bid, digits)} · ASK ${fmt(rate.ask, digits)}</span><span class="${rate.is_stale ? "stale" : ""}">${rate.is_stale ? "数据较旧" : "已更新"}</span></div>
   </button>`;
@@ -40,16 +43,20 @@ function currentRate() {
   return rates.find((rate) => pairOf(rate) === selectedPair) || rates[0];
 }
 
-function renderRates() {
-  const visible = rates.filter((rate) => settings.watchlist.includes(pairOf(rate)));
+async function reconcileWatchlist() {
+  let visible = rates.filter((rate) => settings.watchlist.includes(pairOf(rate)));
   if (!visible.length && rates.length) {
     settings.watchlist = [pairOf(rates[0])];
-    chrome.storage.local.set({ watchlist: settings.watchlist });
-    return renderRates();
+    await chrome.storage.local.set({ watchlist: settings.watchlist });
+    visible = [rates[0]];
   }
   if (visible.length && !visible.some((rate) => pairOf(rate) === selectedPair)) {
     selectedPair = pairOf(visible[0]);
   }
+}
+
+function renderRates() {
+  const visible = rates.filter((rate) => settings.watchlist.includes(pairOf(rate)));
   $("rates").innerHTML = visible.map(rateCard).join("") || "<p class='status'>暂无可用行情</p>";
   document.querySelectorAll(".rate-card").forEach((card) => card.addEventListener("click", () => selectPair(card.dataset.pair)));
 }
@@ -96,17 +103,19 @@ function drawChart(points) {
 }
 
 async function loadHistory() {
+  const version = ++historyVersion;
   $("trend-title").textContent = `${selectedPair} 走势`;
   const rate = currentRate();
   const change = Number(rate?.change_percent || 0);
-  $("trend-change").textContent = `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`;
+  $("trend-change").textContent = `24h · ${changeText(rate?.change_percent)}`;
   $("trend-change").className = `change ${change >= 0 ? "positive" : "negative"}`;
   $("chart").innerHTML = "<span>载入走势…</span>";
   try {
     const [base, quote] = selectedPair.split("/");
-    drawChart(await request(`/rates/${base}/${quote}/history?days=7`));
+    const points = await request(`/rates/${base}/${quote}/history?days=7`);
+    if (version === historyVersion) drawChart(points);
   } catch {
-    drawChart([]);
+    if (version === historyVersion) drawChart([]);
   }
 }
 
@@ -159,7 +168,9 @@ async function saveWatchlist() {
   }
   settings.watchlist = checked;
   await chrome.storage.local.set({ watchlist: checked });
+  await reconcileWatchlist();
   renderRates();
+  renderSelects();
   await loadHistory();
 }
 
@@ -169,11 +180,12 @@ async function loadData() {
   try {
     rates = await request("/rates");
     if (!rates.length) throw new Error("服务器还没有汇率数据");
+    await reconcileWatchlist();
     renderRates();
     renderSelects();
     await loadHistory();
     const newest = Math.max(...rates.map((rate) => new Date(rate.captured_at).getTime()));
-    $("status").textContent = `数据时间 ${new Date(newest).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} · ${rates[0].provider}`;
+    $("status").textContent = `数据时间 ${new Date(newest).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} · ${rates[0].provider === "mock" ? "模拟数据 · 非真实行情" : rates[0].provider}`;
   } catch (error) {
     $("error").textContent = `${error.message}。请确认后端已经启动。`;
     $("error").classList.remove("hidden");
@@ -199,9 +211,17 @@ $("target-form").addEventListener("submit", async (event) => {
 $("copy-button").addEventListener("click", async () => {
   const rate = currentRate();
   if (!rate) return;
-  await navigator.clipboard.writeText(`${pairOf(rate)} ${rate.midpoint}`);
-  $("copy-button").textContent = "已复制";
-  setTimeout(() => $("copy-button").textContent = "复制当前汇率", 1200);
+  const text = `${pairOf(rate)} ${rate.midpoint}`;
+  try {
+    await navigator.clipboard.writeText(text);
+    $("copy-button").textContent = "已复制";
+    setTimeout(() => $("copy-button").textContent = "复制当前汇率", 1200);
+  } catch {
+    $("copy-fallback").classList.remove("hidden");
+    $("copy-value").value = text;
+    $("copy-value").focus();
+    $("copy-value").select();
+  }
 });
 
 async function init() {

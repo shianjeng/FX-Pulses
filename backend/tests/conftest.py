@@ -6,8 +6,9 @@ os.environ["FX_PROVIDER"] = "mock"
 import pytest
 from fastapi.testclient import TestClient
 
-from app.database import Base, engine
+from app.database import Base, SessionLocal, engine
 from app.main import app
+from app.seed import seed_demo_history
 
 
 @pytest.fixture(autouse=True)
@@ -20,5 +21,7 @@ def reset_database():
 
 @pytest.fixture
 def client():
+    with SessionLocal() as db:
+        seed_demo_history(db)
     with TestClient(app) as test_client:
         yield test_client

@@ -4,7 +4,8 @@
   "version": "2.0.0",
   "description": "免登录查看人民币、美元和日元的市场中间价、走势与快捷换算。",
   "minimum_chrome_version": "116",
-  "permissions": ["storage"],
+  "permissions": ["storage", "clipboardWrite"],
+  "icons": {"16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png"},
   "host_permissions": ["http://localhost:8000/*"],
   "optional_host_permissions": ["https://*/*", "http://*/*"],
   "action": {

@@ -1,7 +1,8 @@
 import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -12,7 +13,7 @@ class ProviderError(RuntimeError):
     pass
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Quote:
     base_currency: str
     quote_currency: str
@@ -40,21 +41,21 @@ class AlphaVantageProvider:
         }
         async with httpx.AsyncClient(timeout=15) as client:
             response = await client.get(self.url, params=params)
-            response.raise_for_status()
+            if response.is_error:
+                raise ProviderError(f"Provider HTTP status {response.status_code}")
             payload = response.json()
         data = payload.get("Realtime Currency Exchange Rate")
         if not data:
-            message = (
-                payload.get("Note") or payload.get("Information") or "Unexpected provider response"
-            )
-            raise ProviderError(message)
+            raise ProviderError("Quote unavailable: check provider entitlement and quota")
         try:
             bid = Decimal(data["8. Bid Price"])
             ask = Decimal(data["9. Ask Price"])
             refreshed = datetime.strptime(data["6. Last Refreshed"], "%Y-%m-%d %H:%M:%S").replace(
-                tzinfo=timezone.utc
-            )
-        except (KeyError, ValueError) as exc:
+                tzinfo=ZoneInfo(data["7. Time Zone"])
+            ).astimezone(timezone.utc)
+            if not bid.is_finite() or not ask.is_finite() or not 0 < bid <= ask:
+                raise ValueError("Invalid bid/ask")
+        except (KeyError, ValueError, InvalidOperation) as exc:
             raise ProviderError("Provider response is missing bid/ask fields") from exc
         return Quote(base, quote, bid, ask, (bid + ask) / 2, "alpha_vantage", refreshed)
 
