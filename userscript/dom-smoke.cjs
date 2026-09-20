@@ -89,6 +89,8 @@ globalThis.window = {
 globalThis.NodeFilter = { SHOW_TEXT: 4, FILTER_ACCEPT: 1, FILTER_REJECT: 2 };
 globalThis.getComputedStyle = (el) => ({ backgroundColor: el._bg || 'rgba(0, 0, 0, 0)' });
 globalThis.CustomEvent = class CustomEvent { constructor(type, opts) { this.type = type; this.detail = opts && opts.detail; } };
+const originalInterval = globalThis.setInterval;
+globalThis.setInterval = (...args) => { const timer = originalInterval(...args); timer.unref(); return timer; };
 globalThis.fetch = async () => ({
   ok: true,
   text: async () => JSON.stringify({
@@ -99,7 +101,7 @@ globalThis.fetch = async () => ({
 
 /* ---------------- 加载脚本（isBrowser 为真 → init() 会执行） ---------------- */
 const fx = require('./fx-pulse-hover.user.js');
-const api = globalThis.window.__fxph;
+const api = fx.testApi;
 
 let failures = 0;
 function assert(cond, label) {
@@ -140,7 +142,7 @@ function analyze(text, offset, background = 'rgb(255, 255, 255)') {
   await new Promise((r) => setTimeout(r, 60));   // 等 ensureRates() 走完（桩 fetch 立即返回）
 
   console.log('\n[1] 注入与发布');
-  assert(!!api, 'window.__fxph 已发布');
+  assert(!globalThis.window.__fxph, '网页不能访问内部状态');
   assert(documentStub.documentElement.dataset.fxph === fx.VERSION, 'dataset.fxph = ' + fx.VERSION);
   assert(!documentStub.documentElement.dataset.fxphError, 'init() 没抛错（dataset.fxphError 为空）');
   assert(!!card(), '#fxph-host 已插入并建好 card');

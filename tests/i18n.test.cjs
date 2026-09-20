@@ -12,6 +12,7 @@ for (const language of ['zh','en','ja']) {
       w.chrome = {storage:{local:{get:async defaults => ({...defaults,language}),set:async()=>{}}},runtime:{openOptionsPage(){}}};
       w.fetch = async url => {
         if (failed) throw new Error('Failed to fetch');
+        if (url.endsWith('/pairs')) return {ok:true,json:async()=>['USD/CNY','USD/JPY','CNY/JPY']};
         return {ok:true,json:async()=>url.includes('comparisons') ? {official:[{institution:'European Central Bank',rate:'7.1',reference_date:'2026-09-20',is_derived:true}]} : url.includes('history') ? [] : ['USD/CNY','USD/JPY','CNY/JPY'].map(pair=>({base_currency:pair.split('/')[0],quote_currency:pair.split('/')[1],midpoint:7,bid:6.99,ask:7.01,provider:'alpha_vantage',captured_at:'2026-09-20T00:00:00Z',change_percent:null}))};
       };
       w.eval(read('i18n.js'));
@@ -22,7 +23,11 @@ for (const language of ['zh','en','ja']) {
       if(language==='en') assert.doesNotMatch(text, /[\u3400-\u9fff]/);
       if(language==='ja') assert.doesNotMatch(text, /自选|暂无|正在|已更新|设置|连接|买入|卖出/);
       if(language==='zh') assert.doesNotMatch(text, /MARKET MIDPOINT|QUICK CONVERTER|BID|ASK|Failed to fetch/);
-      if(!failed) assert.equal(w.document.querySelectorAll('.rate-card').length,3);
+      if(!failed) {
+        assert.equal(w.document.querySelectorAll('.rate-card').length,3);
+        assert.match(w.document.querySelector('.rate-card strong').textContent,/7/);
+        assert.equal(w.document.getElementById('error').classList.contains('hidden'),true);
+      }
       else assert.doesNotMatch(w.document.getElementById('chart').textContent,/载入|Loading|読み込み/);
       dom.window.close();
     });

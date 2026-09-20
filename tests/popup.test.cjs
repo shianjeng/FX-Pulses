@@ -24,6 +24,7 @@ async function setup({ clipboardFails = false, watchlist = ["USD/CNY"] } = {}) {
     },
   } });
   w.fetch = async url => ({ ok: true, json: async () => {
+    if (url.endsWith('/pairs')) return ['USD/CNY','USD/JPY','CNY/JPY'];
     if (url.includes("history")) {
       return [{ midpoint: "7.12", captured_at: "2026-09-18T00:00:00Z" }];
     }
@@ -42,10 +43,12 @@ async function setup({ clipboardFails = false, watchlist = ["USD/CNY"] } = {}) {
   return { w, state, copied: () => copied, close: () => w.close() };
 }
 
-test("loads Chinese popup and reconciles invalid watchlist", async () => {
-  const app = await setup({ watchlist: ["EUR/GBP"] });
-  assert.equal(app.w.document.querySelectorAll(".rate-card").length, 1);
+test("loads Chinese popup without replacing missing watchlist entries", async () => {
+  const app = await setup({ watchlist: ["USD/CNY", "USD/JPY"] });
+  assert.equal(app.w.document.querySelectorAll(".rate-card").length, 2);
   assert.equal(app.state.watchlist[0], "USD/CNY");
+  assert.equal(app.state.watchlist[1], "USD/JPY");
+  assert.match(app.w.document.querySelector('[data-pair="USD/JPY"]').textContent, /等待采集/);
   assert.match(app.w.document.getElementById("status").textContent, /模拟数据/);
   assert.match(app.w.document.getElementById("official-rates").textContent, /欧洲央行/);
   app.close();

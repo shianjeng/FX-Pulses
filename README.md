@@ -16,6 +16,12 @@
 
 ---
 
+## Unified extension (2.1.0)
+
+The toolbar popup and webpage hover converter now run inside **one Chrome extension**, using the same FastAPI backend, one-minute quote cache, language and watchlist. Tampermonkey is no longer required. Hover is off by default; enable it in extension settings, grant website access, and reload the page. Disable the old userscript to prevent duplicate cards.
+
+See [migration and architecture](UNIFIED-SERVICE.md). The installed extension never falls back to a separate public-rate provider. Unsupported or uncollected currencies are clearly marked.
+
 FX Pulse is more than a currency converter. It combines live market bid/ask data with daily reference rates published by monetary authorities, normalizes different quotation conventions, and exposes the result through a compact browser interface and a read-only REST API.
 
 The project currently focuses on three pairs:
@@ -46,7 +52,7 @@ Official observations are never presented as tradable live prices. Cross-calcula
 - Quick currency converter with direction reversal
 - Local watchlist and target-price preferences
 - One-click copy with a selectable-text fallback
-- No account, analytics SDK, or background polling
+- No account or analytics SDK; shared on-demand requests, no scheduled collection on hidden pages
 
 ### Backend engineering
 

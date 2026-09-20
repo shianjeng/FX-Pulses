@@ -74,14 +74,14 @@
     <button id="fxph-fallback-page">以普通页面脚本加载（不用油猴，先跑起来）</button>
     <button id="fxph-copy-diag">复制诊断信息</button>
   </p>
-  <p><small>「以普通页面脚本加载」会把 <code>fx-pulse-hover.user.js</code> 当普通 &lt;script&gt; 注入：GM_* 全部走降级分支（localStorage + fetch），
+  <p><small>「以普通页面脚本加载」会把 <code>fx-pulse-hover.user.js</code> 当普通 &lt;script&gt; 注入：GM_* 全部走降级分支（临时内存 + fetch），
   识别与小窗行为和油猴里一致，只是没有菜单命令、也不读油猴里的配置。</small></p>
 </div>
 
 <div id="fxph-fixture">
   <div class="toolbar">
     <button id="fxph-run">运行解析自检</button>
-    <button id="fxph-scan">扫描整页（__fxph.scan）</button>
+    <button id="fxph-scan">扫描整页</button>
     <button id="fxph-stats">打印统计</button>
     <button id="fxph-refresh">刷新汇率（忽略缓存）</button>
     <button id="fxph-hide">关掉小窗</button>
@@ -143,7 +143,7 @@
     <p><small>
       Amazon.com（$）、Amazon.co.jp（￥/円）、楽天（円）、淘宝 / 京东（¥/元/万）、Booking（€/$）、
       一个中文新闻站（大量裸数字 + 年份）、一个 GitHub 页面（代码块里的数字），
-      各自悬停 20 个金额，再点「打印统计」看 <code>__fxph.stats.dump()</code> 的 rejects 分布。
+      各自悬停 20 个金额，再通过脚本管理器菜单「打印统计」查看拒绝识别的分布。
     </small></p>
   </div>
 </section>
@@ -255,10 +255,10 @@
       v.textContent = '脚本注入了，但初始化抛错：' + s.datasetFxphError + ' —— 看 console 的 [FXPH] 初始化失败。';
       list.hidden = true;
     } else if (s.hostElement && s.datasetFxph) {
-      v.className = s.pageApi ? 'ok' : 'warn';
+      v.className = s.pageApi ? 'warn' : 'ok';
       v.textContent = s.pageApi
-        ? '脚本运行正常，页面也能直接调用 __fxph。'
-        : '脚本在跑（① ② 都在），只是 window.__fxph 没桥接过来 —— 油猴沙箱下常见，不影响悬停和自检按钮，只是页面 console 里不能用 __fxph。';
+        ? '检测到旧版公开调试接口，请更新脚本。'
+        : '脚本正常运行，内部接口已隔离。请通过脚本管理器菜单进行设置和诊断。';
       list.hidden = true;
     } else {
       v.className = 'bad';
