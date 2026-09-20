@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>FX Pulse Hover · 无油猴冒烟测试</title>
+<style>
+  body { background:#07120e; color:#e8f5ee; font:15px/1.8 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif; padding:36px; margin:0 }
+  h1 { font-size:20px; margin:0 0 4px }
+  p { color:#8ea79a; max-width:760px }
+  .t { display:inline-block; padding:12px 16px; margin:0 10px 10px 0; border:1px dashed #2f5c47; border-radius:8px; background:#0d1b15; font-size:17px }
+  code { font:12px ui-monospace,monospace; color:#9fd8bb }
+  .palette-demo { margin-top:28px; display:flex; flex-wrap:wrap; gap:10px }
+  .palette-demo .t { margin:0; min-width:135px; color:#242b2b; border:0; border-radius:2px }
+  .palette-demo .ink { color:#f2eee3 }
+</style>
+</head>
+<body>
+<h1>无油猴冒烟测试</h1>
+<p>这个页面把 <code>fx-pulse-hover.user.js</code> 当普通页面脚本加载（GM_* 全部走降级分支：localStorage + fetch），
+用来在没有 Tampermonkey 的浏览器里验证 DOM 层：光标命中、矩形守卫、Shadow DOM 小窗、坐标贴边翻转。
+正常情况下你应该用 <code>test-page.html</code> + 油猴。</p>
+
+<div class="t">$1,299.00</div>
+<div class="t">1,000円</div>
+<div class="t">1.2万元</div>
+<div class="t">¥8,999</div>
+<div class="t">1.299,00 €</div>
+<div class="t">HK$500</div>
+<div class="t">-20%</div>
+<div class="t">2026年9月20日</div>
+<div class="t" style="width:520px">说明文字很长，价格在右边<span style="display:inline-block;width:360px"></span>$1,299.00</div>
+
+<h2>自动配色检查</h2>
+<p>分别悬停下面五个金额，卡片会按金额所在色块切换纸色、深色、海蓝、鼠尾草绿和陶土色。</p>
+<div class="palette-demo">
+  <div class="t" style="background:#fffaf0">纸色 $100.00</div>
+  <div class="t ink" style="background:#1a2022">深色 $100.00</div>
+  <div class="t" style="background:#c9e6f3">海蓝 $100.00</div>
+  <div class="t" style="background:#d6e8c5">草绿 $100.00</div>
+  <div class="t" style="background:#f5d2c3">陶土 $100.00</div>
+</div>
+
+<script src="fx-pulse-hover.user.js"></script>
+</body>
+</html>
