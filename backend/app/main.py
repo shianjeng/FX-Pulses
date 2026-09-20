@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="FX Pulse API", version="2.1.0", lifespan=lifespan)
+app = FastAPI(title="FX Pulse API", version="2.2.1", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[],

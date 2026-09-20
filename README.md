@@ -34,6 +34,9 @@ extension against the mock backend. Mock rates are synthetic, not live quotes.
 - Local target-price status, evaluated when the popup is opened
 - One-click copy of the selected quote
 - Alpha Vantage live adapter and a zero-setup deterministic demo adapter
+- Official reference-rate aggregation from the ECB and Bank of Canada
+- Normalized cross-rates with source date, provenance, and derived-rate labels
+- Market midpoint versus official reference-rate comparison API
 - SQLite locally and PostgreSQL through Docker Compose
 - Public read-only API with browser-extension CORS support
 - Backend tests, linting, and GitHub Actions CI
@@ -46,6 +49,7 @@ flowchart LR
     API --> Cache[(Rate snapshots)]
     Scheduler[APScheduler] --> Provider[FX data provider]
     Provider --> Scheduler
+    Official[ECB + Bank of Canada] --> Scheduler
     Scheduler --> Cache
     Extension --> Local[Browser local storage]
 ```
@@ -100,14 +104,33 @@ variables are read from `backend/.env`, while Compose reads the root `.env`.
 
 ## Use live bid/ask data
 
-Create an Alpha Vantage API key, then update `.env`:
+Create an Alpha Vantage API key. For the standard free allowance and the three
+default pairs, use the prepared four-hour profile:
+
+```bash
+cp alpha-vantage.env.example .env
+```
+
+Then replace only the placeholder in `.env`:
 
 ```dotenv
 FX_PROVIDER=alpha_vantage
 ALPHA_VANTAGE_API_KEY=your_key_here
+REFRESH_INTERVAL_MINUTES=240
+PROVIDER_REQUEST_SPACING_SECONDS=15
+PROVIDER_DAILY_BUDGET=25
 ```
 
-Restart the backend afterward. The API key stays on the server and is never included in the extension bundle. Provider request limits may change, so check the provider's current quota before lowering `REFRESH_INTERVAL_MINUTES`.
+Restart the backend and collector afterward. The collector fetches all three pairs
+with a 15-second gap between requests, then refreshes them every four hours. That is
+18 requests per day;
+the persisted budget stops further calls before request 26. The API key stays on
+the server, is ignored by Git through `.env`, and is never included in the
+extension bundle.
+
+`CURRENCY_EXCHANGE_RATE` returns a real-time observation, but the free profile is
+not a continuous real-time feed: the displayed value refreshes every four hours.
+Do not lower `REFRESH_INTERVAL_MINUTES` unless the key has a larger verified quota.
 
 ## API overview
 
@@ -118,6 +141,9 @@ Restart the backend afterward. The API key stays on the server and is never incl
 | `GET` | `/api/v1/rates` | List the latest cached quotes |
 | `GET` | `/api/v1/rates/{base}/{quote}` | Read one quote |
 | `GET` | `/api/v1/rates/{base}/{quote}/history?days=7` | Read 1–90 days of snapshots |
+| `GET` | `/api/v1/official-rates` | List latest normalized official reference rates |
+| `GET` | `/api/v1/official-rates/{base}/{quote}` | Compare official sources for one pair |
+| `GET` | `/api/v1/comparisons/{base}/{quote}` | Compare market midpoint with official references |
 
 All application endpoints are read-only and require no token. Reading rates
 never calls the upstream provider or spends its quota.
@@ -130,7 +156,10 @@ never calls the upstream provider or spends its quota.
 | `ALPHA_VANTAGE_API_KEY` | empty | Server-side key for live data |
 | `TRACKED_PAIRS` | `USD/CNY,USD/JPY,CNY/JPY` | Comma-separated available pairs |
 | `REFRESH_INTERVAL_MINUTES` | `240` | Server-side collection interval |
+| `PROVIDER_REQUEST_SPACING_SECONDS` | `15` | Delay between Alpha Vantage pair requests |
+| `PROVIDER_DAILY_BUDGET` | `25` | Rolling 24-hour safety ceiling for provider calls |
 | `STALE_AFTER_MINUTES` | `360` | Age at which a quote is marked stale |
+| `OFFICIAL_REFRESH_INTERVAL_MINUTES` | `360` | Official-source collection interval (minimum 60) |
 | `DATABASE_URL` | SQLite | SQLAlchemy database URL |
 
 ## Quality checks
@@ -177,6 +206,8 @@ CI runs backend and extension checks on every push and pull request.
 - Preferences do not sync between browsers or devices.
 - The midpoint is a market reference, not the final rate offered by a bank, card network, or remittance service.
 - Demo quotes are synthetic; use a live provider before relying on the displayed market data.
+- ECB and Bank of Canada values are daily reference/indicative rates, not tradable live quotes.
+- A rate marked `is_derived=true` was cross-calculated from the institution's common base.
 
 ## 中文说明
 
