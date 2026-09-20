@@ -1,0 +1,44 @@
+/* 把这一段追加到 extension/popup.css 末尾 */
+
+.chart{
+  height:94px;
+  margin:10px -2px 3px;
+  display:grid;
+  place-items:center;
+  color:#5e7167;
+  font-size:10px;
+  position:relative;
+}
+.chart svg{
+  width:100%;
+  height:100%;
+  overflow:visible;
+}
+.chart-tip{
+  position:absolute;
+  z-index:2;
+  min-width:118px;
+  padding:7px 9px 6px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#0b1a14;
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+  color:#edf8f2;
+  pointer-events:none;
+  opacity:0;
+  transform:translate(-50%, calc(-100% - 10px));
+  transition:opacity .12s ease;
+  font:11px ui-monospace, monospace;
+}
+.chart-tip.is-on{opacity:1}
+.chart-tip small{
+  display:block;
+  color:var(--muted);
+  font:600 9px -apple-system, BlinkMacSystemFont, "Noto Sans SC", sans-serif;
+  letter-spacing:.02em;
+  margin-bottom:3px;
+}
+.chart-tip b{
+  color:var(--green);
+  font-weight:650;
+}

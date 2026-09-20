@@ -76,30 +76,136 @@ function renderSelects() {
   loadTarget();
 }
 
+function chartTimeLabel(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${month}/${day} ${hours}:${minutes}`;
+}
+
+function smoothPath(points) {
+  if (points.length === 1) {
+    const [point] = points;
+    return `M ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+  }
+  if (points.length === 2) {
+    return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)} L ${points[1].x.toFixed(2)} ${points[1].y.toFixed(2)}`;
+  }
+  let path = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const p0 = points[index - 1] || points[index];
+    const p1 = points[index];
+    const p2 = points[index + 1];
+    const p3 = points[index + 2] || p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    path += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return path;
+}
+
 function drawChart(points) {
+  const root = $("chart");
   if (!points.length) {
-    $("chart").innerHTML = "<span>历史数据仍在积累</span>";
-    ["stat-low", "stat-high", "stat-position"].forEach((id) => $(id).textContent = "—");
+    root.innerHTML = "<span>历史数据仍在积累</span>";
+    ["stat-low", "stat-high", "stat-position"].forEach((id) => {
+      $(id).textContent = "—";
+    });
     return;
   }
+
   const values = points.map((point) => Number(point.midpoint));
   const low = Math.min(...values);
   const high = Math.max(...values);
   const width = 340;
   const height = 82;
   const range = high - low || 1;
-  const coords = values.map((value, index) => {
-    const x = values.length === 1 ? width / 2 : index / (values.length - 1) * width;
-    const y = 7 + (high - value) / range * (height - 14);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
-  const area = `0,${height} ${coords} ${width},${height}`;
-  $("chart").innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${selectedPair} 七日走势图"><defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#56e39f" stop-opacity=".28"/><stop offset="1" stop-color="#56e39f" stop-opacity="0"/></linearGradient></defs><polygon points="${area}" fill="url(#fill)"/><polyline points="${coords}" fill="none" stroke="#56e39f" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
   const digits = selectedPair.includes("JPY") ? 3 : 4;
+  const plotted = values.map((value, index) => {
+    const x = values.length === 1 ? width / 2 : (index / (values.length - 1)) * width;
+    const y = 7 + ((high - value) / range) * (height - 14);
+    return {
+      x,
+      y,
+      value,
+      time: points[index].captured_at,
+    };
+  });
+
+  const line = smoothPath(plotted);
+  const area = `${line} L ${width} ${height} L 0 ${height} Z`;
+
+  root.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${selectedPair} 七日走势图">
+      <defs>
+        <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#56e39f" stop-opacity=".22"/>
+          <stop offset="1" stop-color="#56e39f" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${area}" fill="url(#fill)"></path>
+      <path d="${line}" fill="none" stroke="#56e39f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+      <line class="chart-guide" x1="0" y1="4" x2="0" y2="${height - 2}" stroke="#edf8f2" stroke-opacity=".18" stroke-dasharray="3 4" visibility="hidden"></line>
+      <circle class="chart-dot" cx="0" cy="0" r="3.6" fill="#07120e" stroke="#56e39f" stroke-width="2" visibility="hidden"></circle>
+      <rect class="chart-hit" x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
+    </svg>
+    <div class="chart-tip" aria-hidden="true">
+      <small>—</small>
+      <b>—</b>
+    </div>
+  `;
+
   $("stat-low").textContent = fmt(low, digits);
   $("stat-high").textContent = fmt(high, digits);
-  const position = high === low ? 50 : (values.at(-1) - low) / (high - low) * 100;
+  const position = high === low ? 50 : ((values.at(-1) - low) / (high - low)) * 100;
   $("stat-position").textContent = `${position.toFixed(0)}%`;
+
+  const svg = root.querySelector("svg");
+  const guide = root.querySelector(".chart-guide");
+  const dot = root.querySelector(".chart-dot");
+  const hit = root.querySelector(".chart-hit");
+  const tip = root.querySelector(".chart-tip");
+  const tipTime = tip.querySelector("small");
+  const tipValue = tip.querySelector("b");
+
+  const showAt = (index) => {
+    const point = plotted[index];
+    if (!point) return;
+    guide.setAttribute("x1", point.x);
+    guide.setAttribute("x2", point.x);
+    guide.setAttribute("visibility", "visible");
+    dot.setAttribute("cx", point.x);
+    dot.setAttribute("cy", point.y);
+    dot.setAttribute("visibility", "visible");
+    tipTime.textContent = chartTimeLabel(point.time);
+    tipValue.textContent = `${selectedPair}  ${fmt(point.value, digits)}`;
+    const percent = width ? (point.x / width) * 100 : 50;
+    tip.style.left = `${Math.min(92, Math.max(8, percent))}%`;
+    tip.style.top = `${(point.y / height) * 100}%`;
+    tip.classList.add("is-on");
+  };
+
+  const hideTip = () => {
+    guide.setAttribute("visibility", "hidden");
+    dot.setAttribute("visibility", "hidden");
+    tip.classList.remove("is-on");
+  };
+
+  const pickIndex = (event) => {
+    const box = svg.getBoundingClientRect();
+    if (!box.width) return 0;
+    const ratio = (event.clientX - box.left) / box.width;
+    const index = Math.round(ratio * (plotted.length - 1));
+    return Math.min(plotted.length - 1, Math.max(0, index));
+  };
+
+  hit.addEventListener("mousemove", (event) => showAt(pickIndex(event)));
+  hit.addEventListener("mouseleave", hideTip);
 }
 
 async function loadHistory() {
