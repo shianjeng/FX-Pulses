@@ -16,7 +16,7 @@
 </head>
 <body>
 <h1>无油猴冒烟测试</h1>
-<p>这个页面把 <code>fx-pulse-hover.user.js</code> 当普通页面脚本加载（GM_* 全部走降级分支：localStorage + fetch），
+<p>这个页面把 <code>fx-pulse-hover.user.js</code> 当普通页面脚本加载（GM_* 全部走降级分支：内存存储 + fetch，关闭页面不保留设置），
 用来在没有 Tampermonkey 的浏览器里验证 DOM 层：光标命中、矩形守卫、Shadow DOM 小窗、坐标贴边翻转。
 正常情况下你应该用 <code>test-page.html</code> + 油猴。</p>
 
