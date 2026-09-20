@@ -209,6 +209,7 @@ function drawChart(points) {
 }
 
 async function loadHistory() {
+  void loadOfficial();
   const version = ++historyVersion;
   $("trend-title").textContent = `${selectedPair} 走势`;
   const rate = currentRate();
@@ -292,8 +293,10 @@ async function loadData() {
     await loadHistory();
     const newest = Math.max(...rates.map((rate) => new Date(rate.captured_at).getTime()));
     $("status").textContent = `数据时间 ${new Date(newest).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} · ${rates[0].provider === "mock" ? "模拟数据 · 非真实行情" : rates[0].provider}`;
-  } catch (error) {
-    $("error").textContent = `${error.message}。请确认后端已经启动。`;
+  } catch {
+    $("error").textContent = "Failed to fetch。请确认后端已经启动。";
+    $("chart").textContent = "数据暂不可用，请检查连接";
+    $("official-status").textContent = "数据暂不可用，请检查连接";
     $("error").classList.remove("hidden");
     $("status").textContent = "连接失败";
   } finally {
@@ -330,7 +333,42 @@ $("copy-button").addEventListener("click", async () => {
   }
 });
 
+let officialVersion = 0;
+async function loadOfficial() {
+  const version = ++officialVersion;
+  const pair = selectedPair;
+  $("official-title").textContent = `${pair} 官方参考价`;
+  $("official-status").textContent = "正在读取官方参考价…";
+  $("official-rates").replaceChildren();
+  try {
+    const data = await request(`/comparisons/${pair}`);
+    if (version !== officialVersion) return;
+    const rows = data.official || [];
+    $("official-status").textContent = rows.length ? "每日参考汇率 · 非银行成交价" : "暂无官方参考价";
+    for (const item of rows) {
+      const row = document.createElement("div");
+      row.className = "official-row";
+      const label = document.createElement("div");
+      const name = document.createElement("b");
+      name.textContent = ({ "European Central Bank": "欧洲央行", "Bank of Canada": "加拿大央行" })[item.institution] || item.institution;
+      const date = document.createElement("small");
+      date.textContent = `${item.reference_date}${item.is_derived ? " · 交叉换算" : ""}`;
+      label.append(name, date);
+      const value = document.createElement("div");
+      value.className = "official-value";
+      const number = document.createElement("strong");
+      number.textContent = fmt(item.rate, pair.includes("JPY") ? 3 : 4);
+      value.append(number);
+      row.append(label, value);
+      $("official-rates").append(row);
+    }
+  } catch {
+    if (version === officialVersion) $("official-status").textContent = "官方参考价暂时不可用，请稍后刷新";
+  }
+}
+
 async function init() {
+  await globalThis.FXI18N?.ready;
   settings = await chrome.storage.local.get(DEFAULTS);
   await loadData();
 }
