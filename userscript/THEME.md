@@ -53,7 +53,7 @@
 | `badge-guess` | 「猜测」徽章（识别置信度低） | ambiguous 状态 | 文本，如 `猜测 0.50` |
 | `badge-adjust` | 「已校准」徽章（用户手动改过币种） | adjusted 状态 | 文本，如 `已校准` |
 | `warn-stale` | 汇率刷新失败、使用旧缓存 警告条 | stale 状态 | 文本，如 `汇率刷新失败 · 显示 2 分钟前的缓存` |
-| `warn-offline` | 使用内置离线示例表 警告条 | offline 状态 | 文本，如 `离线示例汇率 · 仅供参考` |
+| `warn-offline` | 无可用汇率的警告条 | offline 状态 | 文本，如 `汇率暂不可用，请稍后重试` |
 | `warn-error` | 完全取不到汇率 警告条 | error 状态 | 文本，如 `无法获取汇率` |
 | `actions` | 按钮行容器 | 仅 detail 模式 | `action-settings` + `action-copy` + `action-close` |
 | `action-settings` | 打开设置面板按钮 | detail 模式 | `<button>` |
@@ -111,7 +111,7 @@
 | `ambiguous` | 币种识别置信度低 | 出现 `badge-guess`（`猜测 0.50`）。需给「待用户确认」的视觉重量：warn 系徽章色。注意：两个下拉（`origin-select` / `target-select`）在任何状态下都存在，不属于 ambiguous 独有 |
 | `adjusted` | 用户手动校准过币种 | 出现 `badge-adjust`（`已校准`）；用 accent 系而非 warn 系，表达「已确定」 |
 | `stale` | 汇率刷新失败，用旧缓存 | 顶部/底部显示 `warn-stale` 条（warn 色 + 弱底）；`timestamp` 的缓存时长需被强调 |
-| `offline` | 网络不可用，用内置离线示例表 | 显示 `warn-offline` 条；整体可信度视觉降级（例如边框虚线） |
+| `offline` | 网络不可用，且没有有效缓存 | 显示 `warn-offline` 条；不提供示例换算结果 |
 | `error` | 完全取不到汇率 | 显示 `warn-error` 条（danger 色）；主数字位置改为不可用占位，保留原始金额与目标币种选择 |
 | `settings-open` | 设置面板打开 | `settings` 面板覆盖/紧贴卡片；需给出面板与卡片的层级关系、`settings-row` 分隔、`settings-actions` 底部固定区、`settings-memory` 列表样式 |
 | `size-s` | 小档 | 信息密度最高：主数字 + 两个下拉（目标/原始）+ 原始金额 + 时间戳（`rate-line`、多币种、证据、按钮行都不出现） |

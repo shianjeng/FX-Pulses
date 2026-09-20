@@ -1,4 +1,4 @@
-export default [{
+export default [{ignores: ["extension/amount-parser.js"]}, {
   files: ["extension/*.js", "tests/*.cjs"],
   languageOptions: {
     ecmaVersion: 2022,
