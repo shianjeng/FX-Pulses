@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
-from app.models import RateSnapshot
-from app.schemas import HistoryPoint, RateOut
-from app.services import latest_for_pair, percentage_change
+from app.models import OfficialRate, RateSnapshot
+from app.schemas import HistoryPoint, OfficialRateOut, RateComparisonOut, RateOut
+from app.services import latest_for_pair, latest_official_for_pair, percentage_change
 
 router = APIRouter()
 
@@ -39,6 +39,18 @@ def serialize_rate(db: Session, latest: RateSnapshot) -> RateOut:
     return result
 
 
+def serialize_official(
+    observation: OfficialRate, market: RateSnapshot | None = None,
+) -> OfficialRateOut:
+    result = OfficialRateOut.model_validate(observation)
+    if market:
+        result.market_deviation_percent = percentage_change(market.midpoint, observation.rate)
+    fetched_at = observation.fetched_at
+    if fetched_at.tzinfo is None:
+        result.fetched_at = fetched_at.replace(tzinfo=timezone.utc)
+    return result
+
+
 @router.get("/pairs", response_model=list[str])
 def pairs() -> list[str]:
     return get_settings().tracked_pairs
@@ -53,6 +65,42 @@ def rates(db: Session = Depends(get_db)) -> list[RateOut]:
         if latest:
             output.append(serialize_rate(db, latest))
     return output
+
+
+@router.get("/official-rates", response_model=list[OfficialRateOut])
+def official_rates(db: Session = Depends(get_db)) -> list[OfficialRateOut]:
+    output: list[OfficialRateOut] = []
+    for pair in get_settings().tracked_pairs:
+        base, quote = pair.split("/", 1)
+        output.extend(
+            serialize_official(item) for item in latest_official_for_pair(db, base, quote)
+        )
+    return output
+
+
+@router.get("/official-rates/{base}/{quote}", response_model=list[OfficialRateOut])
+def official_rate(base: str, quote: str, db: Session = Depends(get_db)) -> list[OfficialRateOut]:
+    base, quote = base.upper(), quote.upper()
+    if f"{base}/{quote}" not in get_settings().tracked_pairs:
+        raise HTTPException(status_code=404, detail="Currency pair is not tracked")
+    return [serialize_official(item) for item in latest_official_for_pair(db, base, quote)]
+
+
+@router.get("/comparisons/{base}/{quote}", response_model=RateComparisonOut)
+def comparison(base: str, quote: str, db: Session = Depends(get_db)) -> RateComparisonOut:
+    base, quote = base.upper(), quote.upper()
+    if f"{base}/{quote}" not in get_settings().tracked_pairs:
+        raise HTTPException(status_code=404, detail="Currency pair is not tracked")
+    market = latest_for_pair(db, base, quote)
+    return RateComparisonOut(
+        base_currency=base,
+        quote_currency=quote,
+        market=serialize_rate(db, market) if market else None,
+        official=[
+            serialize_official(item, market)
+            for item in latest_official_for_pair(db, base, quote)
+        ],
+    )
 
 
 @router.get("/rates/{base}/{quote}", response_model=RateOut)
