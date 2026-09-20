@@ -20,8 +20,8 @@ document.getElementById("settings-form").addEventListener("submit", async (event
     if (!response.ok) throw new Error(`服务器返回 ${response.status}`);
     await chrome.storage.local.set({ apiUrl });
     result.textContent = "连接成功，设置已保存。";
-  } catch (error) {
-    result.textContent = `保存失败：${error.message}`;
+  } catch {
+    result.textContent = "数据暂不可用，请检查连接";
   }
 });
 
