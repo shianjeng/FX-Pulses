@@ -52,7 +52,9 @@
         <div id="watchlist-options" class="watchlist-options"></div>
       </details>
 
+      <p class="hint">市场中间价 = (买入价 + 卖出价) ÷ 2，不是中国人民银行公布的人民币汇率中间价，也不代表银行最终成交价。仅供参考。</p>
       <footer><span>Midpoint = (Bid + Ask) ÷ 2</span><button id="copy-button">复制当前汇率</button></footer>
+      <label id="copy-fallback" class="hidden hint">自动复制失败，请按 Ctrl/Cmd+C 手动复制<input id="copy-value" readonly /></label>
     </main>
     <script src="popup.js"></script>
   </body>
