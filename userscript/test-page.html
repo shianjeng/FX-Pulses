@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FX Pulse Hover · 识别自检页</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 28px 32px 120px; background: #07120e; color: #e8f5ee;
+         font: 14px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif; }
+  h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: -.3px; }
+  h2 { font-size: 15px; margin: 34px 0 10px; color: #56e39f; letter-spacing: .04em; }
+  p.lead { color: #8ea79a; margin: 0 0 18px; max-width: 940px; }
+  .toolbar { position: sticky; top: 0; z-index: 5; display: flex; gap: 8px; align-items: center;
+             flex-wrap: wrap; padding: 10px 0; background: #07120e; border-bottom: 1px solid #1d3329; }
+  button { font: 12px/1 inherit; color: #d6ece0; background: #14271e; border: 1px solid #2f5c47;
+           border-radius: 6px; padding: 7px 10px; cursor: pointer; }
+  button:hover { background: #1d3a2b; color: #fff; }
+  button[disabled] { opacity: .55; cursor: default; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { padding: 7px 9px; border-bottom: 1px solid #16291f; vertical-align: top; text-align: left; }
+  th { color: #7f9c8d; font: 600 11px/1.4 ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; }
+  td.id { font: 11px/1.5 ui-monospace, monospace; color: #7f9c8d; white-space: nowrap; }
+  .t { font-size: 16px; padding: 3px 6px; border: 1px dashed #2f5c47; border-radius: 5px; background: #0d1b15; display: inline-block; }
+  code { font: 12px/1.5 ui-monospace, monospace; color: #9fd8bb; background: #0d1b15; padding: 1px 5px; border-radius: 4px; }
+  small { color: #7f9c8d; }
+  .ok { color: #56e39f; }
+  .bad { color: #ff8d8d; }
+  .warn { color: #ffbf6b; }
+  .actual { font: 11px/1.5 ui-monospace, monospace; color: #b8d5c6; max-width: 460px; }
+  .box { border: 1px solid #1d3329; border-radius: 10px; padding: 14px 16px; margin: 10px 0; background: #0b1712; }
+  .diag { border: 1px solid #2f5c47; border-radius: 10px; padding: 14px 16px; margin: 14px 0 26px; background: #0c1c15; }
+  .diag table { width: auto; }
+  .diag td { border: 0; padding: 3px 14px 3px 0; font: 12px/1.7 ui-monospace, monospace; }
+  #fxph-verdict { margin: 10px 0 6px; font-weight: 600; }
+  ol.checklist { color: #b8d5c6; margin: 6px 0 0 18px; padding: 0; }
+  ol.checklist li { margin: 3px 0; }
+  .target { display: inline-block; padding: 10px 14px; margin: 4px 8px 4px 0; border: 1px dashed #2f5c47; border-radius: 8px; }
+  .spacer { display: inline-block; width: 420px; color: #3d5a4b; }
+  iframe { width: 100%; height: 90px; border: 1px solid #1d3329; border-radius: 8px; background: #fff; }
+  textarea, input, [contenteditable] { font: 13px/1.5 ui-monospace, monospace; background: #0d1b15; color: #e8f5ee;
+    border: 1px solid #2f5c47; border-radius: 6px; padding: 7px; }
+</style>
+</head>
+<body>
+
+<h1>FX Pulse Hover · 识别自检页</h1>
+<p class="lead">
+  这个页面的自检<b>由脚本自己驱动</b>：脚本读取每行的 <code>data-fxph-*</code> 属性、跑用例、把结果写回表格。
+  所以即使油猴沙箱不把 API 暴露给页面，自检照样能用。<br />
+  最直接的「脚本到底活没活」测试：<b>把鼠标停在下面任意虚线框里的金额上 0.3 秒，看有没有弹出小窗。</b><br />
+  v0.2：工具栏里多了「设置面板」（悬停时间/窗口大小/默认货币/目标币种/校准记忆/主题 CSS）和「模式：简单 ↔ 详细」；
+  用例最后一节是<b>混合识别</b>——同一段文本在不同「页面画像」（文字体系比重、语言、域名、全文货币标记普查、邻近前后文）下应该判出不同币种。
+</p>
+
+<div class="diag">
+  <strong>脚本状态诊断</strong>（三个信号互相独立，DOM 那两个最可靠）
+  <table>
+    <tr><td>① DOM 宿主 <code>#fxph-host</code></td><td id="d-host">检查中…</td></tr>
+    <tr><td>② <code>documentElement.dataset.fxph</code></td><td id="d-ds">检查中…</td></tr>
+    <tr><td>③ <code>window.__fxph</code>（页面 API）</td><td id="d-api">检查中…</td></tr>
+    <tr><td>④ <code>dataset.fxphError</code>（初始化异常）</td><td id="d-err">—</td></tr>
+  </table>
+  <p id="fxph-verdict">检查中…</p>
+  <ol class="checklist" id="fxph-checklist" hidden>
+    <li>Tampermonkey 里这个脚本是「已启用」状态（不是草稿、不是禁用）。</li>
+    <li><code>chrome://extensions</code> → Tampermonkey → 详情 → 「允许访问文件网址」必须打开。这是 file:// 页面的头号原因。</li>
+    <li>脚本头部 <code>// ==UserScript==</code> 必须在文件的<b>第一行第一字节</b>：前面不能有空行、空格或 BOM，否则整段元数据失效，<code>@match</code> 不生效。</li>
+    <li>脚本里要有 <code>@match file:///*</code>（或 <code>@include file://*</code>）。</li>
+    <li>点 Tampermonkey 图标，看它是否列出本页。</li>
+    <li>先随便打开一个真实网站（比如 amazon.com）：如果那里能弹窗、只有本页不行，那就纯粹是 file:// 权限问题。</li>
+  </ol>
+  <p>
+    <button id="fxph-fallback-page">以普通页面脚本加载（不用油猴，先跑起来）</button>
+    <button id="fxph-copy-diag">复制诊断信息</button>
+  </p>
+  <p><small>「以普通页面脚本加载」会把 <code>fx-pulse-hover.user.js</code> 当普通 &lt;script&gt; 注入：GM_* 全部走降级分支（localStorage + fetch），
+  识别与小窗行为和油猴里一致，只是没有菜单命令、也不读油猴里的配置。</small></p>
+</div>
+
+<div id="fxph-fixture">
+  <div class="toolbar">
+    <button id="fxph-run">运行解析自检</button>
+    <button id="fxph-scan">扫描整页（__fxph.scan）</button>
+    <button id="fxph-stats">打印统计</button>
+    <button id="fxph-refresh">刷新汇率（忽略缓存）</button>
+    <button id="fxph-hide">关掉小窗</button>
+    <button id="fxph-settings">设置面板</button>
+    <button id="fxph-mode">模式：简单</button>
+    <span class="summary" id="fxph-summary"><small>等待脚本…</small></span>
+  </div>
+  <p><small id="fxph-status">汇率状态：等待脚本…</small></p>
+
+  <section lang="zh-CN">
+    <h2>中文语境 lang=zh-CN · ¥ 应判为 CNY</h2>
+    <table><thead><tr><th>用例</th><th>页面文本（悬停这里）</th><th>期望</th><th>自检结果</th><th>说明</th></tr></thead><tbody id="tb-zh"></tbody></table>
+  </section>
+
+  <section lang="ja">
+    <h2>日文语境 lang=ja · 同样的 ¥1,000 应判为 JPY（差 20 倍，最关键的一条）</h2>
+    <table><thead><tr><th>用例</th><th>页面文本（悬停这里）</th><th>期望</th><th>自检结果</th><th>说明</th></tr></thead><tbody id="tb-ja"></tbody></table>
+  </section>
+
+  <section lang="en">
+    <h2>英文语境 lang=en-US · 裸 $ 保留候选币种</h2>
+    <table><thead><tr><th>用例</th><th>页面文本（悬停这里）</th><th>期望</th><th>自检结果</th><th>说明</th></tr></thead><tbody id="tb-en"></tbody></table>
+  </section>
+
+  <section lang="zh-CN">
+    <h2>误判陷阱 · 悬停上去应当「什么都不弹」</h2>
+    <table><thead><tr><th>用例</th><th>页面文本（悬停这里）</th><th>期望</th><th>自检结果</th><th>说明</th></tr></thead><tbody id="tb-no"></tbody></table>
+  </section>
+</div>
+
+<section lang="zh-CN">
+  <h2>DOM 边界 · 只能手动悬停验证</h2>
+  <div class="box">
+    <p><small>① 真实商品链接 / 按钮里的价格 —— <b>应该弹</b>（电商站全靠这个）：</small></p>
+    <a href="#x" class="target">限时特惠 $1,299.00</a>
+    <button class="target">立即购买 ¥8,999</button>
+    <span class="target" style="font-size:9px">极小字号 ¥9.9</span>
+
+    <p style="margin-top:18px"><small>② 表单与代码 —— <b>不应该弹</b>（用户正在输入 / 这不是正文）：</small></p>
+    <input class="target" value="$1,299" size="12" />
+    <textarea class="target" rows="1">总价 $1,299</textarea>
+    <span class="target" contenteditable="true" style="padding:8px">可编辑：$1,299</span>
+    <code class="target">$1,299.00</code>
+    <pre class="target" style="display:inline-block;margin:0">$1,299.00</pre>
+
+    <p style="margin-top:18px"><small>③ 光标靠近但不落在金额上 —— <b>不应该弹</b>（矩形框守卫）：</small></p>
+    <div class="target">
+      这是一段很长的说明文字，价格在很远的右边<span class="spacer">·</span>$1,299.00
+    </div>
+
+    <p style="margin-top:18px"><small>④ iframe 内的金额：油猴脚本带 <code>@noframes</code>，<b>不会有反应</b>（跨域 iframe 是硬墙）：</small></p>
+    <iframe srcdoc="<p style='font-family:sans-serif'>iframe 内的价格：$1,299.00</p>"></iframe>
+  </div>
+</section>
+
+<section lang="zh-CN">
+  <h2>真实页面建议清单（装好脚本后自己走一遍）</h2>
+  <div class="box">
+    <p><small>
+      Amazon.com（$）、Amazon.co.jp（￥/円）、楽天（円）、淘宝 / 京东（¥/元/万）、Booking（€/$）、
+      一个中文新闻站（大量裸数字 + 年份）、一个 GitHub 页面（代码块里的数字），
+      各自悬停 20 个金额，再点「打印统计」看 <code>__fxph.stats.dump()</code> 的 rejects 分布。
+    </small></p>
+  </div>
+</section>
+
+<script src="cases.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- 1. 渲染用例行（并挂上脚本要读的 data-fxph-* 属性） ---------- */
+
+  function sectionOf(c) {
+    if (c.expect === null || c.expect === '') return 'tb-no';
+    if (c.lang === 'ja') return 'tb-ja';
+    if (c.lang === 'en' || c.lang === 'en-US') return 'tb-en';
+    return 'tb-zh';
+  }
+
+  function row(c) {
+    const tr = document.createElement('tr');
+
+    // 脚本读这些属性来跑用例，不再依赖 window.__fxph
+    tr.dataset.fxphText = c.text;
+    tr.dataset.fxphExpect = c.expect === null ? '' : c.expect;
+    tr.dataset.fxphLang = c.lang === undefined ? 'zh-CN' : c.lang;
+    tr.dataset.fxphHost = c.host || 'example.com';
+    if (c.signals) tr.dataset.fxphSignals = c.signals;
+    if (c.profile) tr.dataset.fxphProfile = JSON.stringify(c.profile);   // v0.2 混合识别的页面画像
+    if (c.amb) tr.dataset.fxphAmb = '1';
+
+    const id = document.createElement('td');
+    id.className = 'id';
+    id.textContent = c.id;
+    tr.appendChild(id);
+
+    const txt = document.createElement('td');
+    const span = document.createElement('span');
+    span.className = 't';
+    span.textContent = c.text;   // 页面文本与用例字符串逐字一致
+    txt.appendChild(span);
+    tr.appendChild(txt);
+
+    const exp = document.createElement('td');
+    const code = document.createElement('code');
+    code.textContent = c.expect === null ? '不应识别' : c.expect + (c.amb ? ' (有候选)' : '');
+    exp.appendChild(code);
+    tr.appendChild(exp);
+
+    const act = document.createElement('td');
+    act.className = 'actual';
+    act.dataset.fxphResult = '';
+    act.textContent = '—';
+    tr.appendChild(act);
+
+    const note = document.createElement('td');
+    const small = document.createElement('small');
+    small.textContent = c.note || '';
+    note.appendChild(small);
+    const meta = document.createElement('small');
+    meta.textContent = ' ［ctx: lang=' + tr.dataset.fxphLang + ', host=' + tr.dataset.fxphHost +
+      (c.signals ? ', signals≠空' : '') + (c.profile ? ', profile≠空' : '') + '］';
+    note.appendChild(meta);
+    tr.appendChild(note);
+
+    return tr;
+  }
+
+  for (const c of FXPH_CASES) {
+    const tb = document.getElementById(sectionOf(c));
+    if (tb) tb.appendChild(row(c));
+  }
+
+  /* ---------- 2. 诊断面板 ---------- */
+
+  const $ = function (id) { return document.getElementById(id); };
+  const set = function (id, text, cls) {
+    const el = $(id);
+    if (el) { el.textContent = text; el.className = cls || ''; }
+  };
+
+  function diagSnapshot() {
+    const hostEl = document.getElementById('fxph-host');
+    const ds = document.documentElement.dataset.fxph || '';
+    const dsErr = document.documentElement.dataset.fxphError || '';
+    let apiVersion = '';
+    try { apiVersion = (window.__fxph && window.__fxph.version) || ''; } catch (e) { apiVersion = ''; }
+    return {
+      url: location.href,
+      ua: navigator.userAgent,
+      hostElement: !!hostEl,
+      datasetFxph: ds,
+      datasetFxphError: dsErr,
+      pageApi: apiVersion,
+      scripts: [].slice.call(document.scripts).map(function (s) { return s.src || '(inline)'; }),
+    };
+  }
+
+  function probe() {
+    const s = diagSnapshot();
+    set('d-host', s.hostElement ? '✓ 存在（脚本已注入并建好宿主）' : '✗ 不存在', s.hostElement ? 'ok' : 'bad');
+    set('d-ds', s.datasetFxph ? '✓ v' + s.datasetFxph : '✗ 未写入', s.datasetFxph ? 'ok' : 'bad');
+    set('d-api', s.pageApi ? '✓ v' + s.pageApi : '✗ 未桥接到页面', s.pageApi ? 'ok' : 'warn');
+    set('d-err', s.datasetFxphError || '—', s.datasetFxphError ? 'bad' : '');
+
+    const v = $('fxph-verdict');
+    const list = $('fxph-checklist');
+    if (s.datasetFxphError) {
+      v.className = 'bad';
+      v.textContent = '脚本注入了，但初始化抛错：' + s.datasetFxphError + ' —— 看 console 的 [FXPH] 初始化失败。';
+      list.hidden = true;
+    } else if (s.hostElement && s.datasetFxph) {
+      v.className = s.pageApi ? 'ok' : 'warn';
+      v.textContent = s.pageApi
+        ? '脚本运行正常，页面也能直接调用 __fxph。'
+        : '脚本在跑（① ② 都在），只是 window.__fxph 没桥接过来 —— 油猴沙箱下常见，不影响悬停和自检按钮，只是页面 console 里不能用 __fxph。';
+      list.hidden = true;
+    } else {
+      v.className = 'bad';
+      v.textContent = '脚本完全没有注入本页。按下面清单逐条查；想先把功能跑起来就点上面的「以普通页面脚本加载」。';
+      list.hidden = false;
+    }
+    return s;
+  }
+
+  probe();
+  [400, 1500, 3000].forEach(function (ms) { setTimeout(probe, ms); });
+  document.addEventListener('fxph-ready', function () { setTimeout(probe, 60); });
+
+  $('fxph-copy-diag').addEventListener('click', function () {
+    const s = diagSnapshot();
+    try {
+      if (navigator.clipboard) navigator.clipboard.writeText(JSON.stringify(s, null, 2));
+    } catch (e) { /* 忽略 */ }
+    console.log('[FXPH] 诊断信息', s);
+    const btn = this;
+    btn.textContent = '已复制（也在 console 里）';
+    setTimeout(function () { btn.textContent = '复制诊断信息'; }, 1500);
+  });
+
+  $('fxph-fallback-page').addEventListener('click', function () {
+    const btn = this;
+    if (document.getElementById('fxph-page-script')) return;
+    if (document.documentElement.dataset.fxph) {
+      btn.textContent = '脚本已在运行，无需降级加载';   // 避免注入第二份（会出现两个小窗）
+      return;
+    }
+    const s = document.createElement('script');
+    s.id = 'fxph-page-script';
+    s.src = 'fx-pulse-hover.user.js';
+    s.onerror = function () { btn.textContent = '加载失败：确认本页与脚本在同一目录'; };
+    document.body.appendChild(s);
+    btn.disabled = true;
+    btn.textContent = '已注入，正在检测…';
+    [300, 900, 2000].forEach(function (ms) { setTimeout(probe, ms); });
+  });
+
+  /* 脚本没跑时，工具栏按钮别变成静默无反应 */
+  ['fxph-run', 'fxph-scan', 'fxph-stats', 'fxph-refresh', 'fxph-hide', 'fxph-settings', 'fxph-mode'].forEach(function (id) {
+    const b = $(id);
+    if (b) b.addEventListener('click', function () {
+      if (!document.documentElement.dataset.fxph) {
+        $('fxph-summary').innerHTML = '<small class="bad">脚本没运行，这些按钮由脚本接管 —— 看上面的诊断</small>';
+        probe();
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
