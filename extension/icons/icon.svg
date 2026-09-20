@@ -1,8 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="FX Pulse">
-  <defs>
-    <clipPath id="fx-pulse-clip"><circle cx="64" cy="64" r="64"/></clipPath>
-  </defs>
   <circle cx="64" cy="64" r="64" fill="#07120e"/>
-  <path clip-path="url(#fx-pulse-clip)" fill="#56e39f" d="M0 84 L28 84 L48 40 L68 92 L92 52 L128 52 V128 H0 Z"/>
+  <g fill="#56e39f">
+    <rect x="39" y="18" width="51" height="22"/>
+    <rect x="26" y="38" width="77" height="12"/>
+    <rect x="26" y="50" width="14" height="52"/>
+    <rect x="47" y="50" width="14" height="52"/>
+    <rect x="68" y="50" width="14" height="52"/>
+    <rect x="89" y="50" width="14" height="52"/>
+    <rect x="34" y="102" width="60" height="4"/>
+    <rect x="26" y="106" width="76" height="4"/>
+  </g>
   <circle cx="64" cy="64" r="60" fill="none" stroke="#56e39f" stroke-width="8"/>
 </svg>
