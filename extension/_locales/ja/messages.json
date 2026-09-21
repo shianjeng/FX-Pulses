@@ -3,7 +3,7 @@
     "message": "FX Pulse — 手元で為替レート"
   },
   "extensionDescription": {
-    "message": "ログイン不要で人民元・米ドル・円の仲値、推移、通貨換算を確認できます。"
+    "message": "ログイン不要で市場レート・推移・公式参考レートを確認し、主要通貨を換算できます。"
   },
   "noAccount": {
     "message": "登録不要"
@@ -110,11 +110,8 @@
   "convertedLabel": {
     "message": "換算結果"
   },
-  "converterPair": {
-    "message": "通貨ペア"
-  },
   "converterHint": {
-    "message": "仲値での概算です。銀行手数料・スプレッドは含みません。"
+    "message": "市場仲値を優先し、取得できない場合は出典と日付付きの公式日次参考レートを使用します。手数料・スプレッドは含みません。"
   },
   "targetTitle": {
     "message": "目標レート"
@@ -442,5 +439,26 @@
   },
   "ask": {
     "message": "売値"
+  },
+  "converterFromCurrency": {
+    "message": "換算元の通貨"
+  },
+  "converterToCurrency": {
+    "message": "換算先の通貨"
+  },
+  "converterNoRate": {
+    "message": "利用可能なレートがありません。収集待ち、または両通貨を扱う同一機関がありません。"
+  },
+  "converterSameCurrency": {
+    "message": "同一通貨 · 1:1"
+  },
+  "converterOfficialSource": {
+    "message": "公式日次参考レート · $1 · $2"
+  },
+  "converterMarketSource": {
+    "message": "市場仲値 · $1"
+  },
+  "loadingConverterRate": {
+    "message": "換算レートを取得中…"
   }
 }

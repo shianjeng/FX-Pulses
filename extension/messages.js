@@ -2,7 +2,7 @@
 globalThis.FXMessages = {
   "zh": {
     "extensionName": "FX Pulse — 随手汇率",
-    "extensionDescription": "免登录查看人民币、美元和日元的市场中间价、走势与快捷换算。",
+    "extensionDescription": "免登录查看市场行情、走势与官方参考价，支持多种主流货币换算。",
     "noAccount": "免登录",
     "settings": "设置",
     "refresh": "刷新",
@@ -38,8 +38,7 @@ globalThis.FXMessages = {
     "reverse": "反转",
     "amountLabel": "金额",
     "convertedLabel": "换算结果",
-    "converterPair": "换算货币对",
-    "converterHint": "按市场中间价估算，不包含银行手续费与点差。",
+    "converterHint": "优先使用市场中间价；无市场行情时使用标明来源和日期的官方日参考价。不包含手续费与点差。",
     "targetTitle": "目标价状态",
     "targetOnOpen": "仅打开插件时检查",
     "targetBackground": "后台定时检查",
@@ -148,11 +147,18 @@ globalThis.FXMessages = {
     "hoverManual": "自动复制失败，请手动复制",
     "hoverOfficial": "官方参考价 · 日更 · 非成交价",
     "bid": "买入",
-    "ask": "卖出"
+    "ask": "卖出",
+    "converterFromCurrency": "源货币",
+    "converterToCurrency": "目标货币",
+    "converterNoRate": "暂无可用汇率：可能尚未采集，或没有同一机构覆盖这两种货币。",
+    "converterSameCurrency": "同币种换算 · 1:1",
+    "converterOfficialSource": "官方日参考价 · $1 · $2",
+    "converterMarketSource": "市场中间价 · $1",
+    "loadingConverterRate": "正在读取换算汇率…"
   },
   "en": {
     "extensionName": "FX Pulse — exchange rates at hand",
-    "extensionDescription": "Login-free market midpoints, trends and quick conversion for CNY, USD and JPY.",
+    "extensionDescription": "Login-free market quotes, trends, official references and conversion across major currencies.",
     "noAccount": "No account",
     "settings": "Settings",
     "refresh": "Refresh",
@@ -188,8 +194,7 @@ globalThis.FXMessages = {
     "reverse": "Swap",
     "amountLabel": "Amount",
     "convertedLabel": "You receive",
-    "converterPair": "Currency pair",
-    "converterHint": "Estimated at the midpoint; bank fees and spreads excluded.",
+    "converterHint": "Uses market midpoints when available; otherwise an official daily reference with source and date. Fees and spreads excluded.",
     "targetTitle": "Rate alerts",
     "targetOnOpen": "Checked on opening",
     "targetBackground": "Checked in the background",
@@ -298,11 +303,18 @@ globalThis.FXMessages = {
     "hoverManual": "Automatic copy failed. Copy the selected text.",
     "hoverOfficial": "Official reference · daily · not a dealing rate",
     "bid": "BID",
-    "ask": "ASK"
+    "ask": "ASK",
+    "converterFromCurrency": "From currency",
+    "converterToCurrency": "To currency",
+    "converterNoRate": "No rate available: collection may be pending, or no single institution covers both currencies.",
+    "converterSameCurrency": "Same currency · 1:1",
+    "converterOfficialSource": "Official daily reference · $1 · $2",
+    "converterMarketSource": "Market midpoint · $1",
+    "loadingConverterRate": "Loading conversion rate…"
   },
   "ja": {
     "extensionName": "FX Pulse — 手元で為替レート",
-    "extensionDescription": "ログイン不要で人民元・米ドル・円の仲値、推移、通貨換算を確認できます。",
+    "extensionDescription": "ログイン不要で市場レート・推移・公式参考レートを確認し、主要通貨を換算できます。",
     "noAccount": "登録不要",
     "settings": "設定",
     "refresh": "更新",
@@ -338,8 +350,7 @@ globalThis.FXMessages = {
     "reverse": "入れ替え",
     "amountLabel": "金額",
     "convertedLabel": "換算結果",
-    "converterPair": "通貨ペア",
-    "converterHint": "仲値での概算です。銀行手数料・スプレッドは含みません。",
+    "converterHint": "市場仲値を優先し、取得できない場合は出典と日付付きの公式日次参考レートを使用します。手数料・スプレッドは含みません。",
     "targetTitle": "目標レート",
     "targetOnOpen": "起動時のみ確認",
     "targetBackground": "バックグラウンドで確認",
@@ -448,6 +459,13 @@ globalThis.FXMessages = {
     "hoverManual": "自動コピーに失敗しました。選択した文字列をコピーしてください。",
     "hoverOfficial": "公式参考レート · 日次 · 約定レートではありません",
     "bid": "買値",
-    "ask": "売値"
+    "ask": "売値",
+    "converterFromCurrency": "換算元の通貨",
+    "converterToCurrency": "換算先の通貨",
+    "converterNoRate": "利用可能なレートがありません。収集待ち、または両通貨を扱う同一機関がありません。",
+    "converterSameCurrency": "同一通貨 · 1:1",
+    "converterOfficialSource": "公式日次参考レート · $1 · $2",
+    "converterMarketSource": "市場仲値 · $1",
+    "loadingConverterRate": "換算レートを取得中…"
   }
 };

@@ -1,6 +1,8 @@
 const DEFAULTS = {
   apiUrl: "http://localhost:8000/api/v1",
   watchlist: ["USD/CNY", "USD/JPY", "CNY/JPY"],
+  converterFrom: "USD",
+  converterTo: "CNY",
   targets: {},
   alertsEnabled: false,
 };
@@ -8,10 +10,12 @@ const DEFAULTS = {
 let settings = { ...DEFAULTS };
 let rates = [];
 let selectedPair = "USD/CNY";
-let reversed = false;
 let historyVersion = 0;
 let refreshVersion = 0;
+let converterVersion = 0;
 let supportedPairs = [];
+let officialCurrencies = [];
+let converterQuote = null;
 let offline = false;
 const validPair = pair => typeof pair === "string" && /^[A-Z]{3}\/[A-Z]{3}$/.test(pair);
 
@@ -95,15 +99,23 @@ function renderRates() {
 function renderSelects() {
   const pairs = [...new Set([...supportedPairs, ...settings.watchlist])];
   const options = pairs.map(pair => `<option value="${pair}">${pair}</option>`).join("");
-  $("converter-pair").innerHTML = options;
   $("target-pair").innerHTML = options;
-  $("converter-pair").value = selectedPair;
   $("target-pair").value = selectedPair;
+  const currencies = [...new Set([
+    ...pairs.flatMap(pair => pair.split("/")),
+    ...officialCurrencies,
+  ])].filter(currency => /^[A-Z]{3}$/.test(currency)).sort();
+  const currencyOptions = currencies.map(currency => `<option value="${currency}">${currency}</option>`).join("");
+  $("converter-from").innerHTML = currencyOptions;
+  $("converter-to").innerHTML = currencyOptions;
+  const [fallbackFrom, fallbackTo] = selectedPair.split("/");
+  $("converter-from").value = currencies.includes(settings.converterFrom) ? settings.converterFrom : fallbackFrom;
+  $("converter-to").value = currencies.includes(settings.converterTo) ? settings.converterTo : fallbackTo;
   $("watchlist-options").innerHTML = pairs.map((pair) => {
     return `<label class="watch-option"><span>${pair}</span><input type="checkbox" value="${pair}" ${settings.watchlist.includes(pair) ? "checked" : ""}></label>`;
   }).join("");
   document.querySelectorAll(".watch-option input").forEach((input) => input.addEventListener("change", saveWatchlist));
-  updateConverter();
+  void loadConverterRate();
   loadTarget();
 }
 
@@ -257,23 +269,44 @@ async function loadHistory() {
 async function selectPair(pair) {
   selectedPair = pair;
   renderRates();
-  $("converter-pair").value = pair;
   $("target-pair").value = pair;
-  reversed = false;
-  updateConverter();
+  [settings.converterFrom, settings.converterTo] = pair.split("/");
+  $("converter-from").value = settings.converterFrom;
+  $("converter-to").value = settings.converterTo;
+  await chrome.storage.local.set({converterFrom: settings.converterFrom, converterTo: settings.converterTo});
+  void loadConverterRate();
   loadTarget();
   await loadHistory();
 }
 
+function marketConverterQuote(base, quote) {
+  const direct = rates.find(item => item.base_currency === base && item.quote_currency === quote);
+  if (direct && Number.isFinite(Number(direct.midpoint)) && Number(direct.midpoint) > 0) return {rate: Number(direct.midpoint), market: direct};
+  const reverse = rates.find(item => item.base_currency === quote && item.quote_currency === base);
+  if (reverse && Number.isFinite(Number(reverse.midpoint)) && Number(reverse.midpoint) > 0) return {rate: 1 / Number(reverse.midpoint), market: reverse};
+  return null;
+}
+
+function converterStatus() {
+  if (!converterQuote) return t("converterNoRate");
+  if (converterQuote.kind === "identity") return t("converterSameCurrency");
+  if (converterQuote.kind === "official") {
+    const key = INSTITUTIONS[converterQuote.institution];
+    return t("converterOfficialSource", key ? t(key) : converterQuote.institution, converterQuote.referenceDate);
+  }
+  const provider = converterQuote.market.provider === "mock" ? t("mockData") : t("providerLive");
+  const freshness = offline ? t("offlineCache") : converterQuote.market.is_stale ? t("outdated") : "";
+  return [t("converterMarketSource", provider), freshness].filter(Boolean).join(" · ");
+}
+
 function updateConverter() {
-  const pair = $("converter-pair").value || selectedPair;
-  const rate = rates.find((item) => pairOf(item) === pair);
-  const [base, quote] = pair.split("/");
-  $("from-label").textContent = reversed ? quote : base;
-  $("to-label").textContent = reversed ? base : quote;
+  const base = $("converter-from").value;
+  const quote = $("converter-to").value;
+  $("from-label").textContent = `${t("amountLabel")} (${base})`;
+  $("to-label").textContent = `${t("convertedLabel")} (${quote})`;
   $("amount-error").textContent = "";
-  $("converter-status").textContent = offline ? t("offlineCache") : rate?.is_stale ? t("outdated") : "";
-  if (!rate) { $("converted").textContent = "—"; return; }
+  $("converter-status").textContent = converterStatus();
+  if (!converterQuote) { $("converted").textContent = "—"; return; }
   const raw = $("amount").value.trim();
   const amount = Number(raw);
   if (!raw || !Number.isFinite(amount) || amount < 0 || amount > 1e12) {
@@ -281,12 +314,37 @@ function updateConverter() {
     $("amount-error").textContent = t("amountRange");
     return;
   }
-  const midpoint = Number(rate.midpoint);
-  const value = reversed ? amount / midpoint : amount * midpoint;
-  if (!Number.isFinite(value) || midpoint <= 0) { $("converted").textContent = "—"; return; }
-  $("from-label").textContent = reversed ? quote : base;
-  $("to-label").textContent = reversed ? base : quote;
-  $("converted").textContent = `${fmt(value, 2)} ${reversed ? base : quote}`;
+  const value = amount * converterQuote.rate;
+  if (!Number.isFinite(value) || converterQuote.rate <= 0) { $("converted").textContent = "—"; return; }
+  $("converted").textContent = `${fmt(value, 2)} ${quote}`;
+}
+
+async function loadConverterRate() {
+  const version = ++converterVersion;
+  const base = $("converter-from").value;
+  const quote = $("converter-to").value;
+  converterQuote = null;
+  updateConverter();
+  $("converter-status").textContent = t("loadingConverterRate");
+  if (!base || !quote) return;
+  if (base === quote) converterQuote = {kind: "identity", rate: 1};
+  else {
+    const market = marketConverterQuote(base, quote);
+    if (market) converterQuote = {kind: "market", ...market};
+  }
+  if (converterQuote) { updateConverter(); return; }
+  try {
+    const rows = await request(`/official-rates/${base}/${quote}`);
+    if (version !== converterVersion) return;
+    const newest = Array.isArray(rows) ? rows
+      .filter(item => Number.isFinite(Number(item?.rate)) && Number(item.rate) > 0 && /^\d{4}-\d{2}-\d{2}$/.test(item?.reference_date || ""))
+      .sort((a, b) => b.reference_date.localeCompare(a.reference_date))[0] : null;
+    if (newest) converterQuote = {
+      kind: "official", rate: Number(newest.rate), institution: newest.institution,
+      referenceDate: newest.reference_date,
+    };
+  } catch { /* A valid currency can still lack one institution covering both sides. */ }
+  if (version === converterVersion) updateConverter();
 }
 
 function targetStatus(pair) {
@@ -327,16 +385,24 @@ async function loadData(force = false) {
   $("refresh-button").classList.add("spinning");
   $("error").classList.add("hidden");
   try {
-    let nextPairs, nextRates, snapshotOffline = false;
+    let nextPairs, nextRates, coverage, snapshotOffline = false;
     if (chrome.runtime?.sendMessage) {
-      const response = await chrome.runtime.sendMessage({type: "FX_SNAPSHOT", force: force === true});
+      const [response, nextCoverage] = await Promise.all([
+        chrome.runtime.sendMessage({type: "FX_SNAPSHOT", force: force === true}),
+        request("/currencies").catch(() => null),
+      ]);
       if (!response?.ok) throw new Error(response?.error || t("cannotConnect"));
       ({pairs: nextPairs, rates: nextRates, offline: snapshotOffline} = response.data);
-    } else [nextPairs, nextRates] = await Promise.all([request("/pairs"), request("/rates")]);
+      coverage = nextCoverage;
+    } else [nextPairs, nextRates, coverage] = await Promise.all([
+      request("/pairs"), request("/rates"), request("/currencies").catch(() => null),
+    ]);
     if (version !== refreshVersion) return;
     if (!Array.isArray(nextPairs) || !nextPairs.every(validPair) || !Array.isArray(nextRates) || !nextRates.every(rate => validPair(pairOf(rate)))) throw new Error(t("badFormat"));
     supportedPairs = nextPairs;
     rates = nextRates;
+    officialCurrencies = Array.isArray(coverage?.official_currencies)
+      ? coverage.official_currencies.filter(currency => /^[A-Z]{3}$/.test(currency)) : officialCurrencies;
     offline = snapshotOffline;
     await reconcileWatchlist();
     if (version !== refreshVersion) return;
@@ -356,6 +422,7 @@ async function loadData(force = false) {
     offline = true;
     historyVersion++;
     officialVersion++;
+    converterVersion++;
     renderRates();
     updateConverter();
     loadTarget();
@@ -374,8 +441,21 @@ async function loadData(force = false) {
 $("refresh-button").addEventListener("click", () => { void loadData(true); });
 $("settings-button").addEventListener("click", () => chrome.runtime.openOptionsPage());
 $("amount").addEventListener("input", updateConverter);
-$("converter-pair").addEventListener("change", () => { reversed = false; updateConverter(); });
-$("reverse-button").addEventListener("click", () => { reversed = !reversed; updateConverter(); });
+async function saveConverterCurrencies() {
+  settings.converterFrom = $("converter-from").value;
+  settings.converterTo = $("converter-to").value;
+  const loading = loadConverterRate();
+  await chrome.storage.local.set({converterFrom: settings.converterFrom, converterTo: settings.converterTo});
+  await loading;
+}
+$("converter-from").addEventListener("change", () => { void saveConverterCurrencies(); });
+$("converter-to").addEventListener("change", () => { void saveConverterCurrencies(); });
+$("reverse-button").addEventListener("click", () => {
+  const from = $("converter-from").value;
+  $("converter-from").value = $("converter-to").value;
+  $("converter-to").value = from;
+  void saveConverterCurrencies();
+});
 $("target-pair").addEventListener("change", loadTarget);
 $("target-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -479,6 +559,7 @@ async function init() {
 init();
 chrome.storage.onChanged?.addListener((changes, area) => {
   if (area !== "local") return;
+  if (changes.apiUrl) { converterVersion++; converterQuote = null; officialCurrencies = []; rates = []; }
   if (changes.apiUrl || changes.watchlist) void init();
   if (changes.language) globalThis.location.reload();
 });
