@@ -64,7 +64,12 @@ class AlphaVantageProvider:
                 raise ValueError("Invalid bid/ask")
         except (KeyError, ValueError, InvalidOperation) as exc:
             raise ProviderError("Provider response is missing bid/ask fields") from exc
-        return Quote(base, quote, bid, ask, (bid + ask) / 2, "alpha_vantage", refreshed)
+        # Quantized here so SQLite and PostgreSQL (Numeric(20, 8)) agree on the value.
+        cent = Decimal("0.00000001")
+        return Quote(
+            base, quote, bid.quantize(cent), ask.quantize(cent),
+            ((bid + ask) / 2).quantize(cent), "alpha_vantage", refreshed,
+        )
 
 
 class MockProvider:

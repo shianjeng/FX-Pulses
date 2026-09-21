@@ -19,8 +19,20 @@ class Settings(BaseSettings):
     retention_days: int = Field(default=90, ge=90)
     provider_daily_budget: int = Field(default=25, ge=1)
     official_refresh_interval_minutes: int = Field(default=360, ge=60)
+    # Which official sources to collect. ECB and the Bank of Canada are documented
+    # statistical APIs; "pboc" reads a website data endpoint, so it is opt-in and
+    # should be verified with `python -m app.check_official` after enabling it.
+    official_sources: Annotated[list[str], NoDecode] = ["ecb", "bank_of_canada"]
     collector_lock_path: str = "./collector.lock"
     api_requests_per_minute: int = Field(default=120, ge=1)
+    # Shared cached data changes at most once per collection, so conditional
+    # requests and a short max-age remove nearly all repeat work.
+    response_cache_seconds: int = Field(default=60, ge=0)
+    # A job is reported stalled once it has been silent for this many collection
+    # intervals, which lets the extension say "collector stopped", not "data old".
+    collector_stall_factor: int = Field(default=3, ge=2)
+    # Trust a reverse proxy's X-Forwarded-For for per-client rate limiting.
+    trust_forwarded_for: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -38,6 +50,20 @@ class Settings(BaseSettings):
             if pair[:3] == pair[4:]:
                 raise ValueError("A currency pair must contain two different currencies")
         return list(dict.fromkeys(pairs))
+
+    @field_validator("official_sources", mode="before")
+    @classmethod
+    def parse_sources(cls, value: object) -> object:
+        from app.official_providers import PROVIDERS
+        if isinstance(value, str):
+            value = value.split(",")
+        if not isinstance(value, list):
+            raise ValueError("OFFICIAL_SOURCES must be a comma-separated list")
+        names = [str(item).strip().lower() for item in value if str(item).strip()]
+        unknown = sorted(set(names) - set(PROVIDERS))
+        if unknown:
+            raise ValueError(f"Unknown OFFICIAL_SOURCES entry: {', '.join(unknown)}")
+        return list(dict.fromkeys(names))
 
     @model_validator(mode="after")
     def validate_live(self):

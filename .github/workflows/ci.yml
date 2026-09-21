@@ -19,3 +19,38 @@ jobs:
       - run: pip install ".[dev]"
       - run: ruff check .
       - run: pytest
+      - name: Migrations apply to an empty database
+        run: alembic upgrade head
+        env:
+          DATABASE_URL: sqlite:///./ci_check.db
+
+  extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run check:i18n
+      - run: npm run lint
+      - run: npm test
+
+  versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extension and API versions agree
+        run: |
+          manifest=$(node -p 'require("./extension/manifest.json").version')
+          api=$(grep -m1 -Po '(?<=^version = ")[^"]+' backend/pyproject.toml)
+          app=$(grep -m1 -Po '(?<=version=")[^"]+' backend/app/main.py)
+          echo "manifest=$manifest api=$api app=$app"
+          test "$manifest" = "$api" && test "$api" = "$app"
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t fx-pulse-api:ci ./backend

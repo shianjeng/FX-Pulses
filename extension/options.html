@@ -1,5 +1,24 @@
 <!doctype html>
 <html lang="zh-CN">
   <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>FX Pulse 设置</title><link rel="stylesheet" href="options.css" /></head>
-  <body><main><div class="brand"><img class="brand-logo" src="icons/icon.svg" width="36" height="36" alt="" /><span class="brand-name">FX Pulse</span></div><p class="eyebrow">EXTENSION SETTINGS</p><h1>数据源设置</h1><p class="intro">插件无需账户。自选、目标价与换算偏好只保存在当前浏览器中；后端仅代理并缓存公开汇率数据。</p><form id="settings-form"><label>后端 API 地址<input id="api-url" type="url" placeholder="https://api.example.com/api/v1" required /></label><button type="submit">保存并测试连接</button></form><p id="result"></p><section><h2>隐私与运行方式</h2><p>插件不会在后台轮询，也不会发送邮件或系统通知。目标价只会在你打开插件时进行比较。部署后端可以保护行情服务密钥，并减少对上游接口的重复请求。</p></section></main><script src="i18n.js"></script><script src="options.js"></script></body>
+  <body>
+    <main>
+      <div class="brand"><img class="brand-logo" src="icons/icon.svg" width="36" height="36" alt="" /><span class="brand-name">FX Pulse</span></div>
+      <p class="eyebrow" data-i18n="eyebrowSettings">扩展设置</p>
+      <h1 data-i18n="settingsTitle">数据源设置</h1>
+      <p class="intro" data-i18n="settingsIntro">插件无需账户。自选、目标价与换算偏好只保存在当前浏览器中；后端仅代理并缓存公开汇率数据。</p>
+      <form id="settings-form">
+        <label><span data-i18n="apiAddress">后端接口地址</span><input id="api-url" type="url" placeholder="https://api.example.com/api/v1" required /></label>
+        <button type="submit" data-i18n="saveAndTest">保存并测试连接</button>
+      </form>
+      <p id="result" role="status"></p>
+      <section>
+        <h2 data-i18n="privacyTitle">隐私与运行方式</h2>
+        <p data-i18n="privacyBody">插件不会发送邮件。目标价默认只在你打开插件时比较；开启提醒后，后台只读取后端已缓存的数据，不会访问上游行情接口。部署后端可以保护行情服务密钥，并减少重复请求。</p>
+      </section>
+    </main>
+    <script src="messages.js"></script>
+    <script src="i18n.js"></script>
+    <script src="options.js"></script>
+  </body>
 </html>

@@ -45,3 +45,25 @@ class RateComparisonOut(BaseModel):
     quote_currency: str
     market: RateOut | None
     official: list[OfficialRateOut]
+
+
+class CoverageOut(BaseModel):
+    """Live pairs versus currencies that only have an official reference rate."""
+
+    market_pairs: list[str]
+    official_currencies: list[str]
+
+
+class CollectorJobOut(BaseModel):
+    job: str
+    finished_at: datetime | None = None
+    last_success_at: datetime | None = None
+    consecutive_failures: int = 0
+    last_error: str | None = None
+    is_stalled: bool = False
+
+
+class HealthOut(BaseModel):
+    status: str
+    provider: str
+    collector: list[CollectorJobOut] = []
