@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     app_name: str = "FX Pulse"
     api_prefix: str = "/api/v1"
     database_url: str = "sqlite:///./fx_pulse.db"
-    fx_provider: Literal["mock", "alpha_vantage"] = "mock"
+    fx_provider: Literal["mock", "alpha_vantage"] = "alpha_vantage"
     alpha_vantage_api_key: str = ""
     tracked_pairs: Annotated[list[str], NoDecode] = ["USD/CNY", "USD/JPY", "CNY/JPY"]
     refresh_interval_minutes: int = Field(default=240, ge=1)
