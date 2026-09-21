@@ -215,6 +215,7 @@
   }
 
   document.addEventListener("mousemove", event => {
+    if (globalThis.__fxUserscriptUntil > Date.now()) { hide(); return; }
     pointerVersion++;
     globalThis.clearTimeout(timer);
     if (!settings.hoverEnabled || event.composedPath().includes(host)) { globalThis.clearTimeout(hiding); return; }

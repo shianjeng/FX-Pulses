@@ -166,3 +166,12 @@ def test_collector_heartbeat_records_failures_and_recovery():
         db.refresh(run)
         assert run.consecutive_failures == 0
         assert run.last_success_at is not None
+
+
+def test_default_live_provider_requires_key(monkeypatch):
+    monkeypatch.delenv("FX_PROVIDER", raising=False)
+    monkeypatch.delenv("ALPHA_VANTAGE_API_KEY", raising=False)
+    with pytest.raises(ValidationError, match="ALPHA_VANTAGE_API_KEY"):
+        Settings(_env_file=None)
+    assert Settings(alpha_vantage_api_key="test", _env_file=None).fx_provider == "alpha_vantage"
+    assert Settings(fx_provider="mock", _env_file=None).fx_provider == "mock"

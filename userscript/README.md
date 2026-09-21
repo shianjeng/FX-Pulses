@@ -1,26 +1,30 @@
-# 历史悬停原型与共享解析器
+# FX Pulse Hover 2.5.0
 
-**正式使用请安装统一版 `extension/`，不再安装这里的油猴脚本。** 工具栏与悬停现在共用同一后端服务、缓存和设置，见 [统一版说明](../UNIFIED-SERVICE.md)。
+可选的 Tampermonkey 悬停界面与插件共享解析器源码。
 
-升级时请在 Tampermonkey 中停用已有 FX Pulse Hover，避免两套悬停同时运行。旧版站点校准数据不会自动导入插件。
+## 安装与数据来源
 
-## 为什么保留这个目录
+1. 安装或更新 FX Pulse 插件到 2.5.0。
+2. 在后端设置 `FX_PROVIDER=alpha_vantage` 与自己的 `ALPHA_VANTAGE_API_KEY`，重启后端。
+3. 在插件设置中开启网页悬停换算，并授予网页访问权限。
+4. 在 Tampermonkey 更新安装 `fx-pulse-hover.user.js`，然后刷新网页。
 
-- `fx-pulse-hover.user.js` 保留旧版原型和已验证的金额解析逻辑；它不是正式插件的入口。
-- `cases.js`、`node-check.mjs` 与 `dom-smoke.cjs` 保留原有回归用例。
-- `build-extension-parser.mjs` 仅提取纯解析逻辑，生成 `extension/amount-parser.js`；不会把原型的第三方行情请求或独立设置系统带入正式扩展。
-- 主题、图像、自检页面与视觉检查脚本用于历史原型维护。
+油猴只通过插件的只读通道请求行情快照及官方参考价，移除了 ER-API/Frankfurter 请求与独立持久化行情缓存。直接货币对报价优先于反向报价；缺少市场报价时使用同一后端的最新官方参考价，并显示机构和日期。没有插件时显示不可用，不会自动改用其他数据源。
 
-修改解析器后，在项目根目录运行：
+插件后台持有后端地址并合并请求，API Key 只在服务端。网页桥接只交换公开报价；宿主网页脚本可以观察或伪造这些页面事件，不应把油猴界面视作经过认证的金融数据通道。在不可信网页上请使用原生插件界面。
 
-```sh
+油猴连接期间，插件原生悬停界面让位，避免双卡片。两者的外观、目标币种、校准等偏好没有迁移或合并。若不需要油猴界面，可停用脚本，只使用插件。
+
+HTTP/HTTPS 顶层网页受支持；不支持文件网址、iframe、浏览器内部页或其他受保护页面。
+
+## 开发
+
+`build-extension-parser.mjs` 只提取脚本的纯解析逻辑到 `extension/amount-parser.js`。修改解析逻辑后运行：
+
+```bash
 node userscript/build-extension-parser.mjs
 npm test
 npm run lint
-node userscript/node-check.mjs
-node userscript/dom-smoke.cjs
 ```
 
-正式插件功能与测试位于 `extension/hover.js`、`extension/background.js` 和 `tests/unified-service.test.cjs`。CI 会检查生成解析器与源码一致，并验证共享服务行为。
-
-旧版原型仍使用自身的数据源和配置，仅作开发参考；不要将它与统一版同时启用。
+DOM 与接口行为由 jsdom 和模拟 Chrome API 检查；这些检查不能替代真实 Chrome/Tampermonkey 联调。

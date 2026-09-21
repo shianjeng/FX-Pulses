@@ -7,7 +7,7 @@ const source = readFileSync(join(__dirname, '../userscript/fx-pulse-hover.user.j
 const fx = require('../userscript/fx-pulse-hover.user.js');
 const tick = () => new Promise(resolve => setTimeout(resolve, 10));
 
-async function harness(t, {fail = false} = {}) {
+async function harness(t, {fail = false, extraRates = [], officialRows = [], delayedBridge = false} = {}) {
   const dom = new JSDOM('<body><span>$10</span></body>', {url: 'https://example.com', runScripts: 'outside-only'});
   t.after(() => dom.window.close());
   const w = dom.window;
@@ -18,17 +18,25 @@ async function harness(t, {fail = false} = {}) {
   w.GM_setValue = (key, value) => store.set(key, JSON.stringify(value));
   const attach = w.Element.prototype.attachShadow;
   w.Element.prototype.attachShadow = function (options) { shadow = attach.call(this, options); return shadow; };
-  w.fetch = async () => {
+  w.fetch = () => { throw new Error('Userscript must never fetch providers'); };
+  w.chrome = {runtime: {sendMessage: async message => {
     count++;
-    if (bad) throw new Error('offline');
-    return {ok: true, text: async () => JSON.stringify({rates: {USD: 1, CNY: midpoint, JPY: 150}, time_last_update_utc: '2026-09-20'})};
-  };
+    if (bad) return {ok: false};
+    if (message.type === 'FX_OFFICIAL') return {ok: true, data: officialRows};
+    return {ok: true, data: {rates: [
+      {base_currency:'USD',quote_currency:'CNY',midpoint,provider:'alpha_vantage',captured_at:'2026-09-20T00:00:00Z'},
+      {base_currency:'USD',quote_currency:'JPY',midpoint:150,provider:'alpha_vantage',captured_at:'2026-09-20T00:00:00Z'}
+    ].concat(extraRates), offline:false, base: 'https://private.example/api/v1'}};
+  }}};
+  const installBridge = () => w.eval(readFileSync(join(__dirname, '../extension/userscript-bridge.js'), 'utf8'));
+  if (!delayedBridge) installBridge();
   // Test-only closure access: the shipped script has no page-accessible API.
   w.eval(source.replace('function publishApi() {', `function publishApi() {
     globalThis.testHarness = api;
     globalThis.testCopy = copyCurrent;
     globalThis.testShow = function () { showCard(10, 10, {match: parseText('$10', {}), rect: {left: 10, top: 10, bottom: 30}, element: document.body}); };
   `));
+  if (delayedBridge) installBridge();
   await tick();
   return {w, api: w.testHarness, shadow: () => shadow, count: () => count,
     advance: minutes => { now += minutes * 60000; }, price: value => { midpoint = value; }, fail: value => { bad = value; }};
@@ -104,4 +112,44 @@ test('hover checks TTL on a fresh hover and offers manual copy after clipboard d
   h.w.testCopy(); await tick();
   const fallback = h.shadow().querySelector('[data-part="copy-fallback"]');
   assert.ok(fallback); assert.match(fallback.value, /80\.00/); assert.equal(fallback.readOnly, true);
+});
+
+test('userscript uses the direct plugin quote and labelled latest official fallback', async t => {
+  const h = await harness(t, {
+    extraRates: [{base_currency:'CNY',quote_currency:'JPY',midpoint:22,provider:'alpha_vantage',captured_at:'2026-09-20T00:00:00Z'}],
+    officialRows: [
+      {rate:7,institution:'Bank of Canada',reference_date:'2026-09-18'},
+      {rate:8,institution:'European Central Bank',reference_date:'2026-09-19'},
+    ],
+  });
+  assert.equal(h.api.convert(10,'CNY','JPY'),220);
+  assert.equal(h.api.convert(220,'JPY','CNY'),10);
+  assert.equal(h.api.convert(10,'EUR','CNY'),null);
+  await tick();
+  assert.equal(h.api.convert(10,'EUR','CNY'),80);
+  assert.doesNotMatch(source,/open\.er-api\.com|api\.frankfurter\.app|GM_xmlhttpRequest/);
+});
+
+test('bridge rejects arbitrary paths and does not expose backend configuration', async t => {
+  const h = await harness(t);
+  const before = h.count();
+  const send = detail => h.w.document.dispatchEvent(new h.w.CustomEvent('fx-pulse-request',{detail:JSON.stringify(detail)}));
+  send({id:'bad',type:'FX_API',path:'/pairs'});
+  send({id:'bad2',type:'FX_OFFICIAL',path:'https://evil.example/'});
+  send({id:'bad3',type:'FX_OFFICIAL',path:'/official-rates/USD/CNY/../../health'});
+  await tick();
+  assert.equal(h.count(),before);
+  let reply;
+  h.w.document.addEventListener('fx-pulse-response',event => {reply=JSON.parse(event.detail);});
+  send({id:'safe',type:'FX_SNAPSHOT',force:true});
+  await tick();
+  assert.equal(reply.id,'safe');
+  assert.equal(reply.data.base,undefined);
+  assert.ok(reply.data.rates.length);
+});
+
+test('userscript recovers when the extension bridge loads after the script', async t => {
+  const h = await harness(t, {delayedBridge:true});
+  assert.equal(h.api.convert(10,'USD','CNY'),70);
+  assert.equal(h.count(),1);
 });

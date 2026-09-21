@@ -138,10 +138,14 @@ async function health() {
 async function syncHover() {
   const {hoverEnabled} = await chrome.storage.local.get({hoverEnabled: false});
   const permitted = await chrome.permissions.contains({origins: FX_MATCHES});
-  const registered = await chrome.scripting.getRegisteredContentScripts({ids: ["fx-hover"]});
+  let registered = await chrome.scripting.getRegisteredContentScripts({ids: ["fx-hover"]});
+  if (registered.length && !registered[0].js?.includes("userscript-bridge.js")) {
+    await chrome.scripting.unregisterContentScripts({ids: ["fx-hover"]});
+    registered = [];
+  }
   if ((!hoverEnabled || !permitted) && registered.length) await chrome.scripting.unregisterContentScripts({ids: ["fx-hover"]});
   if (hoverEnabled && permitted && !registered.length) await chrome.scripting.registerContentScripts([{
-    id: "fx-hover", matches: FX_MATCHES, js: ["messages.js", "amount-parser.js", "hover.js"],
+    id: "fx-hover", matches: FX_MATCHES, js: ["messages.js", "amount-parser.js", "userscript-bridge.js", "hover.js"],
     runAt: "document_idle", allFrames: false, persistAcrossSessions: true, world: "ISOLATED",
   }]);
   if (hoverEnabled && !permitted) await chrome.storage.local.set({hoverEnabled: false});
