@@ -11,7 +11,7 @@
 
   <p>
     <a href="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml"><img src="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
-    <img src="https://img.shields.io/badge/version-2.2.2-36D9A0" alt="Version 2.2.2" />
+    <img src="https://img.shields.io/badge/version-2.3.0-36D9A0" alt="Version 2.3.0" />
     <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
     <img src="https://img.shields.io/badge/FastAPI-0.116-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.116" />
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Manifest V3" />
@@ -56,14 +56,16 @@ FX Pulse labels each data layer instead of presenting unrelated rates as if they
 | Demo quotes | Built-in deterministic provider | Local | Development and interface testing only |
 | Official references | European Central Bank | Daily on business days | Indicative reference observations |
 | Official references | Bank of Canada | Daily on business days | Indicative reference observations |
-| Optional CNY anchor | People's Bank of China | Website data endpoint | Central parity reference; opt-in |
+| Official references | Federal Reserve Board | H.10 business-day release | Daily exchange-rate observations |
+| Official references | Bank of Japan | Tokyo business days | USD/JPY spot rate at 17:00 JST |
+| Official references | People's Bank of China | Business days | RMB central parity reference |
 
 Official cross-rates retain their institution, reference date, fetch time, source URL, and an `is_derived` marker. They are never described as live or tradable quotes.
 
-The PBOC source is disabled by default because it uses a website data endpoint rather than a documented statistical API. To enable and verify it:
+The PBOC source uses a website data endpoint rather than a documented statistical API. Verify all configured official sources after setup:
 
 ```dotenv
-OFFICIAL_SOURCES=ecb,bank_of_canada,pboc
+OFFICIAL_SOURCES=ecb,bank_of_canada,federal_reserve,bank_of_japan,pboc
 ```
 
 ```bash
@@ -177,7 +179,7 @@ Responses include `ETag` and `Cache-Control`. Conditional requests for unchanged
 | `PROVIDER_REQUEST_SPACING_SECONDS` | `15` | Delay between provider requests |
 | `PROVIDER_DAILY_BUDGET` | `25` | Rolling 24-hour call ceiling |
 | `STALE_AFTER_MINUTES` | `360` | Quote age considered stale |
-| `OFFICIAL_SOURCES` | `ecb,bank_of_canada` | Enabled official providers |
+| `OFFICIAL_SOURCES` | five major institutions | Enabled official providers |
 | `OFFICIAL_REFRESH_INTERVAL_MINUTES` | `360` | Official-source interval |
 | `RETENTION_DAYS` | `90` | Snapshot retention period |
 | `RESPONSE_CACHE_SECONDS` | `60` | Read response cache duration |
@@ -249,7 +251,7 @@ GitHub Actions runs migrations, backend and extension tests, linting, localizati
 
 FX Pulse 是一个免登录、重视隐私的汇率浏览器插件与 FastAPI 后端项目。插件可以同时查看 `USD/CNY`、`USD/JPY` 和 `CNY/JPY` 三组市场行情，也能在网页中悬停识别金额并快速换算。
 
-项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行等机构发布的每日官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
+项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
 
 界面完整支持中文、English 和日本語。详细迁移和统一服务设计请参阅 [UNIFIED-SERVICE.md](UNIFIED-SERVICE.md)。
 

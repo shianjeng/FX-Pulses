@@ -19,10 +19,12 @@ class Settings(BaseSettings):
     retention_days: int = Field(default=90, ge=90)
     provider_daily_budget: int = Field(default=25, ge=1)
     official_refresh_interval_minutes: int = Field(default=360, ge=60)
-    # Which official sources to collect. ECB and the Bank of Canada are documented
-    # statistical APIs; "pboc" reads a website data endpoint, so it is opt-in and
-    # should be verified with `python -m app.check_official` after enabling it.
-    official_sources: Annotated[list[str], NoDecode] = ["ecb", "bank_of_canada"]
+    # Which official sources to collect. PBOC reads a website data endpoint rather
+    # than a documented statistical API, so deployments should verify it with
+    # `python -m app.check_official` after setup.
+    official_sources: Annotated[list[str], NoDecode] = [
+        "ecb", "bank_of_canada", "federal_reserve", "bank_of_japan", "pboc",
+    ]
     collector_lock_path: str = "./collector.lock"
     api_requests_per_minute: int = Field(default=120, ge=1)
     # Shared cached data changes at most once per collection, so conditional
