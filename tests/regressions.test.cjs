@@ -26,8 +26,9 @@ test('late refresh cannot overwrite a more recent response',async t=>{
 });
 test('missing quotes remain selectable and saved preferences survive recovery',async t=>{
  const {w,state,other,el}=await popup(t,['USD/JPY']);
+ await w.eval('selectPair("USD/JPY")');
  assert.deepEqual(state.watchlist,['USD/JPY']);
- assert.match(el('rates').textContent,/等待采集/);
+ assert.match(el('rates').textContent,/暂无可用汇率/);
  assert.equal(el('watchlist-options').querySelectorAll('input').length,3);
  w.fetch=async url=>url.endsWith('/rates')?response([{...quote(150),quote_currency:'JPY'}]):other(url);
  await w.eval('loadData()');assert.match(el('rates').textContent,/150/);
@@ -59,10 +60,11 @@ test('empty, negative and excessive amounts are rejected; zero and reverse work'
  }
  el('amount').value='0';w.eval('updateConverter()');assert.equal(el('converted').textContent,'0.00 CNY');
  el('amount').value='700';el('reverse-button').click();assert.equal(el('converted').textContent,'100.00 USD');
+ await tick();
 });
 test('an empty but reachable API is waiting, not a connection error',async t=>{
  const {w,other,el}=await popup(t);w.fetch=async url=>url.endsWith('/rates')?response([]):other(url);
- await w.eval('loadData()');assert.equal(el('status').textContent,'等待采集');assert.ok(el('error').classList.contains('hidden'));
+ await w.eval('loadData()');assert.match(el('status').textContent,/暂无可用汇率/);assert.ok(el('error').classList.contains('hidden'));
  assert.equal(el('converted').textContent,'—');
 });
 test('HTTP rate limiting is distinguished from network errors',async t=>{

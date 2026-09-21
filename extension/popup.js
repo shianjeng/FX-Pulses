@@ -80,27 +80,47 @@ function rateCard(rate) {
 }
 
 function currentRate() {
-  return rates.find((rate) => pairOf(rate) === selectedPair);
+  const direct = rates.find(rate => pairOf(rate) === selectedPair);
+  if (direct) return direct;
+  const [base, quote] = selectedPair.split("/");
+  const inverse = rates.find(rate => rate.base_currency === quote && rate.quote_currency === base);
+  return inverse ? {...inverse, base_currency: base, quote_currency: quote,
+    midpoint: 1 / Number(inverse.midpoint), bid: 1 / Number(inverse.ask),
+    ask: 1 / Number(inverse.bid), change_percent: null} : null;
 }
 
 async function reconcileWatchlist() {
-  if (!settings.watchlist.includes(selectedPair)) selectedPair = settings.watchlist[0];
+  const pair = settings.converterFrom + "/" + settings.converterTo;
+  if (validPair(pair)) selectedPair = pair;
 }
 
 function renderRates() {
-  $("rates").innerHTML = settings.watchlist.map(pair => {
-    const rate = rates.find(item => pairOf(item) === pair);
-    return rate ? rateCard(rate) : `<button class="rate-card ${pair === selectedPair ? "selected" : ""}" data-pair="${pair}"><span class="pair">${pair}</span><strong>—</strong><span>${offline ? t("dataUnavailable") : supportedPairs.includes(pair) ? t("waitingCollection") : t("pairNotConfigured")}</span></button>`;
-  }).join("");
-  $("copy-button").disabled = offline || !currentRate();
-  document.querySelectorAll(".rate-card").forEach((card) => card.addEventListener("click", () => selectPair(card.dataset.pair)));
+  const rate = currentRate();
+  if (rate) $("rates").innerHTML = rateCard(rate);
+  else {
+    $("rates").replaceChildren();
+    const card = document.createElement("div");
+    card.className = "rate-card selected";
+    card.dataset.pair = selectedPair;
+    const title = document.createElement("span");
+    title.className = "pair";
+    title.textContent = selectedPair;
+    const value = document.createElement("strong");
+    const source = document.createElement("small");
+    const available = converterQuote && selectedPair === $("converter-from").value + "/" + $("converter-to").value;
+    value.textContent = available ? fmt(converterQuote.rate, 6) : "—";
+    source.textContent = available ? converterStatus() : offline ? t("dataUnavailable") : t("converterNoRate");
+    card.append(title, value, source);
+    $("rates").append(card);
+  }
+  $("copy-button").disabled = offline || (!rate && !converterQuote);
 }
 
 function renderSelects() {
   const pairs = [...new Set([...supportedPairs, ...settings.watchlist])];
   const options = pairs.map(pair => `<option value="${pair}">${pair}</option>`).join("");
   $("target-pair").innerHTML = options;
-  $("target-pair").value = selectedPair;
+  $("target-pair").value = supportedPairs.includes(selectedPair) ? selectedPair : supportedPairs[0] || "";
   const available = [...new Set([
     ...pairs.flatMap(pair => pair.split("/")),
     ...officialCurrencies,
@@ -262,8 +282,16 @@ async function loadHistory() {
   $("chart").innerHTML = `<span>${t("loadingChart")}</span>`;
   ["stat-low", "stat-high", "stat-position"].forEach(id => $(id).textContent = "—");
   try {
-    const [base, quote] = selectedPair.split("/");
-    const points = await request(`/rates/${base}/${quote}/history?days=${historyDays}`);
+    let [base, quote] = selectedPair.split("/");
+    const inverse = !supportedPairs.includes(selectedPair) && supportedPairs.includes(quote + "/" + base);
+    if (!supportedPairs.includes(selectedPair) && !inverse) {
+      drawChart([]);
+      $("chart").textContent = t("noMarketHistory");
+      return;
+    }
+    if (inverse) [base, quote] = [quote, base];
+    let points = await request(`/rates/${base}/${quote}/history?days=${historyDays}`);
+    if (inverse) points = points.map(point => ({...point, midpoint: 1 / Number(point.midpoint)}));
     if (version === historyVersion) drawChart(points);
   } catch (error) {
     if (version === historyVersion) {
@@ -274,16 +302,17 @@ async function loadHistory() {
 }
 
 async function selectPair(pair) {
+  if (!validPair(pair)) return;
   selectedPair = pair;
-  renderRates();
-  $("target-pair").value = pair;
   [settings.converterFrom, settings.converterTo] = pair.split("/");
   $("converter-from").value = settings.converterFrom;
   $("converter-to").value = settings.converterTo;
-  await chrome.storage.local.set({converterFrom: settings.converterFrom, converterTo: settings.converterTo});
-  void loadConverterRate();
+  const conversion = loadConverterRate();
+  $("target-pair").value = supportedPairs.includes(pair) ? pair : supportedPairs[0] || "";
   loadTarget();
-  await loadHistory();
+  const history = loadHistory();
+  await chrome.storage.local.set({converterFrom: settings.converterFrom, converterTo: settings.converterTo});
+  await Promise.all([conversion, history]);
 }
 
 function marketConverterQuote(base, quote) {
@@ -314,6 +343,11 @@ function updateConverter() {
   $("to-label").textContent = `${t("convertedLabel")} (${quote})`;
   $("amount-error").textContent = "";
   $("converter-status").textContent = converterStatus();
+  renderRates();
+  const market = currentRate();
+  $("status").textContent = market ? t("statusLine", chartTimeLabel(market.captured_at),
+    market.provider === "mock" ? t("mockData") : t("providerLive")) : converterStatus();
+  if (offline) $("status").textContent += " · " + t("offlineCache");
   if (!converterQuote) { $("converted").textContent = "—"; return; }
   const raw = $("amount").value.trim();
   const amount = Number(raw);
@@ -418,12 +452,7 @@ async function loadData(force = false) {
     renderSelects();
     await loadHistory();
     if (version !== refreshVersion) return;
-    if (!rates.length) { $("status").textContent = t("waitingCollection"); return; }
-    const newest = Math.max(...rates.map((rate) => parseUtc(rate.captured_at)));
-    $("status").textContent = t("statusLine",
-      new Date(newest).toLocaleString(docLocale(), { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }),
-      rates[0].provider === "mock" ? t("mockData") : t("providerLive"));
-    if (offline) $("status").textContent += ` · ${t("offlineCache")}`;
+    updateConverter();
     void loadHealth();
   } catch (error) {
     if (version !== refreshVersion) return;
@@ -450,12 +479,9 @@ $("refresh-button").addEventListener("click", () => { void loadData(true); });
 $("settings-button").addEventListener("click", () => chrome.runtime.openOptionsPage());
 $("amount").addEventListener("input", updateConverter);
 async function saveConverterCurrencies() {
-  settings.converterFrom = $("converter-from").value;
-  settings.converterTo = $("converter-to").value;
-  const loading = loadConverterRate();
-  await chrome.storage.local.set({converterFrom: settings.converterFrom, converterTo: settings.converterTo});
-  await loading;
+  await selectPair($("converter-from").value + "/" + $("converter-to").value);
 }
+
 $("converter-from").addEventListener("change", () => { void saveConverterCurrencies(); });
 $("converter-to").addEventListener("change", () => { void saveConverterCurrencies(); });
 $("reverse-button").addEventListener("click", () => {
@@ -489,8 +515,8 @@ $("range-buttons").addEventListener("click", (event) => {
 });
 $("copy-button").addEventListener("click", async () => {
   const rate = currentRate();
-  if (!rate) return;
-  const text = `${pairOf(rate)} ${rate.midpoint}`;
+  if (!rate && !converterQuote) return;
+  const text = `${selectedPair} ${rate ? rate.midpoint : converterQuote.rate}`;
   try {
     await navigator.clipboard.writeText(text);
     $("copy-button").textContent = t("copied");
@@ -511,7 +537,7 @@ async function loadOfficial() {
   $("official-status").textContent = t("loadingOfficial");
   $("official-rates").replaceChildren();
   try {
-    const data = await request(`/comparisons/${pair}`);
+    const data = pair.split("/")[0] === pair.split("/")[1] ? {official: []} : await request(`/comparisons/${pair}`);
     if (version !== officialVersion) return;
     const rows = data.official || [];
     $("official-status").textContent = rows.length ? t("officialDaily") : t("noOfficial");
