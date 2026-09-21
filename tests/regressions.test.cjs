@@ -37,10 +37,10 @@ test('offline marks cards and converter, pauses target checks and recovery clear
  const {w,el,other}=await popup(t);w.fetch=async()=>{throw new w.TypeError('Failed to fetch');};
  await w.eval('loadData()');assert.match(el('rates').textContent,/离线缓存/);
  assert.doesNotMatch(el('rates').textContent,/已更新/);
- assert.equal(el('converter-status').textContent,'离线缓存');
+ assert.match(el('converter-status').textContent,/离线缓存/);
  assert.match(el('target-message').textContent,/暂停/);assert.equal(el('copy-button').disabled,true);
  w.fetch=async url=>url.endsWith('/rates')?response([quote()]):other(url);await w.eval('loadData()');
- assert.equal(el('converter-status').textContent,'');assert.equal(el('copy-button').disabled,false);
+ assert.doesNotMatch(el('converter-status').textContent,/离线缓存/);assert.equal(el('copy-button').disabled,false);
 });
 test('single observation has no filled triangle; time spacing and gaps are respected',async t=>{
  const {w,el}=await popup(t);

@@ -103,7 +103,7 @@ async function snapshot(force = false) {
   try { return await task; } finally { if (pending.get(key) === task) pending.delete(key); }
 }
 
-const UI_PATHS = /^\/(?:comparisons\/[A-Z]{3}\/[A-Z]{3}|currencies|rates\/[A-Z]{3}\/[A-Z]{3}\/history\?days=(?:1|7|30|90))$/;
+const UI_PATHS = /^\/(?:comparisons\/[A-Z]{3}\/[A-Z]{3}|currencies|official-rates\/[A-Z]{3}\/[A-Z]{3}|rates\/[A-Z]{3}\/[A-Z]{3}\/history\?days=(?:1|7|30|90))$/;
 /* Content scripts may only read a single official cross rate, never arbitrary paths. */
 const PAGE_PATHS = /^\/official-rates\/[A-Z]{3}\/[A-Z]{3}$/;
 
