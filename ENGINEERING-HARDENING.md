@@ -1,6 +1,6 @@
 # 设计与工程风险处理记录
 
-> 本文记录前一轮加固。后续已完成方案 B Logo 替换与插件/悬停统一；当前架构与限制以 [UNIFIED-SERVICE.md](UNIFIED-SERVICE.md) 为准。下文关于两套独立运行入口的描述仅为历史记录。
+> 本文记录前一轮加固。后续已完成方案 B Logo 替换与插件/悬停统一；当前架构与限制以 [UNIFIED-SERVICE.md](docs/archive/UNIFIED-SERVICE.md) 为准。下文关于两套独立运行入口的描述仅为历史记录。
 
 本轮基于上一轮 7 项 bug 修复版继续修改。基线为 shianjeng/FX-Pulses main 提交 8e4b49162a2555d1de974933b3a97cef276fb4c0，不包含图标重设计。
 

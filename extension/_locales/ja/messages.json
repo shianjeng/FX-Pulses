@@ -460,5 +460,32 @@
   },
   "loadingConverterRate": {
     "message": "換算レートを取得中…"
+  },
+  "bridgeSectionTitle": {
+    "message": "ユーザースクリプト互換"
+  },
+  "bridgeDescription": {
+    "message": "旧版 FX Pulse ユーザースクリプトを使い続ける場合のみ有効にしてください。有効な間、ホバーを許可したサイトは保存済みの公開レートを読み取れ、拡張機能の導入を検知でき、そのページで一度だけホバーカードを停止できます。サーバーアドレス・設定・キーがページに渡ることはありません。"
+  },
+  "bridgeEnable": {
+    "message": "ページ内のユーザースクリプトにデータの読み取りを許可する"
+  },
+  "bridgeOn": {
+    "message": "ユーザースクリプト互換を有効にしました。ページを再読み込みしてください。"
+  },
+  "bridgeOff": {
+    "message": "ユーザースクリプト互換を無効にしました"
+  },
+  "bridgeRequiresHover": {
+    "message": "先にホバー換算を有効にしてください"
+  },
+  "sourceStale": {
+    "message": "$1 日更新なし"
+  },
+  "converterUnavailableCurrency": {
+    "message": "$1 (unavailable)"
+  },
+  "converterViaCurrency": {
+    "message": "$1 経由"
   }
 }

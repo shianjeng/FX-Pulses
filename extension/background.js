@@ -135,17 +135,30 @@ async function health() {
   return data;
 }
 
+/* The page-facing bridge is opt-in. While it is registered, any site can call
+   the gateway, detect the extension and suppress its hover card, so only users
+   who actually run the legacy userscript should pay that cost. */
+function hoverScripts(bridgeEnabled) {
+  return bridgeEnabled
+    ? ["messages.js", "amount-parser.js", "userscript-bridge.js", "hover.js"]
+    : ["messages.js", "amount-parser.js", "hover.js"];
+}
+
 async function syncHover() {
-  const {hoverEnabled} = await chrome.storage.local.get({hoverEnabled: false});
+  const {hoverEnabled, bridgeEnabled} = await chrome.storage.local.get({
+    hoverEnabled: false, bridgeEnabled: false,
+  });
   const permitted = await chrome.permissions.contains({origins: FX_MATCHES});
+  const wanted = hoverScripts(bridgeEnabled);
   let registered = await chrome.scripting.getRegisteredContentScripts({ids: ["fx-hover"]});
-  if (registered.length && !registered[0].js?.includes("userscript-bridge.js")) {
+  const current = registered[0]?.js ?? [];
+  if (registered.length && current.join(",") !== wanted.join(",")) {
     await chrome.scripting.unregisterContentScripts({ids: ["fx-hover"]});
     registered = [];
   }
   if ((!hoverEnabled || !permitted) && registered.length) await chrome.scripting.unregisterContentScripts({ids: ["fx-hover"]});
   if (hoverEnabled && permitted && !registered.length) await chrome.scripting.registerContentScripts([{
-    id: "fx-hover", matches: FX_MATCHES, js: ["messages.js", "amount-parser.js", "userscript-bridge.js", "hover.js"],
+    id: "fx-hover", matches: FX_MATCHES, js: wanted,
     runAt: "document_idle", allFrames: false, persistAcrossSessions: true, world: "ISOLATED",
   }]);
   if (hoverEnabled && !permitted) await chrome.storage.local.set({hoverEnabled: false});
@@ -205,18 +218,28 @@ async function checkTargets() {
 
 chrome.alarms?.onAlarm.addListener(alarm => { if (alarm.name === FX_ALARM) void checkTargets(); });
 
+/* Our own content script is trusted because hover is on; anything a web page
+   relays through the bridge additionally requires the bridge opt-in. */
+async function pageAccessAllowed(message) {
+  const {hoverEnabled, bridgeEnabled} = await chrome.storage.local.get({
+    hoverEnabled: false, bridgeEnabled: false,
+  });
+  if (!hoverEnabled) return false;
+  return message?.fromBridge === true ? bridgeEnabled === true : true;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
   if (sender.id !== chrome.runtime.id) return false;
   const isUi = typeof sender.url === "string" && sender.url.startsWith(chrome.runtime.getURL(""));
   const action = async () => {
     if (message?.type === "FX_SNAPSHOT") {
-      if (!isUi && !(await chrome.storage.local.get({hoverEnabled: false})).hoverEnabled) throw new Error("Hover is disabled");
+      if (!isUi && !await pageAccessAllowed(message)) throw new Error("Hover is disabled");
       return snapshot(isUi && message.force === true);
     }
     if (message?.type === "FX_API" && isUi) return apiRequest(message.path);
     if (message?.type === "FX_HEALTH" && isUi) return health();
     if (message?.type === "FX_OFFICIAL") {
-      if (!isUi && !(await chrome.storage.local.get({hoverEnabled: false})).hoverEnabled) throw new Error("Hover is disabled");
+      if (!isUi && !await pageAccessAllowed(message)) throw new Error("Hover is disabled");
       return apiRequest(message.path, {fromPage: !isUi});
     }
     if (message?.type === "FX_OPEN_SETTINGS") { await chrome.runtime.openOptionsPage(); return true; }
@@ -233,7 +256,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     generation++; snapshots.clear(); requests.clear(); pending.clear();
     if (chrome.storage.session) void chrome.storage.session.remove("fxSnapshot");
   }
-  if (changes.hoverEnabled) void queueRegistration();
+  if (changes.hoverEnabled || changes.bridgeEnabled) void queueRegistration();
   if (changes.alertsEnabled || changes.alertIntervalMinutes) void syncAlarms();
   if (changes.language && FX_LANGUAGES.includes(changes.language.newValue)) workerLanguage = changes.language.newValue;
 });

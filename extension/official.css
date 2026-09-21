@@ -50,3 +50,5 @@
   color: #edf8f2;
   font: 600 14px ui-monospace, monospace;
 }
+
+.official-row small.stale { color: var(--warning, #c47f2b); }
