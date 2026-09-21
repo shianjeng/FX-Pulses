@@ -105,7 +105,7 @@ for (const language of ['zh', 'en', 'ja']) {
         assert.ok(!keys.has(node.textContent.trim()), `untranslated key on screen: ${node.textContent.trim()}`);
       }
       if (!failed) {
-        assert.equal(w.document.querySelectorAll('.rate-card').length, 3);
+        assert.equal(w.document.querySelectorAll('.rate-card').length, 1);
         assert.match(w.document.querySelector('.rate-card strong').textContent, /7/);
         assert.equal(w.document.getElementById('error').classList.contains('hidden'), true);
       } else {

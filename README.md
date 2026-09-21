@@ -11,7 +11,7 @@
 
   <p>
     <a href="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml"><img src="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
-    <img src="https://img.shields.io/badge/version-2.5.0-36D9A0" alt="Version 2.5.0" />
+    <img src="https://img.shields.io/badge/version-2.6.0-36D9A0" alt="Version 2.6.0" />
     <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
     <img src="https://img.shields.io/badge/FastAPI-0.116-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.116" />
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Manifest V3" />
@@ -34,7 +34,7 @@ The extension and hover converter share the same backend, one-minute cache, watc
 
 | | Capability | Details |
 | --- | --- | --- |
-| 📊 | Three-pair overview | See `USD/CNY`, `USD/JPY`, and `CNY/JPY` together |
+| 📊 | Currency explorer | Select any two available currencies and view their rate, source and date |
 | ↕️ | Market quote detail | Bid, ask, midpoint, spread, freshness, and 24-hour movement |
 | 📈 | Interactive history | Switch between 1, 7, 30, and 90-day SVG charts |
 | 🏛️ | Official references | Compare market midpoints with central-bank reference observations |
@@ -60,7 +60,9 @@ FX Pulse labels each data layer instead of presenting unrelated rates as if they
 | Official references | Bank of Japan | Tokyo business days | USD/JPY spot rate at 17:00 JST |
 | Official references | People's Bank of China | Business days | RMB central parity reference |
 
-The popup converter discovers available currencies from `/api/v1/currencies` instead of limiting selection to the three default market pairs. It prefers direct or inverse market quotes, then selects the newest available official reference for the chosen pair. Official coverage depends on successfully collected tables; a pair requires one institution covering both currencies. Missing rates are shown explicitly. History and target alerts continue to use configured market pairs.
+The main dashboard and converter share two currency selectors and one selected-pair card. Selecting a pair updates conversion, official comparisons, and the history panel together. Direct market quotes are preferred; reverse quotes use reciprocal prices, with bid/ask sides swapped. Market history is inverted when only the reverse pair is tracked. Pairs without market history show an explicit notice. Your last selection is saved.
+
+The popup discovers available currencies from `/api/v1/currencies` instead of limiting selection to the three default market pairs. It prefers direct or inverse market quotes, then selects the newest available official reference for the chosen pair. Official coverage depends on successfully collected tables. A pair may use one institution or triangulate across two institutions through a shared currency; the latter retains both sources, the bridging currency, and the older reference date. Missing rates are shown explicitly. History and target alerts continue to use configured market pairs.
 
 Official cross-rates retain their institution, reference date, fetch time, source URL, and an `is_derived` marker. They are never described as live or tradable quotes.
 
@@ -150,7 +152,9 @@ Alpha Vantage is the default provider. A missing key prevents startup with a con
 
 The default backend address is `http://localhost:8000/api/v1`. You can change it from the extension settings page.
 
-### 3. Upgrade from 2.4.0
+### 3. Upgrade from 2.5.0
+
+The 2.6.0 compatibility patch is based on commit `5816065` (including PR #14). It preserves the opt-in userscript bridge, per-source health checks, triangulated official rates, stale-source labels, and saved unavailable currencies.
 
 Keep your existing database and edit your existing `.env`; do not overwrite it with an example file. Set `FX_PROVIDER=alpha_vantage` and your own `ALPHA_VANTAGE_API_KEY`, then rebuild:
 
@@ -159,7 +163,7 @@ docker compose up -d --build --force-recreate
 docker compose logs --tail=100 collector
 ```
 
-Reload the extension in `chrome://extensions`, verify version **2.5.0**, then refresh open webpages. For the optional Tampermonkey interface, update `userscript/fx-pulse-hover.user.js` too. Enable hover and approve website access in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
+Reload the extension in `chrome://extensions`, verify version **2.6.0**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
 
 Confirm that `/health` reports `"provider": "alpha_vantage"`. Its `collector` array carries one heartbeat per configured official source, so a source that quietly stopped publishing surfaces instead of hiding behind the ones that still work. Initial collection may take time; existing demo observations remain marked as mock until replaced. The userscript keeps separate appearance, target-currency and calibration preferences; only the data service is shared.
 
@@ -183,7 +187,7 @@ All application endpoints are public, cached, rate-limited, and read-only.
 | `GET` | `/api/v1/official-rates/{base}/{quote}` | Official observations for a covered pair |
 | `GET` | `/api/v1/comparisons/{base}/{quote}` | Market and official-rate comparison |
 
-Responses include `ETag` and `Cache-Control`. Conditional requests for unchanged data return `304`. Official endpoints can cross any pair covered by one institution's published table; market endpoints remain limited to `TRACKED_PAIRS`.
+Responses include `ETag` and `Cache-Control`. Conditional requests for unchanged data return `304`. Official endpoints can derive pairs within one published table or triangulate across two tables through a shared currency; market endpoints remain limited to `TRACKED_PAIRS`.
 
 ## Configuration
 
@@ -267,18 +271,18 @@ and keys are never exposed to a page.
 
 - FX Pulse provides informational data, not financial advice or an executable trading quote.
 - Official observations are daily reference or indicative rates, not live prices.
-- Cross-rates may combine two observations from the same institution and are marked as derived.
+- Cross-rates may combine observations from one institution or bridge two institutions; derived rates retain source and date labels.
 - Target alerts are suppressed when quotes are stale or the backend is offline.
 - The free Alpha Vantage profile is periodic rather than streaming.
 - Actual card, bank, brokerage, and remittance rates may include spreads and fees.
 
 ## 中文简介
 
-FX Pulse 是一个免登录、重视隐私的汇率浏览器插件与 FastAPI 后端项目。插件可以同时查看 `USD/CNY`、`USD/JPY` 和 `CNY/JPY` 三组市场行情，也能在网页中悬停识别金额并快速换算。
+FX Pulse 是一个免登录、重视隐私的汇率浏览器插件与 FastAPI 后端项目。插件通过两个货币选择框自由选择已覆盖的源币种和目标币种，统一查看当前汇率、官方参考价和可用走势，也能在网页中悬停识别金额并快速换算。
 
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
 
-2.5.0 默认使用 Alpha Vantage 市场数据，需在后端配置自己的 API Key。油猴 2.5.0 移除了 ER-API/Frankfurter 请求，通过已授权的插件读取同一快照及官方参考价。油猴需要插件与网页悬停权限，外观、目标币种和校准设置仍独立保存。
+2.6.0 默认使用 Alpha Vantage 市场数据，需在后端配置自己的 API Key。油猴 2.5.0 起移除了 ER-API/Frankfurter 请求，通过已授权的插件读取同一快照及官方参考价。油猴需要插件与网页悬停权限，外观、目标币种和校准设置仍独立保存。
 
 插件界面支持中文、English 和日本語；油猴保留原有中文界面。详细迁移和统一服务设计请参阅 [UNIFIED-SERVICE.md](docs/archive/UNIFIED-SERVICE.md)。
 
