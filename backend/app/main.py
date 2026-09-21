@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     _hits.clear()
 
 
-app = FastAPI(title="FX Pulse API", version="2.5.0", lifespan=lifespan)
+app = FastAPI(title="FX Pulse API", version="2.6.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[],

@@ -26,9 +26,6 @@
   "langJa": {
     "message": "日文"
   },
-  "eyebrowMarket": {
-    "message": "市场中间价"
-  },
   "watchlistTitle": {
     "message": "自选行情"
   },
@@ -155,14 +152,8 @@
   "noComparison": {
     "message": "暂无对比"
   },
-  "waitingCollection": {
-    "message": "等待采集"
-  },
   "dataUnavailable": {
     "message": "数据不可用"
-  },
-  "pairNotConfigured": {
-    "message": "此货币对未在后端配置"
   },
   "offlineCache": {
     "message": "离线缓存"
@@ -447,7 +438,7 @@
     "message": "目标货币"
   },
   "converterNoRate": {
-    "message": "暂无可用汇率：可能尚未采集，或没有同一机构覆盖这两种货币。"
+    "message": "暂无可用汇率：可能尚未采集，或当前数据无法连接这两种货币。"
   },
   "converterSameCurrency": {
     "message": "同币种换算 · 1:1"
@@ -487,5 +478,14 @@
   },
   "converterViaCurrency": {
     "message": "经 $1 推算"
+  },
+  "explorerTitle": {
+    "message": "汇率查询"
+  },
+  "explorerEyebrow": {
+    "message": "选择两种货币"
+  },
+  "noMarketHistory": {
+    "message": "该货币对暂无市场历史数据。当前换算可使用下方标明日期的官方参考价。"
   }
 }

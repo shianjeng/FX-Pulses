@@ -54,10 +54,9 @@ async function setup({ clipboardFails = false, watchlist = ["USD/CNY"] } = {}) {
 
 test("loads Chinese popup without replacing missing watchlist entries", async () => {
   const app = await setup({ watchlist: ["USD/CNY", "USD/JPY"] });
-  assert.equal(app.w.document.querySelectorAll(".rate-card").length, 2);
+  assert.equal(app.w.document.querySelectorAll(".rate-card").length, 1);
   assert.equal(app.state.watchlist[0], "USD/CNY");
   assert.equal(app.state.watchlist[1], "USD/JPY");
-  assert.match(app.w.document.querySelector('[data-pair="USD/JPY"]').textContent, /等待采集/);
   assert.match(app.w.document.getElementById("status").textContent, /模拟数据/);
   assert.match(app.w.document.getElementById("official-rates").textContent, /欧洲央行/);
   app.close();
@@ -134,5 +133,60 @@ test("late official response cannot replace a newer currency selection; missing 
     await tick();
     assert.equal(el('converted').textContent, '—');
     assert.match(el('converter-status').textContent, /暂无可用汇率/);
+  } finally { app.close(); }
+});
+
+test("currency selectors drive the main card, official panel, history and saved selection", async () => {
+  const app = await setup();
+  try {
+    const el = id => app.w.document.getElementById(id);
+    el('converter-from').value = 'EUR';
+    el('converter-from').dispatchEvent(new app.w.Event('change'));
+    await tick();
+    assert.equal(app.w.document.querySelectorAll('.rate-card').length, 1);
+    assert.match(el('rates').textContent, /EUR\/CNY/);
+    assert.match(el('rates').textContent, /8\.000000/);
+    assert.match(el('rates').textContent, /官方日参考价.*欧洲央行/);
+    assert.match(el('official-title').textContent, /EUR\/CNY/);
+    assert.match(el('chart').textContent, /暂无市场历史数据/);
+    await app.w.eval('loadData()');
+    await tick();
+    assert.equal(el('converter-from').value, 'EUR');
+    assert.match(el('rates').textContent, /EUR\/CNY/);
+    assert.equal(app.state.converterFrom, 'EUR');
+  } finally { app.close(); }
+});
+
+test("reverse selection uses reciprocal market prices and history", async () => {
+  const app = await setup();
+  try {
+    const el = id => app.w.document.getElementById(id);
+    el('reverse-button').click();
+    await tick();
+    assert.match(el('rates').textContent, /CNY\/USD/);
+    assert.match(el('rates').textContent, /0\.1404/);
+    assert.equal(el('stat-low').textContent, '0.1404');
+    assert.match(el('official-title').textContent, /CNY\/USD/);
+  } finally { app.close(); }
+});
+
+test("explorer retains unavailable selections and triangulation labels after PR14", async () => {
+  const app = await setup();
+  try {
+    const el = id => app.w.document.getElementById(id);
+    app.state.converterFrom = "ZAR";
+    await app.w.eval("init()");
+    await tick();
+    assert.equal(el('converter-from').value, 'ZAR');
+    assert.match(el('converter-from').selectedOptions[0].textContent, /不可用/);
+    app.w.fetch = async url => ({ok:true,json:async () => url.includes('/official-rates/')
+      ? [{rate:8,institution:'Bank A / Bank B',reference_date:'2026-09-18',via_currency:'USD'}]
+      : {official:[]}});
+    el('converter-from').value = 'EUR';
+    el('converter-from').dispatchEvent(new app.w.Event('change'));
+    await tick();
+    assert.match(el('rates').textContent, /Bank A \/ Bank B/);
+    assert.match(el('rates').textContent, /USD/);
+    assert.match(el('converter-status').textContent, /USD/);
   } finally { app.close(); }
 });

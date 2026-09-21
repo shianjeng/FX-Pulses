@@ -19,3 +19,6 @@
 .currency-selects + .converter {
   margin-top: 8px;
 }
+
+main > .currency-selects { margin: 12px 0; }
+main > .currency-selects select { font-size: 16px; min-height: 44px; }

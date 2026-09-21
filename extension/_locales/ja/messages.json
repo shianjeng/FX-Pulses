@@ -26,9 +26,6 @@
   "langJa": {
     "message": "日本語"
   },
-  "eyebrowMarket": {
-    "message": "市場仲値"
-  },
   "watchlistTitle": {
     "message": "ウォッチリスト"
   },
@@ -155,14 +152,8 @@
   "noComparison": {
     "message": "比較データなし"
   },
-  "waitingCollection": {
-    "message": "データ取得待ち"
-  },
   "dataUnavailable": {
     "message": "データを取得できません"
-  },
-  "pairNotConfigured": {
-    "message": "サーバーに未登録の通貨ペア"
   },
   "offlineCache": {
     "message": "オフライン・保存済みレート"
@@ -447,7 +438,7 @@
     "message": "換算先の通貨"
   },
   "converterNoRate": {
-    "message": "利用可能なレートがありません。収集待ち、または両通貨を扱う同一機関がありません。"
+    "message": "利用可能なレートがありません。収集待ち、または現在のデータでは両通貨を結べません。"
   },
   "converterSameCurrency": {
     "message": "同一通貨 · 1:1"
@@ -487,5 +478,14 @@
   },
   "converterViaCurrency": {
     "message": "$1 経由"
+  },
+  "explorerTitle": {
+    "message": "為替レート検索"
+  },
+  "explorerEyebrow": {
+    "message": "2つの通貨を選択"
+  },
+  "noMarketHistory": {
+    "message": "この通貨ペアの市場履歴は収集されていません。換算には日付付きの公式参考レートを使用できます。"
   }
 }
