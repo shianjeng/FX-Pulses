@@ -8,4 +8,6 @@ backend/test_fx_pulse.db
 test_fx_pulse.db
 backend/.venv/
 backend/*.egg-info/
+node_modules/
+userscript/.visual-check/
 .DS_Store
