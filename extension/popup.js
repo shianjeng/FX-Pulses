@@ -29,6 +29,8 @@ const INSTITUTIONS = {
   "European Central Bank": "institutionEcb",
   "Bank of Canada": "institutionBoc",
   "People's Bank of China": "institutionPboc",
+  "Federal Reserve Board": "institutionFed",
+  "Bank of Japan": "institutionBoj",
 };
 const fmt = (value, digits = 4) => Number(value).toLocaleString(docLocale(), {
   minimumFractionDigits: digits,

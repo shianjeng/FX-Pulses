@@ -142,6 +142,17 @@ def test_rate_limit_is_per_client(client, monkeypatch):
     main._hits.clear()
 
 
+def test_conditional_response_keeps_extension_cors_headers(client):
+    origin = "chrome-extension://abcdefghijklmnopabcdefghijklmnop"
+    first = client.get("/api/v1/pairs", headers={"origin": origin})
+    cached = client.get(
+        "/api/v1/pairs",
+        headers={"origin": origin, "if-none-match": first.headers["etag"]},
+    )
+    assert cached.status_code == 304
+    assert cached.headers["access-control-allow-origin"] == origin
+
+
 def test_collector_heartbeat_records_failures_and_recovery():
     from app.models import CollectorRun
     from app.services import MARKET_JOB, record_run
