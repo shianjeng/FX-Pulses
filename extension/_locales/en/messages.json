@@ -263,6 +263,12 @@
   "institutionPboc": {
     "message": "People's Bank of China"
   },
+  "institutionFed": {
+    "message": "Federal Reserve Board"
+  },
+  "institutionBoj": {
+    "message": "Bank of Japan"
+  },
   "optionsDocTitle": {
     "message": "FX Pulse Settings"
   },

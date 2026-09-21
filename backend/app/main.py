@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     _hits.clear()
 
 
-app = FastAPI(title="FX Pulse API", version="2.2.2", lifespan=lifespan)
+app = FastAPI(title="FX Pulse API", version="2.3.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[],
@@ -69,7 +69,12 @@ async def conditional_cache(request: Request, call_next):
     etag = f'"{hashlib.sha256(body).hexdigest()[:32]}"'
     cache_control = f"public, max-age={settings.response_cache_seconds}"
     if request.headers.get("if-none-match") == etag:
-        return Response(status_code=304, headers={"ETag": etag, "Cache-Control": cache_control})
+        headers = {
+            key: value for key, value in response.headers.items()
+            if key.lower() not in {"content-length", "etag", "cache-control"}
+        }
+        headers.update({"ETag": etag, "Cache-Control": cache_control})
+        return Response(status_code=304, headers=headers)
     headers = {
         key: value
         for key, value in response.headers.items()

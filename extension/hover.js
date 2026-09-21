@@ -65,19 +65,28 @@
 
   function officialFor(from, to) {
     const key = `${from}/${to}`;
-    if (officialCache.has(key)) return officialCache.get(key);
+    const cached = officialCache.get(key);
+    if (cached) {
+      const ttl = cached.missing ? 60000 : 600000;
+      if (Date.now() - cached.cachedAt < ttl) return cached.missing ? null : cached;
+      officialCache.delete(key);
+    }
     if (officialPending.has(key) || from === to) return undefined;
     officialPending.add(key);
     chrome.runtime.sendMessage({type: "FX_OFFICIAL", path: `/official-rates/${from}/${to}`})
       .then(reply => {
         const rows = reply?.ok && Array.isArray(reply.data) ? reply.data : [];
-        const best = rows.find(row => Number(row?.rate) > 0);
+        // Providers update on different calendars. Prefer the newest observation
+        // instead of whichever institution happens to be returned first.
+        const best = rows
+          .filter(row => Number(row?.rate) > 0 && Number.isFinite(Date.parse(row.reference_date)))
+          .sort((a, b) => Date.parse(b.reference_date) - Date.parse(a.reference_date))[0];
         officialCache.set(key, best ? {
           value: Number(best.rate), institution: best.institution,
-          date: best.reference_date, derived: best.is_derived,
-        } : null);
+          date: best.reference_date, derived: best.is_derived, cachedAt: Date.now(),
+        } : {missing: true, cachedAt: Date.now()});
       })
-      .catch(() => officialCache.set(key, null))
+      .catch(() => officialCache.set(key, {missing: true, cachedAt: Date.now()}))
       .finally(() => { officialPending.delete(key); render(); });
     return undefined;
   }
@@ -149,7 +158,8 @@
     if (settings.hoverMode === "detail" && snapshot) {
       const targets = [...new Set(settings.watchlist.flatMap(pair => pair.split("/")))].filter(code => code !== to && code !== from);
       for (const code of targets) {
-        const other = quote(from, code) || officialCache.get(`${from}/${code}`);
+        const cachedOther = officialCache.get(`${from}/${code}`);
+        const other = quote(from, code) || (cachedOther?.missing ? null : cachedOther);
         if (other) { const row = el("div", "", "detail"); row.append(el("span", code), el("span", format(active.match.amount * other.value, code))); card.append(row); }
       }
     }
