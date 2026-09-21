@@ -101,11 +101,18 @@ function renderSelects() {
   const options = pairs.map(pair => `<option value="${pair}">${pair}</option>`).join("");
   $("target-pair").innerHTML = options;
   $("target-pair").value = selectedPair;
-  const currencies = [...new Set([
+  const available = [...new Set([
     ...pairs.flatMap(pair => pair.split("/")),
     ...officialCurrencies,
   ])].filter(currency => /^[A-Z]{3}$/.test(currency)).sort();
-  const currencyOptions = currencies.map(currency => `<option value="${currency}">${currency}</option>`).join("");
+  // A saved currency stays selectable while coverage is unknown (offline, or
+  // /currencies not answered yet); losing the selection silently looked like the
+  // setting had been forgotten.
+  const chosen = [settings.converterFrom, settings.converterTo]
+    .filter(currency => /^[A-Z]{3}$/.test(currency) && !available.includes(currency));
+  const currencies = [...new Set([...available, ...chosen])].sort();
+  const currencyOptions = currencies.map(currency =>
+    `<option value="${currency}">${available.includes(currency) ? currency : t("converterUnavailableCurrency", currency)}</option>`).join("");
   $("converter-from").innerHTML = currencyOptions;
   $("converter-to").innerHTML = currencyOptions;
   const [fallbackFrom, fallbackTo] = selectedPair.split("/");
@@ -292,7 +299,8 @@ function converterStatus() {
   if (converterQuote.kind === "identity") return t("converterSameCurrency");
   if (converterQuote.kind === "official") {
     const key = INSTITUTIONS[converterQuote.institution];
-    return t("converterOfficialSource", key ? t(key) : converterQuote.institution, converterQuote.referenceDate);
+    const source = t("converterOfficialSource", key ? t(key) : converterQuote.institution, converterQuote.referenceDate);
+    return converterQuote.via ? `${source} · ${t("converterViaCurrency", converterQuote.via)}` : source;
   }
   const provider = converterQuote.market.provider === "mock" ? t("mockData") : t("providerLive");
   const freshness = offline ? t("offlineCache") : converterQuote.market.is_stale ? t("outdated") : "";
@@ -341,7 +349,7 @@ async function loadConverterRate() {
       .sort((a, b) => b.reference_date.localeCompare(a.reference_date))[0] : null;
     if (newest) converterQuote = {
       kind: "official", rate: Number(newest.rate), institution: newest.institution,
-      referenceDate: newest.reference_date,
+      referenceDate: newest.reference_date, via: newest.via_currency || null,
     };
   } catch { /* A valid currency can still lack one institution covering both sides. */ }
   if (version === converterVersion) updateConverter();
@@ -514,7 +522,17 @@ async function loadOfficial() {
       const name = document.createElement("b");
       name.textContent = INSTITUTIONS[item.institution] ? t(INSTITUTIONS[item.institution]) : item.institution;
       const date = document.createElement("small");
-      date.textContent = `${item.reference_date}${item.is_derived ? ` · ${t("crossRate")}` : ""}`;
+      const notes = [item.reference_date];
+      if (item.via_currency) notes.push(t("converterViaCurrency", item.via_currency));
+      else if (item.is_derived) notes.push(t("crossRate"));
+      // A source that quietly stopped publishing looks identical to a fresh one
+      // unless its age is spelled out.
+      const age = Math.floor((Date.now() - Date.parse(`${item.reference_date}T00:00:00Z`)) / 86400000);
+      if (Number.isFinite(age) && age >= 3) {
+        notes.push(t("sourceStale", age));
+        date.classList.add("stale");
+      }
+      date.textContent = notes.join(" · ");
       label.append(name, date);
       const value = document.createElement("div");
       value.className = "official-value";

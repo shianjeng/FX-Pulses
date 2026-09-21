@@ -28,17 +28,25 @@ class OfficialQuote:
     fetched_at: datetime
     source_url: str
     is_derived: bool
+    # Set when the two legs come from different institutions, e.g. EUR/USD from
+    # the ECB combined with USD/KRW from the Federal Reserve.
+    via_currency: str | None = None
 
 
-def cross_rate(values_per_anchor: dict[str, Decimal], base: str, quote: str) -> Decimal:
-    """Return quote units per one base unit from anchor-based observations."""
+def raw_cross(values_per_anchor: dict[str, Decimal], base: str, quote: str) -> Decimal:
+    """Unrounded quote units per base unit, for chaining without compounding error."""
     try:
         result = values_per_anchor[quote] / values_per_anchor[base]
     except (KeyError, InvalidOperation, ZeroDivisionError) as exc:
         raise ProviderError(f"Official rate does not cover {base}/{quote}") from exc
     if not result.is_finite() or result <= 0:
         raise ProviderError(f"Official rate is invalid for {base}/{quote}")
-    return result.quantize(Decimal("0.00000001"))
+    return result
+
+
+def cross_rate(values_per_anchor: dict[str, Decimal], base: str, quote: str) -> Decimal:
+    """Return quote units per one base unit from anchor-based observations."""
+    return raw_cross(values_per_anchor, base, quote).quantize(Decimal("0.00000001"))
 
 
 @dataclass(frozen=True, slots=True)
@@ -362,6 +370,14 @@ OfficialProvider = (
     EcbReferenceProvider | BankOfCanadaProvider | FederalReserveProvider
     | BankOfJapanProvider | PbocProvider
 )
+
+
+PROVIDER_NAMES = {klass: name for name, klass in PROVIDERS.items()}
+
+
+def provider_name(provider: OfficialProvider) -> str:
+    """Stable short key used for per-source collector heartbeats."""
+    return PROVIDER_NAMES.get(type(provider), type(provider).__name__)
 
 
 def get_official_providers(names: list[str] | None = None) -> list[OfficialProvider]:

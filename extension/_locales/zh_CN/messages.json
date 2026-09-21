@@ -460,5 +460,32 @@
   },
   "loadingConverterRate": {
     "message": "正在读取换算汇率…"
+  },
+  "bridgeSectionTitle": {
+    "message": "油猴脚本兼容"
+  },
+  "bridgeDescription": {
+    "message": "仅当你仍在使用旧版 FX Pulse 油猴脚本时才需要开启。开启后，你授权悬停的网站可以读取本扩展已缓存的公开汇率数据，也能探测到本扩展已安装，并可让本扩展的悬停卡片在该页面内让位一次。后端地址、偏好设置和密钥永远不会暴露给网页。"
+  },
+  "bridgeEnable": {
+    "message": "允许网页内的油猴脚本读取本扩展数据"
+  },
+  "bridgeOn": {
+    "message": "已开启油猴兼容，请刷新网页"
+  },
+  "bridgeOff": {
+    "message": "已关闭油猴兼容"
+  },
+  "bridgeRequiresHover": {
+    "message": "请先开启网页悬停换算"
+  },
+  "sourceStale": {
+    "message": "$1 天未更新"
+  },
+  "converterUnavailableCurrency": {
+    "message": "$1（暂不可用）"
+  },
+  "converterViaCurrency": {
+    "message": "经 $1 推算"
   }
 }

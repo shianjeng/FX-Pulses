@@ -10,13 +10,25 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.database import SessionLocal
 from app.models import CollectorRun, OfficialAnchorRate, ProviderRequest, RateSnapshot
-from app.official_providers import OfficialQuote, OfficialTable, get_official_providers
-from app.providers import Quote, get_provider
+from app.official_providers import (
+    OfficialQuote,
+    OfficialTable,
+    get_official_providers,
+    provider_name,
+    raw_cross,
+)
+from app.providers import ProviderError, Quote, get_provider
 
 logger = logging.getLogger(__name__)
 
 MARKET_JOB = "market"
 OFFICIAL_JOB = "official"
+
+
+def official_job(name: str) -> str:
+    """One heartbeat per source: with five of them, a single aggregate row hid a
+    permanently broken source behind the ones that still worked."""
+    return f"{OFFICIAL_JOB}:{name}"
 
 
 def reserve_request(db: Session) -> bool:
@@ -157,10 +169,64 @@ def official_currencies(db: Session) -> list[str]:
 
 
 def latest_official_for_pair(db: Session, base: str, quote: str) -> list[OfficialQuote]:
+    tables = latest_official_tables(db)
     output: list[OfficialQuote] = []
-    for table in latest_official_tables(db):
+    for table in tables:
         output.extend(table.quotes([f"{base}/{quote}"]))
-    return output
+    if output:
+        return output
+    return triangulate_official(tables, base, quote)
+
+
+def triangulate_official(
+    tables: list[OfficialTable], base: str, quote: str,
+) -> list[OfficialQuote]:
+    """Combine two institutions through a shared currency.
+
+    No single source covers every pair, so SEK/KRW can be unanswerable even when
+    the ECB quotes SEK and the Federal Reserve quotes KRW. Each leg stays an
+    official observation; the result is labelled with the bridging currency and
+    carries the older of the two reference dates.
+    """
+    results: list[OfficialQuote] = []
+    seen: set[tuple[str, str, str]] = set()
+    for left in tables:
+        if base not in left.values_per_anchor:
+            continue
+        for right in tables:
+            if right is left or quote not in right.values_per_anchor:
+                continue
+            shared = sorted(
+                set(left.values_per_anchor) & set(right.values_per_anchor)
+                - {base, quote}
+            )
+            for via in shared:
+                key = (left.institution, right.institution, via)
+                if key in seen:
+                    continue
+                try:
+                    # Rounding each leg first would compound into the result.
+                    first = raw_cross(left.values_per_anchor, base, via)
+                    second = raw_cross(right.values_per_anchor, via, quote)
+                except ProviderError:
+                    continue
+                rate = (first * second).quantize(Decimal("0.00000001"))
+                if not rate.is_finite() or rate <= 0:
+                    continue
+                seen.add(key)
+                results.append(OfficialQuote(
+                    base, quote, rate,
+                    f"{left.institution} + {right.institution}",
+                    left.rate_type,
+                    min(left.reference_date, right.reference_date),
+                    min(left.fetched_at, right.fetched_at),
+                    left.source_url,
+                    True,
+                    via_currency=via,
+                ))
+                break  # One bridge per institution pair is enough.
+    results.sort(key=lambda item: (-item.reference_date.toordinal(), item.institution))
+    return results[:3]
 
 
 async def refresh_all_rates() -> dict[str, int]:
@@ -201,14 +267,17 @@ async def refresh_official_rates() -> dict[str, int]:
     last_error: str | None = None
     with SessionLocal() as db:
         for provider in get_official_providers():
+            name = provider_name(provider)
             try:
                 table = await provider.get_table()
                 refreshed += store_official_table(db, table)
+                record_run(db, official_job(name), ok=True)
             except Exception as exc:
                 db.rollback()
                 logger.exception("Official-rate refresh failed for %s", provider.institution)
                 last_error = f"{provider.institution}: {exc}"
                 errors += 1
+                record_run(db, official_job(name), ok=False, error=f"{provider.institution}: {exc}")
             await asyncio.sleep(0)
         prune_history(db)
         record_run(db, OFFICIAL_JOB, ok=refreshed > 0, error=last_error)
