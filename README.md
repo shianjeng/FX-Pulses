@@ -80,7 +80,7 @@ flowchart LR
     Browser["Chrome extension"] -->|Read-only API| API["FastAPI"]
     API --> DB[("PostgreSQL / SQLite")]
     Alpha["Alpha Vantage"] --> Collector["Scheduled collector"]
-    Banks["ECB · BoC · optional PBOC"] --> Collector
+    Banks["ECB · BoC · Fed · BoJ · PBOC"] --> Collector
     Collector --> DB
 ```
 
