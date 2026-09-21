@@ -145,7 +145,7 @@ test("currency selectors drive the main card, official panel, history and saved 
     await tick();
     assert.equal(app.w.document.querySelectorAll('.rate-card').length, 1);
     assert.match(el('rates').textContent, /EUR\/CNY/);
-    assert.match(el('rates').textContent, /8\.000000/);
+    assert.match(el('rates').textContent, /8\.0000/);
     assert.match(el('rates').textContent, /官方日参考价.*欧洲央行/);
     assert.match(el('official-title').textContent, /EUR\/CNY/);
     assert.match(el('chart').textContent, /暂无市场历史数据/);
@@ -165,7 +165,7 @@ test("reverse selection uses reciprocal market prices and history", async () => 
     await tick();
     assert.match(el('rates').textContent, /CNY\/USD/);
     assert.match(el('rates').textContent, /0\.1404/);
-    assert.equal(el('stat-low').textContent, '0.1404');
+    assert.equal(el('stat-low').textContent, '0.140449');
     assert.match(el('official-title').textContent, /CNY\/USD/);
   } finally { app.close(); }
 });
@@ -188,5 +188,34 @@ test("explorer retains unavailable selections and triangulation labels after PR1
     assert.match(el('rates').textContent, /Bank A \/ Bank B/);
     assert.match(el('rates').textContent, /USD/);
     assert.match(el('converter-status').textContent, /USD/);
+  } finally { app.close(); }
+});
+
+test("small rates agree across card, history and converter without rounding calculations", async () => {
+  const app = await setup();
+  try {
+    const el = id => app.w.document.getElementById(id);
+    const raw = 0.0425749;
+    app.w.fetch = async url => ({ok:true,json:async () =>
+      url.endsWith('/pairs') ? ['JPY/CNY'] :
+      url.endsWith('/currencies') ? {official_currencies:['JPY','CNY']} :
+      url.includes('/history') ? [{midpoint:raw,captured_at:'2026-09-20T00:00:00Z'}] :
+      url.includes('/comparisons/') ? {official:[{rate:raw,institution:'Bank of Japan',reference_date:'2026-09-20'}]} :
+      [{base_currency:'JPY',quote_currency:'CNY',midpoint:raw,bid:0.042574,ask:0.0425758,
+        captured_at:'2026-09-20T00:00:00Z',provider:'alpha_vantage',is_stale:false}]});
+    await app.w.eval('loadData()');
+    await app.w.eval('selectPair("JPY/CNY")');
+    await tick();
+    assert.equal(el('rates').querySelector('strong').textContent, '0.042575');
+    assert.equal(el('stat-low').textContent, '0.042575');
+    assert.equal(el('official-rates').querySelector('strong').textContent, '0.042575');
+    assert.equal(el('conversion-rate').textContent, '1 JPY ≈ 0.042575 CNY');
+    assert.equal(el('converted').textContent, '42.57 CNY');
+    el('amount').value = '1000000';
+    el('amount').dispatchEvent(new app.w.Event('input'));
+    assert.equal(el('converted').textContent, '42,574.90 CNY');
+    assert.match(el('conversion-rate').title, /0\.0425749/);
+    assert.notEqual(app.w.eval('formatRate(1e-14)'), '0.000000');
+    assert.match(app.w.eval('formatRate(1e-14)'), /E-14/i);
   } finally { app.close(); }
 });

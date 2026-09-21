@@ -487,5 +487,8 @@
   },
   "noMarketHistory": {
     "message": "该货币对暂无市场历史数据。当前换算可使用下方标明日期的官方参考价。"
+  },
+  "displayRoundingHint": {
+    "message": "汇率显示值经过四舍五入；换算使用完整精度，结果保留两位小数。"
   }
 }

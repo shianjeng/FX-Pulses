@@ -487,5 +487,8 @@
   },
   "noMarketHistory": {
     "message": "No market history is collected for this pair. Conversion may use dated official reference rates."
+  },
+  "displayRoundingHint": {
+    "message": "Displayed rates are rounded. Conversion uses full precision; amounts are rounded to two decimal places."
   }
 }
