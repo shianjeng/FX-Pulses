@@ -26,9 +26,6 @@
   "langJa": {
     "message": "Japanese"
   },
-  "eyebrowMarket": {
-    "message": "MARKET MIDPOINT"
-  },
   "watchlistTitle": {
     "message": "Watchlist"
   },
@@ -155,14 +152,8 @@
   "noComparison": {
     "message": "No comparison"
   },
-  "waitingCollection": {
-    "message": "Waiting for collection"
-  },
   "dataUnavailable": {
     "message": "Data unavailable"
-  },
-  "pairNotConfigured": {
-    "message": "Pair not configured on the server"
   },
   "offlineCache": {
     "message": "Offline · cached quote"
@@ -447,7 +438,7 @@
     "message": "To currency"
   },
   "converterNoRate": {
-    "message": "No rate available: collection may be pending, or no single institution covers both currencies."
+    "message": "No rate available: collection may be pending, or current data cannot connect these currencies."
   },
   "converterSameCurrency": {
     "message": "Same currency · 1:1"
@@ -487,5 +478,14 @@
   },
   "converterViaCurrency": {
     "message": "via $1"
+  },
+  "explorerTitle": {
+    "message": "Currency explorer"
+  },
+  "explorerEyebrow": {
+    "message": "CHOOSE TWO CURRENCIES"
+  },
+  "noMarketHistory": {
+    "message": "No market history is collected for this pair. Conversion may use dated official reference rates."
   }
 }
