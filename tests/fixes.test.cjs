@@ -243,6 +243,28 @@ test('a currency the market feed lacks falls back to a labelled official rate', 
   assert.doesNotMatch(card, /not configured/);
 });
 
+test('hover selects the newest official observation and retries a negative cache', async t => {
+  const official = [
+    {rate: '7.5', institution: 'Bank of Canada', reference_date: '2026-08-01'},
+    {rate: '8', institution: 'European Central Bank', reference_date: '2026-09-18'},
+  ];
+  const h = await hover(t, {official});
+  assert.match(h.shadow().querySelector('.amount').textContent, /80\.00 CNY/);
+  assert.match(h.shadow().querySelector('.card').textContent, /European Central Bank/);
+
+  const missing = [];
+  const recovered = await hover(t, {official: missing});
+  assert.equal(recovered.shadow().querySelector('.amount').textContent, '—');
+  missing.push({rate: '9', institution: 'Federal Reserve Board', reference_date: '2026-09-19'});
+  const realNow = recovered.w.Date.now;
+  recovered.w.Date.now = () => realNow() + 61000;
+  recovered.w.document.getElementById('price').dispatchEvent(
+    new recovered.w.MouseEvent('mousemove', {bubbles: true, clientX: 20, clientY: 20}),
+  );
+  await tick(300);
+  assert.match(recovered.shadow().querySelector('.amount').textContent, /90\.00 CNY/);
+});
+
 test('per-site currency memory is capped instead of growing forever', async t => {
   const h = await hover(t, {text: '$10', official: []});
   for (let index = 0; index < 260; index += 1) {

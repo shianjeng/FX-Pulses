@@ -8,7 +8,9 @@ from pydantic import ValidationError
 from app.database import SessionLocal
 from app.official_providers import (
     BankOfCanadaProvider,
+    BankOfJapanProvider,
     EcbReferenceProvider,
+    FederalReserveProvider,
     OfficialTable,
 )
 from app.providers import ProviderError
@@ -53,6 +55,59 @@ def test_bank_of_canada_normalizes_cross_rates():
     assert quotes[0].rate == Decimal("6.69631755")
     assert quotes[1].rate == Decimal("157.14927048")
     assert "EUR" in table.values_per_anchor
+
+
+def test_bank_of_canada_uses_newest_row_not_last_row():
+    payload = {"observations": [
+        BOC_PAYLOAD["observations"][0],
+        {"d": "2026-04-30", "FXRUBCAD": {"v": "0.01819"}},
+    ]}
+    table = BankOfCanadaProvider().parse(payload)
+    assert table.reference_date == date(2026, 9, 18)
+    assert "USD" in table.currencies
+    assert "RUB" not in table.currencies
+
+
+FED_PAYLOAD = (
+    '"Series Description","Australian Dollar","Euro-Area Euro",'
+    '"Chinese Yuan","Japanese Yen"\n'
+    '"Unit:","Currency","Currency","Currency","Currency"\n'
+    '"Multiplier:","1","1","1","1"\n'
+    '"Currency:","AUD","EUR","CNY","JPY"\n'
+    '"Unique Identifier:","H10/H10/RXI$US_N.B.AL","H10/H10/RXI$US_N.B.EU",'
+    '"H10/H10/RXI_N.B.CH","H10/H10/RXI_N.B.JA"\n'
+    '"Time Period","RXI$US_N.B.AL","RXI$US_N.B.EU","RXI_N.B.CH","RXI_N.B.JA"\n'
+    "2026-09-17,0.7000,1.2000,7.0000,150.0000\n"
+    "2026-09-18,0.7100,1.2500,7.1000,151.0000\n"
+    "2026-09-21,ND,ND,ND,ND\n"
+)
+
+
+def test_federal_reserve_normalizes_mixed_quote_directions():
+    table = FederalReserveProvider().parse(FED_PAYLOAD)
+    assert table.reference_date == date(2026, 9, 18)
+    assert table.quote("USD", "CNY").rate == Decimal("7.10000000")
+    assert table.quote("EUR", "USD").rate == Decimal("1.25000000")
+    assert table.quote("USD", "AUD").rate == Decimal("1.40845070")
+
+
+BOJ_PAYLOAD = {
+    "STATUS": 200,
+    "RESULTSET": [{
+        "SERIES_CODE": "FXERD04",
+        "VALUES": {
+            "SURVEY_DATES": [20260917, 20260918, 20260919],
+            "VALUES": [154.98, 155.25, None],
+        },
+    }],
+}
+
+
+def test_bank_of_japan_reads_latest_daily_usd_jpy_rate():
+    table = BankOfJapanProvider().parse(BOJ_PAYLOAD)
+    assert table.reference_date == date(2026, 9, 18)
+    assert table.currencies == ["JPY", "USD"]
+    assert table.quote("USD", "JPY").rate == Decimal("155.25000000")
 
 
 def test_one_uncovered_pair_does_not_discard_the_table():
@@ -132,8 +187,9 @@ PBOC_PAYLOAD = {
     "records": [
         {"vrtEName": "USD/CNY", "price": "7.1234"},
         {"vrtEName": "EUR/CNY", "price": "8.4000"},
-        {"vrtEName": "JPY/CNY", "price": "4.8000"},      # published per 100 JPY
+        {"vrtEName": "100JPY/CNY", "price": "4.8000"},   # published per 100 JPY
         {"vrtEName": "KRW/CNY", "price": "0.5200"},      # published per 100 KRW
+        {"vrtEName": "CNY/MYR", "price": "0.6000"},
         {"vrtEName": "USD/HKD", "price": "7.8"},         # not a CNY pair: ignored
         {"vrtEName": "GBP/CNY", "price": "0"},           # unusable: ignored
         {"vrtEName": "AUD/CNY"},                         # no price: ignored
@@ -146,11 +202,12 @@ def test_pboc_scales_the_per_hundred_quotations():
     from app.official_providers import PbocProvider
     table = PbocProvider().parse(PBOC_PAYLOAD)
     assert table.reference_date == date(2026, 9, 18)
-    assert table.currencies == ["CNY", "EUR", "JPY", "KRW", "USD"]
+    assert table.currencies == ["CNY", "EUR", "JPY", "KRW", "MYR", "USD"]
     # 1 USD = 7.1234 CNY, and 100 JPY = 4.80 CNY, so USD/JPY is 7.1234 / 0.048.
     assert table.quote("USD", "CNY").rate == Decimal("7.12340000")
     assert table.quote("USD", "JPY").rate == Decimal("148.40416667")
     assert table.quote("CNY", "JPY").rate == Decimal("20.83333333")
+    assert table.quote("CNY", "MYR").rate == Decimal("0.60000000")
     assert table.quote("USD", "CNY").is_derived is False
 
 
@@ -170,5 +227,6 @@ def test_official_sources_are_configurable_and_validated():
     settings = Settings(official_sources="ecb,pboc,ecb", _env_file=None)
     assert settings.official_sources == ["ecb", "pboc"]
     assert isinstance(get_official_providers(settings.official_sources)[1], PbocProvider)
+    assert len(Settings(_env_file=None).official_sources) == 5
     with pytest.raises(ValidationError):
-        Settings(official_sources="ecb,boj", _env_file=None)
+        Settings(official_sources="ecb,unknown", _env_file=None)

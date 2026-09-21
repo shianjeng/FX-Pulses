@@ -263,6 +263,12 @@
   "institutionPboc": {
     "message": "中国人民银行"
   },
+  "institutionFed": {
+    "message": "美国联邦储备委员会"
+  },
+  "institutionBoj": {
+    "message": "日本银行"
+  },
   "optionsDocTitle": {
     "message": "FX Pulse 设置"
   },
