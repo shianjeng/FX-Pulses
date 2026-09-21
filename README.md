@@ -78,10 +78,14 @@ python -m app.check_official
 ## Architecture
 
 ```mermaid
-flowchart LR
-    Browser["Chrome extension"] -->|Read-only API| API["FastAPI"]
-    API --> DB[("PostgreSQL / SQLite")]
-    Alpha["Alpha Vantage"] --> Collector["Scheduled collector"]
+flowchart TD
+    Popup["Extension Popup"] --> Worker["Extension Background · Shared Cache"]
+    Hover["Native Hover Interface"] --> Worker
+    Script["Tampermonkey Interface · Optional"] --> Bridge["Extension Read-Only Bridge"]
+    Bridge --> Worker
+    Worker --> API["FastAPI Backend"]
+    API --> DB[("Exchange Rate Database")]
+    Alpha["Alpha Vantage · Market Quotes"] --> Collector["Scheduled Collector"]
     Banks["ECB · BoC · Fed · BoJ · PBOC"] --> Collector
     Collector --> DB
 ```
