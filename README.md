@@ -79,10 +79,20 @@ python -m app.check_official
 
 ```mermaid
 flowchart TD
-    Popup["Extension Popup"] --> Worker["Extension Background · Shared Cache"]
-    Hover["Native Hover Interface"] --> Worker
-    Script["Tampermonkey Interface · Optional"] --> Bridge["Extension Read-Only Bridge"]
-    Bridge --> Worker
+    Script["Tampermonkey Userscript · Optional"]
+
+    subgraph Extension["Browser Extension · Chrome / Edge"]
+        Popup["Toolbar Popup"]
+        Hover["Built-in Hover Interface"]
+        Bridge["Read-Only Userscript Bridge"]
+        Worker["Background Service Worker · Shared Cache"]
+
+        Popup --> Worker
+        Hover --> Worker
+        Bridge --> Worker
+    end
+
+    Script --> Bridge
     Worker --> API["FastAPI Backend"]
     API --> DB[("Exchange Rate Database")]
     Alpha["Alpha Vantage · Market Quotes"] --> Collector["Scheduled Collector"]
