@@ -230,3 +230,59 @@ def test_official_sources_are_configurable_and_validated():
     assert len(Settings(_env_file=None).official_sources) == 5
     with pytest.raises(ValidationError):
         Settings(official_sources="ecb,unknown", _env_file=None)
+
+
+def test_triangulation_bridges_two_institutions():
+    from app.services import triangulate_official
+    ecb = OfficialTable(
+        institution="European Central Bank", rate_type="Reference rate", anchor_currency="EUR",
+        reference_date=date(2026, 9, 18), fetched_at=datetime.now(timezone.utc),
+        source_url="https://example.test/ecb",
+        values_per_anchor={"EUR": Decimal("1"), "USD": Decimal("1.2"), "SEK": Decimal("11")},
+    )
+    fed = OfficialTable(
+        institution="Federal Reserve Board", rate_type="H.10 foreign exchange rate",
+        anchor_currency="USD", reference_date=date(2026, 9, 17),
+        fetched_at=datetime.now(timezone.utc), source_url="https://example.test/frb",
+        values_per_anchor={"USD": Decimal("1"), "KRW": Decimal("1300")},
+    )
+    # Neither table alone covers SEK/KRW.
+    assert ecb.quotes(["SEK/KRW"]) == []
+    assert fed.quotes(["SEK/KRW"]) == []
+
+    results = triangulate_official([ecb, fed], "SEK", "KRW")
+    assert results, "expected a bridged quote"
+    best = results[0]
+    # 1 SEK = 1/11 EUR = 1.2/11 USD = 1300 * 1.2 / 11 KRW
+    assert best.rate == Decimal("141.81818182")
+    assert best.via_currency == "USD"
+    assert best.is_derived is True
+    assert best.institution == "European Central Bank + Federal Reserve Board"
+    # The result is only as fresh as its oldest leg.
+    assert best.reference_date == date(2026, 9, 17)
+    assert triangulate_official([ecb, fed], "SEK", "XXX") == []
+
+
+def test_direct_observations_win_over_triangulation(client: TestClient):
+    from app.services import latest_official_tables, store_official_table
+    with SessionLocal() as db:
+        store_official_table(db, OfficialTable(
+            institution="European Central Bank", rate_type="Reference rate",
+            anchor_currency="EUR", reference_date=date(2026, 9, 18),
+            fetched_at=datetime.now(timezone.utc), source_url="https://example.test/ecb",
+            values_per_anchor={"EUR": Decimal("1"), "USD": Decimal("1.2"), "SEK": Decimal("11")},
+        ))
+        store_official_table(db, OfficialTable(
+            institution="Federal Reserve Board", rate_type="H.10 foreign exchange rate",
+            anchor_currency="USD", reference_date=date(2026, 9, 17),
+            fetched_at=datetime.now(timezone.utc), source_url="https://example.test/frb",
+            values_per_anchor={"USD": Decimal("1"), "KRW": Decimal("1300")},
+        ))
+        assert len(latest_official_tables(db)) == 2
+
+    direct = client.get("/api/v1/official-rates/SEK/USD").json()
+    assert all(row["via_currency"] is None for row in direct)
+
+    bridged = client.get("/api/v1/official-rates/SEK/KRW").json()
+    assert bridged[0]["via_currency"] == "USD"
+    assert bridged[0]["rate"] == "141.81818182"

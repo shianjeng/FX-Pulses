@@ -460,5 +460,32 @@
   },
   "loadingConverterRate": {
     "message": "Loading conversion rate…"
+  },
+  "bridgeSectionTitle": {
+    "message": "Userscript compatibility"
+  },
+  "bridgeDescription": {
+    "message": "Only needed if you still run the legacy FX Pulse userscript. While it is on, sites you allowed hover on can read cached public quote data, detect that the extension is installed, and make the extension's own hover card stand down once per page. The backend address, preferences and keys are never exposed to a page."
+  },
+  "bridgeEnable": {
+    "message": "Let in-page userscripts read this extension's data"
+  },
+  "bridgeOn": {
+    "message": "Userscript compatibility enabled. Reload your pages."
+  },
+  "bridgeOff": {
+    "message": "Userscript compatibility disabled"
+  },
+  "bridgeRequiresHover": {
+    "message": "Enable hover conversion first"
+  },
+  "sourceStale": {
+    "message": "$1 days without an update"
+  },
+  "converterUnavailableCurrency": {
+    "message": "$1 (unavailable)"
+  },
+  "converterViaCurrency": {
+    "message": "via $1"
   }
 }

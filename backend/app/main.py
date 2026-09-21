@@ -15,7 +15,7 @@ from app.config import get_settings
 from app.database import get_db
 from app.models import CollectorRun
 from app.schemas import CollectorJobOut, HealthOut
-from app.services import MARKET_JOB, OFFICIAL_JOB
+from app.services import MARKET_JOB, OFFICIAL_JOB, official_job
 
 settings = get_settings()
 
@@ -114,6 +114,10 @@ def health(db: Session = Depends(get_db)) -> HealthOut:
         MARKET_JOB: settings.refresh_interval_minutes,
         OFFICIAL_JOB: settings.official_refresh_interval_minutes,
     }
+    # One row per configured source, so a single dead source cannot hide behind
+    # the aggregate job that still succeeds thanks to the others.
+    for name in settings.official_sources:
+        intervals[official_job(name)] = settings.official_refresh_interval_minutes
     now = datetime.now(timezone.utc)
     runs = {run.job: run for run in db.scalars(select(CollectorRun)).all()}
     jobs = []
