@@ -3,7 +3,7 @@
     "message": "FX Pulse — exchange rates at hand"
   },
   "extensionDescription": {
-    "message": "Login-free market midpoints, trends and quick conversion for CNY, USD and JPY."
+    "message": "Login-free market quotes, trends, official references and conversion across major currencies."
   },
   "noAccount": {
     "message": "No account"
@@ -110,11 +110,8 @@
   "convertedLabel": {
     "message": "You receive"
   },
-  "converterPair": {
-    "message": "Currency pair"
-  },
   "converterHint": {
-    "message": "Estimated at the midpoint; bank fees and spreads excluded."
+    "message": "Uses market midpoints when available; otherwise an official daily reference with source and date. Fees and spreads excluded."
   },
   "targetTitle": {
     "message": "Rate alerts"
@@ -442,5 +439,26 @@
   },
   "ask": {
     "message": "ASK"
+  },
+  "converterFromCurrency": {
+    "message": "From currency"
+  },
+  "converterToCurrency": {
+    "message": "To currency"
+  },
+  "converterNoRate": {
+    "message": "No rate available: collection may be pending, or no single institution covers both currencies."
+  },
+  "converterSameCurrency": {
+    "message": "Same currency · 1:1"
+  },
+  "converterOfficialSource": {
+    "message": "Official daily reference · $1 · $2"
+  },
+  "converterMarketSource": {
+    "message": "Market midpoint · $1"
+  },
+  "loadingConverterRate": {
+    "message": "Loading conversion rate…"
   }
 }

@@ -177,6 +177,7 @@ test('evicting cached requests never discards the shared snapshot', async () => 
 test('a content script cannot ask the gateway for arbitrary paths', async () => {
   const h = worker({official: [{rate: '7.8', institution: 'European Central Bank', reference_date: '2026-09-18', is_derived: true}]});
   assert.equal((await h.send({type: 'FX_OFFICIAL', path: '/official-rates/EUR/CNY'}, true)).ok, true);
+  assert.equal((await h.send({type: 'FX_API', path: '/official-rates/EUR/CNY'})).ok, true);
   for (const path of ['/rates', '/official-rates/EUR/CNY/../../rates', '/pairs', '/official-rates/eur/cny']) {
     const reply = await h.send({type: 'FX_OFFICIAL', path}, true);
     assert.equal(reply.ok, false, path);
