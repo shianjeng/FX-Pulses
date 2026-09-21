@@ -124,3 +124,34 @@ async def test_provider_reports_quota_without_echoing_upstream(monkeypatch, payl
     monkeypatch.setattr("app.providers.httpx.AsyncClient", lambda **kwargs: mock)
     with pytest.raises(ProviderError, match="quota or endpoint entitlement"):
         await AlphaVantageProvider("secret-key").get_quote("USD", "CNY")
+
+
+def test_rate_limit_is_per_client(client, monkeypatch):
+    monkeypatch.setattr(get_settings(), "api_requests_per_minute", 3)
+    import app.main as main
+    main._hits.clear()
+    noisy = {"x-forwarded-for": "198.51.100.7"}
+    monkeypatch.setattr(get_settings(), "trust_forwarded_for", True)
+    for _ in range(3):
+        assert client.get("/api/v1/pairs", headers=noisy).status_code == 200
+    assert client.get("/api/v1/pairs", headers=noisy).status_code == 429
+    # A different client must not inherit the noisy one's exhausted budget.
+    assert client.get(
+        "/api/v1/pairs", headers={"x-forwarded-for": "203.0.113.9"}
+    ).status_code == 200
+    main._hits.clear()
+
+
+def test_collector_heartbeat_records_failures_and_recovery():
+    from app.models import CollectorRun
+    from app.services import MARKET_JOB, record_run
+    with SessionLocal() as db:
+        record_run(db, MARKET_JOB, ok=False, error="offline")
+        record_run(db, MARKET_JOB, ok=False, error="offline")
+        run = db.scalar(select(CollectorRun).where(CollectorRun.job == MARKET_JOB))
+        assert run.consecutive_failures == 2
+        assert run.last_success_at is None
+        record_run(db, MARKET_JOB, ok=True)
+        db.refresh(run)
+        assert run.consecutive_failures == 0
+        assert run.last_success_at is not None

@@ -1,0 +1,440 @@
+{
+  "extensionName": {
+    "message": "FX Pulse — 手元で為替レート"
+  },
+  "extensionDescription": {
+    "message": "ログイン不要で人民元・米ドル・円の仲値、推移、通貨換算を確認できます。"
+  },
+  "noAccount": {
+    "message": "登録不要"
+  },
+  "settings": {
+    "message": "設定"
+  },
+  "refresh": {
+    "message": "更新"
+  },
+  "languageLabel": {
+    "message": "表示言語"
+  },
+  "langZh": {
+    "message": "中国語"
+  },
+  "langEn": {
+    "message": "英語"
+  },
+  "langJa": {
+    "message": "日本語"
+  },
+  "eyebrowMarket": {
+    "message": "市場仲値"
+  },
+  "watchlistTitle": {
+    "message": "ウォッチリスト"
+  },
+  "loadingRates": {
+    "message": "レートを読み込み中…"
+  },
+  "refreshHint": {
+    "message": "更新は保存済みのサーバーデータを読み直します。配信元からの新規取得は実行しません。"
+  },
+  "eyebrowOfficial": {
+    "message": "公式参考レート"
+  },
+  "officialTitle": {
+    "message": "公式参考レート"
+  },
+  "officialTitleFor": {
+    "message": "$1 の公式参考レート"
+  },
+  "daily": {
+    "message": "日次"
+  },
+  "loadingOfficial": {
+    "message": "参考レートを読み込み中…"
+  },
+  "eyebrowTrend": {
+    "message": "価格推移"
+  },
+  "trendTitle": {
+    "message": "為替推移"
+  },
+  "trendTitleFor": {
+    "message": "$1 の推移"
+  },
+  "change24h": {
+    "message": "24時間 · $1"
+  },
+  "rangeGroup": {
+    "message": "表示期間"
+  },
+  "loadingChart": {
+    "message": "チャートを読み込み中…"
+  },
+  "chartAria": {
+    "message": "$1 $2チャート"
+  },
+  "range1": {
+    "message": "1日間"
+  },
+  "range7": {
+    "message": "7日間"
+  },
+  "range30": {
+    "message": "30日間"
+  },
+  "range90": {
+    "message": "90日間"
+  },
+  "statLow": {
+    "message": "安値"
+  },
+  "statHigh": {
+    "message": "高値"
+  },
+  "statRange": {
+    "message": "レンジ"
+  },
+  "eyebrowConverter": {
+    "message": "通貨換算"
+  },
+  "converterTitle": {
+    "message": "通貨換算"
+  },
+  "reverse": {
+    "message": "入れ替え"
+  },
+  "amountLabel": {
+    "message": "金額"
+  },
+  "convertedLabel": {
+    "message": "換算結果"
+  },
+  "converterPair": {
+    "message": "通貨ペア"
+  },
+  "converterHint": {
+    "message": "仲値での概算です。銀行手数料・スプレッドは含みません。"
+  },
+  "targetTitle": {
+    "message": "目標レート"
+  },
+  "targetOnOpen": {
+    "message": "起動時のみ確認"
+  },
+  "targetBackground": {
+    "message": "バックグラウンドで確認"
+  },
+  "above": {
+    "message": "以上"
+  },
+  "below": {
+    "message": "以下"
+  },
+  "targetPlaceholder": {
+    "message": "目標仲値を入力"
+  },
+  "saveLocal": {
+    "message": "端末に保存"
+  },
+  "manageWatchlist": {
+    "message": "ウォッチリストを編集"
+  },
+  "savedLocally": {
+    "message": "この端末に保存"
+  },
+  "midpointDisclaimer": {
+    "message": "仲値は買値と売値の平均です。人民元の公式基準値や銀行の約定レートとは異なります。参考情報です。"
+  },
+  "midpointFormula": {
+    "message": "仲値 =（買値 + 売値）÷ 2"
+  },
+  "copyRate": {
+    "message": "レートをコピー"
+  },
+  "copyManual": {
+    "message": "自動コピーに失敗しました。Ctrl/Cmd+Cでコピーしてください。"
+  },
+  "noComparison": {
+    "message": "比較データなし"
+  },
+  "waitingCollection": {
+    "message": "データ取得待ち"
+  },
+  "dataUnavailable": {
+    "message": "データを取得できません"
+  },
+  "pairNotConfigured": {
+    "message": "サーバーに未登録の通貨ペア"
+  },
+  "offlineCache": {
+    "message": "オフライン・保存済みレート"
+  },
+  "outdated": {
+    "message": "古いデータ"
+  },
+  "updated": {
+    "message": "更新済み"
+  },
+  "chartCollecting": {
+    "message": "履歴データを収集中"
+  },
+  "singlePoint": {
+    "message": "観測データは1件のみ"
+  },
+  "amountRange": {
+    "message": "0から1兆までの有効な金額を入力してください"
+  },
+  "targetPaused": {
+    "message": "レートを取得できないため目標の判定を停止中"
+  },
+  "noTarget": {
+    "message": "目標レートは未設定です"
+  },
+  "targetReached": {
+    "message": "● 目標に到達 $1 $2"
+  },
+  "targetNotReached": {
+    "message": "○ 未到達 · 目標 $1 $2"
+  },
+  "targetPositive": {
+    "message": "0より大きい目標値を入力してください"
+  },
+  "copied": {
+    "message": "コピーしました"
+  },
+  "dataUnavailableCheck": {
+    "message": "データを取得できません。接続を確認してください。"
+  },
+  "officialUnavailable": {
+    "message": "参考レートを取得できません。後でもう一度更新してください。"
+  },
+  "officialDaily": {
+    "message": "日次参考レート · 銀行の約定レートではありません"
+  },
+  "noOfficial": {
+    "message": "参考レートはありません"
+  },
+  "crossRate": {
+    "message": "クロスレート"
+  },
+  "mockData": {
+    "message": "デモデータ · 実際の相場ではありません"
+  },
+  "providerLive": {
+    "message": "為替データ"
+  },
+  "asOf": {
+    "message": "更新日時"
+  },
+  "statusLine": {
+    "message": "更新日時 $1 · $2"
+  },
+  "connectionFailed": {
+    "message": "接続失敗"
+  },
+  "collectorStopped": {
+    "message": "データ取得が停止しています"
+  },
+  "serverReturned": {
+    "message": "サーバー応答 $1"
+  },
+  "tooManyRequests": {
+    "message": "リクエストが多すぎます。後で再試行してください。"
+  },
+  "timeout": {
+    "message": "タイムアウトしました。再試行してください。"
+  },
+  "badFormat": {
+    "message": "API応答の形式が正しくありません"
+  },
+  "cannotConnect": {
+    "message": "サーバーに接続できません"
+  },
+  "checkBackend": {
+    "message": "サーバーに接続できません。アドレスと接続を確認してください。"
+  },
+  "institutionEcb": {
+    "message": "欧州中央銀行"
+  },
+  "institutionBoc": {
+    "message": "カナダ銀行"
+  },
+  "institutionPboc": {
+    "message": "中国人民銀行"
+  },
+  "optionsDocTitle": {
+    "message": "FX Pulse 設定"
+  },
+  "eyebrowSettings": {
+    "message": "拡張機能の設定"
+  },
+  "settingsTitle": {
+    "message": "データソース設定"
+  },
+  "settingsIntro": {
+    "message": "アカウントは不要です。ウォッチリスト、目標レート、換算設定はこのブラウザーにのみ保存されます。サーバーは公開為替データを取得・キャッシュします。"
+  },
+  "apiAddress": {
+    "message": "サーバーAPIアドレス"
+  },
+  "saveAndTest": {
+    "message": "保存して接続を確認"
+  },
+  "privacyTitle": {
+    "message": "プライバシーと動作"
+  },
+  "privacyBody": {
+    "message": "メールは送信しません。目標レートは拡張機能を開いたときに確認し、通知を有効にした場合もバックグラウンドでは保存済みのサーバーデータのみを読み取り、配信元には接続しません。サーバーはAPIキーを保護し、重複リクエストを減らします。"
+  },
+  "checking": {
+    "message": "接続を確認中…"
+  },
+  "saveFailed": {
+    "message": "保存できません：$1"
+  },
+  "connectedWaiting": {
+    "message": "接続済み。初回データ取得待ちです。"
+  },
+  "connectedMock": {
+    "message": "接続済み。デモデータを使用中です。"
+  },
+  "connectedSaved": {
+    "message": "接続に成功し、設定を保存しました。"
+  },
+  "serverPermissionDenied": {
+    "message": "このサーバーへのアクセスが許可されていません"
+  },
+  "invalidUrl": {
+    "message": "有効なHTTPまたはHTTPSアドレスを入力してください"
+  },
+  "sourceChanged": {
+    "message": "データソースが変更されました。再試行してください。"
+  },
+  "hoverSectionTitle": {
+    "message": "ページ上での通貨換算"
+  },
+  "hoverDescription": {
+    "message": "ホバーとツールバーはサーバー、レートキャッシュ、言語、ウォッチリストを共有します。ユーザースクリプト管理ソフトは不要です。金額は端末内で判定し、ページの内容は送信しません。二重表示を防ぐため旧スクリプトを無効にしてください。"
+  },
+  "hoverEnable": {
+    "message": "ウェブページでホバー換算を有効にする"
+  },
+  "hoverTargetLabel": {
+    "message": "ホバー換算先の通貨"
+  },
+  "cardSize": {
+    "message": "カードのサイズ"
+  },
+  "sizeS": {
+    "message": "小"
+  },
+  "sizeM": {
+    "message": "中"
+  },
+  "sizeL": {
+    "message": "大"
+  },
+  "cardMode": {
+    "message": "カードの表示モード"
+  },
+  "modeSimple": {
+    "message": "シンプル"
+  },
+  "modeDetail": {
+    "message": "詳細"
+  },
+  "settingsSaved": {
+    "message": "設定を保存しました"
+  },
+  "hoverPermissionDenied": {
+    "message": "ページへのアクセスが許可されていないため、ホバーは無効のままです。"
+  },
+  "hoverEnabledMessage": {
+    "message": "有効にしました。ウェブページを再読み込みしてください。"
+  },
+  "hoverDisabledMessage": {
+    "message": "ホバー換算を無効にしました"
+  },
+  "hoverFailed": {
+    "message": "ホバーを設定できませんでした。拡張機能を再読み込みしてください。"
+  },
+  "alertsSectionTitle": {
+    "message": "目標レート通知"
+  },
+  "alertsDescription": {
+    "message": "通知は保存済みのサーバーデータのみを読み取り、APIの利用枠を消費しません。"
+  },
+  "alertsEnable": {
+    "message": "目標レート通知を有効にする（バックグラウンド確認）"
+  },
+  "alertIntervalLabel": {
+    "message": "通知の確認間隔"
+  },
+  "interval30": {
+    "message": "30分"
+  },
+  "interval60": {
+    "message": "1時間"
+  },
+  "interval180": {
+    "message": "3時間"
+  },
+  "interval360": {
+    "message": "6時間"
+  },
+  "alertsOn": {
+    "message": "目標レート通知を有効にしました"
+  },
+  "alertsOff": {
+    "message": "目標レート通知を無効にしました"
+  },
+  "alertsPermissionDenied": {
+    "message": "通知が許可されていないため、通知は無効のままです。"
+  },
+  "alertsFailed": {
+    "message": "通知を設定できませんでした。拡張機能を再読み込みしてください。"
+  },
+  "targetAlertBody": {
+    "message": "$1 $2 $3 に到達しました。現在 $4"
+  },
+  "hoverSource": {
+    "message": "元の通貨"
+  },
+  "hoverTargetField": {
+    "message": "換算先の通貨"
+  },
+  "hoverCopy": {
+    "message": "コピー"
+  },
+  "hoverClose": {
+    "message": "閉じる"
+  },
+  "hoverUnavailable": {
+    "message": "レートを取得できません。サーバー接続を確認してください。"
+  },
+  "hoverUnsupported": {
+    "message": "未登録または未取得の通貨です"
+  },
+  "hoverStale": {
+    "message": "古いレート"
+  },
+  "hoverGuessed": {
+    "message": "通貨は自動判定です。必要に応じて修正してください"
+  },
+  "hoverDisclaimer": {
+    "message": "仲値による概算です。手数料は含みません。"
+  },
+  "hoverManual": {
+    "message": "自動コピーに失敗しました。選択した文字列をコピーしてください。"
+  },
+  "hoverOfficial": {
+    "message": "公式参考レート · 日次 · 約定レートではありません"
+  },
+  "bid": {
+    "message": "買値"
+  },
+  "ask": {
+    "message": "売値"
+  }
+}

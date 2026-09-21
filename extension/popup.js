@@ -2,6 +2,7 @@ const DEFAULTS = {
   apiUrl: "http://localhost:8000/api/v1",
   watchlist: ["USD/CNY", "USD/JPY", "CNY/JPY"],
   targets: {},
+  alertsEnabled: false,
 };
 
 let settings = { ...DEFAULTS };
@@ -14,19 +15,33 @@ let supportedPairs = [];
 let offline = false;
 const validPair = pair => typeof pair === "string" && /^[A-Z]{3}\/[A-Z]{3}$/.test(pair);
 
+const RANGE_DAYS = [1, 7, 30, 90];
+const t = (key, ...values) => globalThis.FXI18N.t(key, ...values);
+let historyDays = 7;
+
+/* A timestamp without an offset is parsed as LOCAL time by the browser, which
+   shifted every chart label by the client's UTC offset. Backend values are UTC. */
+const parseUtc = (value) => Date.parse(/([Zz]|[+-]\d{2}:?\d{2})$/.test(String(value)) ? value : `${value}Z`);
+
 const $ = (id) => document.getElementById(id);
-const fmt = (value, digits = 4) => Number(value).toLocaleString("zh-CN", {
+const docLocale = () => ({zh: "zh-CN", en: "en-US", ja: "ja-JP"})[globalThis.FXI18N.language] || "zh-CN";
+const INSTITUTIONS = {
+  "European Central Bank": "institutionEcb",
+  "Bank of Canada": "institutionBoc",
+  "People's Bank of China": "institutionPboc",
+};
+const fmt = (value, digits = 4) => Number(value).toLocaleString(docLocale(), {
   minimumFractionDigits: digits,
   maximumFractionDigits: digits,
 });
 const pairOf = (rate) => `${rate.base_currency}/${rate.quote_currency}`;
-const changeText = (value) => value === null || value === undefined ? "暂无对比" :
+const changeText = (value) => value === null || value === undefined ? t("noComparison") :
   `${Number(value) >= 0 ? "+" : ""}${Number(value).toFixed(2)}%`;
 
 async function request(path) {
   if (chrome.runtime?.sendMessage) {
     const response = await chrome.runtime.sendMessage({type: "FX_API", path});
-    if (!response?.ok) throw new Error(response?.error || "Failed to fetch");
+    if (!response?.ok) throw new Error(response?.error || t("cannotConnect"));
     return response.data;
   }
   const controller = new globalThis.AbortController();
@@ -34,12 +49,12 @@ async function request(path) {
   try {
   const response = await fetch(`${settings.apiUrl.replace(/\/$/, "")}${path}`, {signal: controller.signal});
   if (!response.ok) {
-    throw new Error(response.status === 429 ? "请求过于频繁，请稍后重试" : `服务器返回 ${response.status}`);
+    throw new Error(response.status === 429 ? t("tooManyRequests") : t("serverReturned", response.status));
   }
   return await response.json();
   } catch (error) {
-    if (error.name === "AbortError") throw new Error("请求超时，请重试");
-    if (error instanceof TypeError) throw new Error("Failed to fetch。请确认后端已经启动。");
+    if (error.name === "AbortError") throw new Error(t("timeout"));
+    if (error instanceof TypeError || error.message === "Failed to fetch") throw new Error(t("checkBackend"));
     throw error;
   } finally {
     globalThis.clearTimeout(timer);
@@ -53,7 +68,7 @@ function rateCard(rate) {
   return `<button class="rate-card ${pair === selectedPair ? "selected" : ""}" data-pair="${pair}">
     <div class="rate-top"><span class="pair">${pair}</span><span class="change ${rate.change_percent === null || rate.change_percent === undefined ? "" : change >= 0 ? "positive" : "negative"}">${changeText(rate.change_percent)}</span></div>
     <strong>${fmt(rate.midpoint, digits)}</strong>
-    <div class="rate-bottom"><span>BID ${fmt(rate.bid, digits)} · ASK ${fmt(rate.ask, digits)}</span><span class="${offline || rate.is_stale ? "stale" : ""}">${offline ? "离线缓存" : rate.is_stale ? "数据较旧" : "已更新"}</span></div>
+    <div class="rate-bottom"><span>${t("bid")} ${fmt(rate.bid, digits)} · ${t("ask")} ${fmt(rate.ask, digits)}</span><span class="${offline || rate.is_stale ? "stale" : ""}">${offline ? t("offlineCache") : rate.is_stale ? t("outdated") : t("updated")}</span></div>
     <small class="quote-time">${chartTimeLabel(rate.captured_at)}</small>
   </button>`;
 }
@@ -69,7 +84,7 @@ async function reconcileWatchlist() {
 function renderRates() {
   $("rates").innerHTML = settings.watchlist.map(pair => {
     const rate = rates.find(item => pairOf(item) === pair);
-    return rate ? rateCard(rate) : `<button class="rate-card ${pair === selectedPair ? "selected" : ""}" data-pair="${pair}"><span class="pair">${pair}</span><strong>—</strong><span>${offline ? "数据不可用" : supportedPairs.includes(pair) ? "等待采集" : "此货币对未在后端配置"}</span></button>`;
+    return rate ? rateCard(rate) : `<button class="rate-card ${pair === selectedPair ? "selected" : ""}" data-pair="${pair}"><span class="pair">${pair}</span><strong>—</strong><span>${offline ? t("dataUnavailable") : supportedPairs.includes(pair) ? t("waitingCollection") : t("pairNotConfigured")}</span></button>`;
   }).join("");
   $("copy-button").disabled = offline || !currentRate();
   document.querySelectorAll(".rate-card").forEach((card) => card.addEventListener("click", () => selectPair(card.dataset.pair)));
@@ -91,7 +106,7 @@ function renderSelects() {
 }
 
 function chartTimeLabel(value) {
-  const date = new Date(value);
+  const date = new Date(parseUtc(value));
   if (Number.isNaN(date.getTime())) return "—";
   const month = date.getMonth() + 1;
   const day = date.getDate();
@@ -101,18 +116,25 @@ function chartTimeLabel(value) {
 }
 
 function smoothPath(points) {
-  // Straight segments cannot invent extrema between observations.
+  // Straight segments cannot invent extrema between observations. The break
+  // threshold follows the observed sampling interval instead of a hardcoded six
+  // hours, which turned the whole line into loose dots on slower collectors.
+  const gaps = points.slice(1)
+    .map((point, index) => parseUtc(point.time) - parseUtc(points[index].time))
+    .sort((a, b) => a - b);
+  const typical = gaps.length ? gaps[(gaps.length - 1) >> 1] : 0;
+  const limit = Math.max(typical * 2.5, 60000);
   return points.map((point, index) => {
-    const gap = index && new Date(point.time) - new Date(points[index - 1].time) > 6 * 3600000;
+    const gap = index && parseUtc(point.time) - parseUtc(points[index - 1].time) > limit;
     return `${!index || gap ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
   }).join(" ");
 }
 
 function drawChart(points) {
   const root = $("chart");
-  points = points.filter(point => Number.isFinite(Number(point.midpoint)) && Number(point.midpoint) > 0 && Number.isFinite(Date.parse(point.captured_at))).sort((a,b) => Date.parse(a.captured_at) - Date.parse(b.captured_at));
+  points = points.filter(point => Number.isFinite(Number(point.midpoint)) && Number(point.midpoint) > 0 && Number.isFinite(parseUtc(point.captured_at))).sort((a,b) => parseUtc(a.captured_at) - parseUtc(b.captured_at));
   if (!points.length) {
-    root.innerHTML = "<span>历史数据仍在积累</span>";
+    root.innerHTML = `<span>${t("chartCollecting")}</span>`;
     ["stat-low", "stat-high", "stat-position"].forEach((id) => {
       $(id).textContent = "—";
     });
@@ -125,11 +147,11 @@ function drawChart(points) {
   const width = 340;
   const height = 82;
   const range = high - low || 1;
-  const start = Date.parse(points[0].captured_at);
-  const duration = Date.parse(points.at(-1).captured_at) - start;
+  const start = parseUtc(points[0].captured_at);
+  const duration = parseUtc(points.at(-1).captured_at) - start;
   const digits = selectedPair.includes("JPY") ? 3 : 4;
   const plotted = values.map((value, index) => {
-    const x = duration ? (Date.parse(points[index].captured_at) - start) / duration * width : width / 2;
+    const x = duration ? (parseUtc(points[index].captured_at) - start) / duration * width : width / 2;
     const y = high === low ? height / 2 : 7 + ((high - value) / range) * (height - 14);
     return {
       x,
@@ -142,7 +164,7 @@ function drawChart(points) {
   const line = smoothPath(plotted);
 
   root.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${selectedPair} 七日走势图">
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${t("chartAria", selectedPair, t(`range${historyDays}`))}">
       <defs>
         <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#56e39f" stop-opacity=".22"/>
@@ -159,7 +181,7 @@ function drawChart(points) {
       <small>—</small>
       <b>—</b>
     </div>
-  ${points.length === 1 ? '<span class="single-point-note">仅有一个观测点</span>' : ''}`;
+  ${points.length === 1 ? `<span class="single-point-note">${t("singlePoint")}</span>` : ""}`;
 
   $("stat-low").textContent = fmt(low, digits);
   $("stat-high").textContent = fmt(high, digits);
@@ -211,16 +233,16 @@ function drawChart(points) {
 async function loadHistory() {
   void loadOfficial();
   const version = ++historyVersion;
-  $("trend-title").textContent = `${selectedPair} 走势`;
+  $("trend-title").textContent = t("trendTitleFor", selectedPair);
   const rate = currentRate();
   const change = Number(rate?.change_percent || 0);
-  $("trend-change").textContent = `24h · ${changeText(rate?.change_percent)}`;
+  $("trend-change").textContent = t("change24h", changeText(rate?.change_percent));
   $("trend-change").className = `change ${rate?.change_percent === null || rate?.change_percent === undefined ? "" : change >= 0 ? "positive" : "negative"}`;
-  $("chart").innerHTML = "<span>载入走势…</span>";
+  $("chart").innerHTML = `<span>${t("loadingChart")}</span>`;
   ["stat-low", "stat-high", "stat-position"].forEach(id => $(id).textContent = "—");
   try {
     const [base, quote] = selectedPair.split("/");
-    const points = await request(`/rates/${base}/${quote}/history?days=7`);
+    const points = await request(`/rates/${base}/${quote}/history?days=${historyDays}`);
     if (version === historyVersion) drawChart(points);
   } catch (error) {
     if (version === historyVersion) {
@@ -248,13 +270,13 @@ function updateConverter() {
   $("from-label").textContent = reversed ? quote : base;
   $("to-label").textContent = reversed ? base : quote;
   $("amount-error").textContent = "";
-  $("converter-status").textContent = offline ? "离线缓存" : rate?.is_stale ? "数据较旧" : "";
+  $("converter-status").textContent = offline ? t("offlineCache") : rate?.is_stale ? t("outdated") : "";
   if (!rate) { $("converted").textContent = "—"; return; }
   const raw = $("amount").value.trim();
   const amount = Number(raw);
   if (!raw || !Number.isFinite(amount) || amount < 0 || amount > 1e12) {
     $("converted").textContent = "—";
-    $("amount-error").textContent = "请输入0到1万亿之间的有效金额";
+    $("amount-error").textContent = t("amountRange");
     return;
   }
   const midpoint = Number(rate.midpoint);
@@ -268,11 +290,12 @@ function updateConverter() {
 function targetStatus(pair) {
   const target = settings.targets[pair];
   const rate = rates.find((item) => pairOf(item) === pair);
-  if (!target || !rate) return "尚未设置目标价";
-  if (offline || rate.is_stale) return "行情不可用，暂停目标价判断";
+  if (!target || !rate) return t("noTarget");
+  if (offline || rate.is_stale) return t("targetPaused");
   const current = Number(rate.midpoint);
   const reached = target.direction === "above" ? current >= target.value : current <= target.value;
-  return reached ? `● 已达到目标 ${target.direction === "above" ? "≥" : "≤"} ${target.value}` : `○ 尚未达到 · 目标 ${target.direction === "above" ? "≥" : "≤"} ${target.value}`;
+  const sign = target.direction === "above" ? "≥" : "≤";
+  return t(reached ? "targetReached" : "targetNotReached", sign, target.value);
 }
 
 function loadTarget() {
@@ -305,11 +328,11 @@ async function loadData(force = false) {
     let nextPairs, nextRates, snapshotOffline = false;
     if (chrome.runtime?.sendMessage) {
       const response = await chrome.runtime.sendMessage({type: "FX_SNAPSHOT", force: force === true});
-      if (!response?.ok) throw new Error(response?.error || "Failed to fetch");
+      if (!response?.ok) throw new Error(response?.error || t("cannotConnect"));
       ({pairs: nextPairs, rates: nextRates, offline: snapshotOffline} = response.data);
     } else [nextPairs, nextRates] = await Promise.all([request("/pairs"), request("/rates")]);
     if (version !== refreshVersion) return;
-    if (!Array.isArray(nextPairs) || !nextPairs.every(validPair) || !Array.isArray(nextRates) || !nextRates.every(rate => validPair(pairOf(rate)))) throw new Error("行情数据格式错误");
+    if (!Array.isArray(nextPairs) || !nextPairs.every(validPair) || !Array.isArray(nextRates) || !nextRates.every(rate => validPair(pairOf(rate)))) throw new Error(t("badFormat"));
     supportedPairs = nextPairs;
     rates = nextRates;
     offline = snapshotOffline;
@@ -319,10 +342,13 @@ async function loadData(force = false) {
     renderSelects();
     await loadHistory();
     if (version !== refreshVersion) return;
-    if (!rates.length) { $("status").textContent = "等待采集"; return; }
-    const newest = Math.max(...rates.map((rate) => new Date(rate.captured_at).getTime()));
-    $("status").textContent = `数据时间 ${new Date(newest).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} · ${rates[0].provider === "mock" ? "模拟数据 · 非真实行情" : rates[0].provider}`;
-    if (offline) $("status").textContent += " · 离线缓存";
+    if (!rates.length) { $("status").textContent = t("waitingCollection"); return; }
+    const newest = Math.max(...rates.map((rate) => parseUtc(rate.captured_at)));
+    $("status").textContent = t("statusLine",
+      new Date(newest).toLocaleString(docLocale(), { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+      rates[0].provider === "mock" ? t("mockData") : t("providerLive"));
+    if (offline) $("status").textContent += ` · ${t("offlineCache")}`;
+    void loadHealth();
   } catch (error) {
     if (version !== refreshVersion) return;
     offline = true;
@@ -334,10 +360,10 @@ async function loadData(force = false) {
     $("official-rates").replaceChildren();
     ["stat-low", "stat-high", "stat-position", "trend-change"].forEach(id => $(id).textContent = "—");
     $("error").textContent = error.message;
-    $("chart").textContent = "数据暂不可用，请检查连接";
-    $("official-status").textContent = "数据暂不可用，请检查连接";
+    $("chart").textContent = t("dataUnavailableCheck");
+    $("official-status").textContent = t("dataUnavailableCheck");
     $("error").classList.remove("hidden");
-    $("status").textContent = "连接失败";
+    $("status").textContent = t("connectionFailed");
   } finally {
     if (version === refreshVersion) $("refresh-button").classList.remove("spinning");
   }
@@ -352,9 +378,24 @@ $("target-pair").addEventListener("change", loadTarget);
 $("target-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const pair = $("target-pair").value;
-  settings.targets[pair] = { direction: $("target-direction").value, value: Number($("target-value").value) };
+  const value = Number($("target-value").value);
+  // A blank or zero target used to be stored as 0, which reads as "reached" forever.
+  if (!Number.isFinite(value) || value <= 0 || value > 1e12) {
+    $("target-message").textContent = t("targetPositive");
+    return;
+  }
+  settings.targets[pair] = { direction: $("target-direction").value, value };
   await chrome.storage.local.set({ targets: settings.targets });
   loadTarget();
+});
+$("range-buttons").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-days]");
+  const days = Number(button?.dataset.days);
+  if (!RANGE_DAYS.includes(days) || days === historyDays) return;
+  historyDays = days;
+  document.querySelectorAll("#range-buttons button").forEach((item) =>
+    item.classList.toggle("selected", Number(item.dataset.days) === days));
+  void loadHistory();
 });
 $("copy-button").addEventListener("click", async () => {
   const rate = currentRate();
@@ -362,8 +403,8 @@ $("copy-button").addEventListener("click", async () => {
   const text = `${pairOf(rate)} ${rate.midpoint}`;
   try {
     await navigator.clipboard.writeText(text);
-    $("copy-button").textContent = "已复制";
-    setTimeout(() => $("copy-button").textContent = "复制当前汇率", 1200);
+    $("copy-button").textContent = t("copied");
+    setTimeout(() => $("copy-button").textContent = t("copyRate"), 1200);
   } catch {
     $("copy-fallback").classList.remove("hidden");
     $("copy-value").value = text;
@@ -376,22 +417,22 @@ let officialVersion = 0;
 async function loadOfficial() {
   const version = ++officialVersion;
   const pair = selectedPair;
-  $("official-title").textContent = `${pair} 官方参考价`;
-  $("official-status").textContent = "正在读取官方参考价…";
+  $("official-title").textContent = t("officialTitleFor", pair);
+  $("official-status").textContent = t("loadingOfficial");
   $("official-rates").replaceChildren();
   try {
     const data = await request(`/comparisons/${pair}`);
     if (version !== officialVersion) return;
     const rows = data.official || [];
-    $("official-status").textContent = rows.length ? "每日参考汇率 · 非银行成交价" : "暂无官方参考价";
+    $("official-status").textContent = rows.length ? t("officialDaily") : t("noOfficial");
     for (const item of rows) {
       const row = document.createElement("div");
       row.className = "official-row";
       const label = document.createElement("div");
       const name = document.createElement("b");
-      name.textContent = ({ "European Central Bank": "欧洲央行", "Bank of Canada": "加拿大央行" })[item.institution] || item.institution;
+      name.textContent = INSTITUTIONS[item.institution] ? t(INSTITUTIONS[item.institution]) : item.institution;
       const date = document.createElement("small");
-      date.textContent = `${item.reference_date}${item.is_derived ? " · 交叉换算" : ""}`;
+      date.textContent = `${item.reference_date}${item.is_derived ? ` · ${t("crossRate")}` : ""}`;
       label.append(name, date);
       const value = document.createElement("div");
       value.className = "official-value";
@@ -402,13 +443,32 @@ async function loadOfficial() {
       $("official-rates").append(row);
     }
   } catch {
-    if (version === officialVersion) $("official-status").textContent = "官方参考价暂时不可用，请稍后刷新";
+    if (version === officialVersion) $("official-status").textContent = t("officialUnavailable");
   }
+}
+
+async function loadHealth() {
+  // Advisory only: tells "the collector stopped" apart from "this quote is old".
+  try {
+    let data;
+    if (chrome.runtime?.sendMessage) {
+      const reply = await chrome.runtime.sendMessage({type: "FX_HEALTH"});
+      if (!reply?.ok) return;
+      data = reply.data;
+    } else {
+      const response = await fetch(`${new URL(settings.apiUrl).origin}/health`);
+      if (!response.ok) return;
+      data = await response.json();
+    }
+    const jobs = Array.isArray(data?.collector) ? data.collector : [];
+    if (jobs.some((job) => job?.is_stalled)) $("status").textContent += ` · ${t("collectorStopped")}`;
+  } catch { /* never let a health probe break the popup */ }
 }
 
 async function init() {
   await globalThis.FXI18N?.ready;
   settings = await chrome.storage.local.get(DEFAULTS);
+  $("target-mode").textContent = t(settings.alertsEnabled ? "targetBackground" : "targetOnOpen");
   settings.watchlist = Array.isArray(settings.watchlist) ? settings.watchlist.filter(validPair) : [...DEFAULTS.watchlist];
   if (!settings.watchlist.length) settings.watchlist = [...DEFAULTS.watchlist];
   await loadData();

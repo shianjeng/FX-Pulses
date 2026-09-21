@@ -31,6 +31,7 @@ function worker({session = {}, initial = {}} = {}) {
     scripting: {getRegisteredContentScripts: async () => registered, registerContentScripts: async items => { registered = items; }, unregisterContentScripts: async () => { registered = []; }},
   };
   const context = vm.createContext({chrome, URL, console, setTimeout, clearTimeout: globalThis.clearTimeout, AbortController: globalThis.AbortController,
+    importScripts: name => vm.runInContext(source(name), context),
     Date: class extends Date { static now() { return now; } },
     fetch: async url => {
       calls.push(url);
@@ -38,6 +39,7 @@ function worker({session = {}, initial = {}} = {}) {
       if (fail) throw new Error('offline');
       return {ok: true, json: async () => url.endsWith('/pairs') ? pairs : url.endsWith('/rates') ? rates(price) : []};
     }});
+  context.globalThis = context;
   vm.runInContext(source('background.js'), context);
   const send = (message, page = false) => new Promise(resolve => {
     const sender = {id: 'test', url: page ? 'https://example.com/' : 'chrome-extension://test/popup.html', ...(page ? {tab: {id: 1}} : {})};
@@ -116,7 +118,7 @@ async function hover(t, {language = 'en', text = '$10', target = 'CNY'} = {}) {
   w.document.caretRangeFromPoint = () => ({startContainer: price.firstChild, startOffset: 2});
   const createRange = w.document.createRange.bind(w.document);
   w.document.createRange = () => {const range = createRange(); range.getBoundingClientRect = () => ({left: 10, right: 100, top: 10, bottom: 30}); return range;};
-  w.eval(source('amount-parser.js')); w.eval(source('hover.js')); await tick();
+  w.eval(source('messages.js')); w.eval(source('amount-parser.js')); w.eval(source('hover.js')); await tick();
   const show = async () => {price.dispatchEvent(new w.MouseEvent('mousemove', {bubbles: true, clientX: 20, clientY: 20})); await tick(250);};
   await show();
   return {...h, w, shadow: () => shadow, show, requests};
@@ -171,7 +173,7 @@ test('popup reads the same gateway and shows persisted offline cache after reope
   const w = dom.window;
   w.chrome = {...h.chrome, runtime: {...h.chrome.runtime, sendMessage: h.send}};
   w.fetch = () => {throw new Error('Popup must use the shared service');};
-  w.eval(source('popup.js')); await tick(60);
+  w.eval(source('messages.js')); w.eval(source('i18n.js')); w.eval(source('popup.js')); await tick(60);
   assert.match(w.document.getElementById('rates').textContent, /7\.0000/);
   assert.match(w.document.getElementById('status').textContent, /离线缓存/);
   assert.equal(w.document.getElementById('copy-button').disabled, true);
@@ -184,7 +186,7 @@ for (const language of ['zh', 'en', 'ja']) test(`unified options permission cont
   t.after(() => dom.window.close());
   const w = dom.window;
   w.chrome = {...h.chrome, runtime: {...h.chrome.runtime, sendMessage: h.send}, permissions: {...h.chrome.permissions, request: async value => {requested.push(value); return grant;}}};
-  w.eval(source('i18n.js')); await w.FXI18N.ready;
+  w.eval(source('messages.js')); w.eval(source('i18n.js')); await w.FXI18N.ready;
   w.eval(source('options.js')); await tick();
   if (language === 'en') assert.doesNotMatch(w.document.body.textContent, /[\u3400-\u9fff]/);
   if (language === 'ja') assert.match(w.document.body.textContent, /ホバー換算/);

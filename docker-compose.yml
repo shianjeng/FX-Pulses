@@ -1,16 +1,19 @@
 x-backend: &backend
   build: ./backend
   env_file: .env
+  restart: unless-stopped
   environment:
-    DATABASE_URL: postgresql+psycopg://fxpulse:fxpulse@db:5432/fxpulse
+    DATABASE_URL: postgresql+psycopg://fxpulse:${POSTGRES_PASSWORD:-fxpulse}@db:5432/fxpulse
 
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: fxpulse
       POSTGRES_USER: fxpulse
-      POSTGRES_PASSWORD: fxpulse
+      # Override POSTGRES_PASSWORD in .env before exposing this stack anywhere.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fxpulse}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,6 +24,7 @@ services:
   migrate:
     <<: *backend
     command: ["sh", "-c", "alembic upgrade head && python -m app.bootstrap"]
+    restart: "no"
     healthcheck:
       disable: true
     depends_on:

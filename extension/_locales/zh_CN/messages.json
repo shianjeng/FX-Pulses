@@ -1,0 +1,440 @@
+{
+  "extensionName": {
+    "message": "FX Pulse — 随手汇率"
+  },
+  "extensionDescription": {
+    "message": "免登录查看人民币、美元和日元的市场中间价、走势与快捷换算。"
+  },
+  "noAccount": {
+    "message": "免登录"
+  },
+  "settings": {
+    "message": "设置"
+  },
+  "refresh": {
+    "message": "刷新"
+  },
+  "languageLabel": {
+    "message": "界面语言"
+  },
+  "langZh": {
+    "message": "中文"
+  },
+  "langEn": {
+    "message": "英文"
+  },
+  "langJa": {
+    "message": "日文"
+  },
+  "eyebrowMarket": {
+    "message": "市场中间价"
+  },
+  "watchlistTitle": {
+    "message": "自选行情"
+  },
+  "loadingRates": {
+    "message": "正在读取行情…"
+  },
+  "refreshHint": {
+    "message": "刷新只重新读取后端数据，不会立即触发上游采集。"
+  },
+  "eyebrowOfficial": {
+    "message": "官方参考价"
+  },
+  "officialTitle": {
+    "message": "官方参考价"
+  },
+  "officialTitleFor": {
+    "message": "$1 官方参考价"
+  },
+  "daily": {
+    "message": "日更"
+  },
+  "loadingOfficial": {
+    "message": "正在读取官方参考价…"
+  },
+  "eyebrowTrend": {
+    "message": "价格走势"
+  },
+  "trendTitle": {
+    "message": "汇率走势"
+  },
+  "trendTitleFor": {
+    "message": "$1 走势"
+  },
+  "change24h": {
+    "message": "24小时 · $1"
+  },
+  "rangeGroup": {
+    "message": "历史区间"
+  },
+  "loadingChart": {
+    "message": "载入走势…"
+  },
+  "chartAria": {
+    "message": "$1 $2走势图"
+  },
+  "range1": {
+    "message": "一日"
+  },
+  "range7": {
+    "message": "七日"
+  },
+  "range30": {
+    "message": "三十日"
+  },
+  "range90": {
+    "message": "九十日"
+  },
+  "statLow": {
+    "message": "低"
+  },
+  "statHigh": {
+    "message": "高"
+  },
+  "statRange": {
+    "message": "区间"
+  },
+  "eyebrowConverter": {
+    "message": "快捷换算"
+  },
+  "converterTitle": {
+    "message": "快捷换算"
+  },
+  "reverse": {
+    "message": "反转"
+  },
+  "amountLabel": {
+    "message": "金额"
+  },
+  "convertedLabel": {
+    "message": "换算结果"
+  },
+  "converterPair": {
+    "message": "换算货币对"
+  },
+  "converterHint": {
+    "message": "按市场中间价估算，不包含银行手续费与点差。"
+  },
+  "targetTitle": {
+    "message": "目标价状态"
+  },
+  "targetOnOpen": {
+    "message": "仅打开插件时检查"
+  },
+  "targetBackground": {
+    "message": "后台定时检查"
+  },
+  "above": {
+    "message": "高于或等于"
+  },
+  "below": {
+    "message": "低于或等于"
+  },
+  "targetPlaceholder": {
+    "message": "输入目标中间价"
+  },
+  "saveLocal": {
+    "message": "保存到本机"
+  },
+  "manageWatchlist": {
+    "message": "管理自选"
+  },
+  "savedLocally": {
+    "message": "设置保存在本机"
+  },
+  "midpointDisclaimer": {
+    "message": "市场中间价为买卖报价的平均值，非人民币官方中间价或银行成交价。仅供参考。"
+  },
+  "midpointFormula": {
+    "message": "中间价 =（买入价 + 卖出价）÷ 2"
+  },
+  "copyRate": {
+    "message": "复制当前汇率"
+  },
+  "copyManual": {
+    "message": "自动复制失败，请按 Ctrl/Cmd+C 手动复制"
+  },
+  "noComparison": {
+    "message": "暂无对比"
+  },
+  "waitingCollection": {
+    "message": "等待采集"
+  },
+  "dataUnavailable": {
+    "message": "数据不可用"
+  },
+  "pairNotConfigured": {
+    "message": "此货币对未在后端配置"
+  },
+  "offlineCache": {
+    "message": "离线缓存"
+  },
+  "outdated": {
+    "message": "数据较旧"
+  },
+  "updated": {
+    "message": "已更新"
+  },
+  "chartCollecting": {
+    "message": "历史数据仍在积累"
+  },
+  "singlePoint": {
+    "message": "仅有一个观测点"
+  },
+  "amountRange": {
+    "message": "请输入0到1万亿之间的有效金额"
+  },
+  "targetPaused": {
+    "message": "行情不可用，暂停目标价判断"
+  },
+  "noTarget": {
+    "message": "尚未设置目标价"
+  },
+  "targetReached": {
+    "message": "● 已达到目标 $1 $2"
+  },
+  "targetNotReached": {
+    "message": "○ 尚未达到 · 目标 $1 $2"
+  },
+  "targetPositive": {
+    "message": "请输入大于0的目标价"
+  },
+  "copied": {
+    "message": "已复制"
+  },
+  "dataUnavailableCheck": {
+    "message": "数据暂不可用，请检查连接"
+  },
+  "officialUnavailable": {
+    "message": "官方参考价暂时不可用，请稍后刷新"
+  },
+  "officialDaily": {
+    "message": "每日参考汇率 · 非银行成交价"
+  },
+  "noOfficial": {
+    "message": "暂无官方参考价"
+  },
+  "crossRate": {
+    "message": "交叉换算"
+  },
+  "mockData": {
+    "message": "模拟数据 · 非真实行情"
+  },
+  "providerLive": {
+    "message": "行情服务"
+  },
+  "asOf": {
+    "message": "数据时间"
+  },
+  "statusLine": {
+    "message": "数据时间 $1 · $2"
+  },
+  "connectionFailed": {
+    "message": "连接失败"
+  },
+  "collectorStopped": {
+    "message": "采集器已停止"
+  },
+  "serverReturned": {
+    "message": "服务器返回 $1"
+  },
+  "tooManyRequests": {
+    "message": "请求过于频繁，请稍后重试"
+  },
+  "timeout": {
+    "message": "请求超时，请重试"
+  },
+  "badFormat": {
+    "message": "行情数据格式错误"
+  },
+  "cannotConnect": {
+    "message": "无法连接服务器"
+  },
+  "checkBackend": {
+    "message": "无法连接服务器。请确认后端已经启动。"
+  },
+  "institutionEcb": {
+    "message": "欧洲央行"
+  },
+  "institutionBoc": {
+    "message": "加拿大央行"
+  },
+  "institutionPboc": {
+    "message": "中国人民银行"
+  },
+  "optionsDocTitle": {
+    "message": "FX Pulse 设置"
+  },
+  "eyebrowSettings": {
+    "message": "扩展设置"
+  },
+  "settingsTitle": {
+    "message": "数据源设置"
+  },
+  "settingsIntro": {
+    "message": "插件无需账户。自选、目标价与换算偏好只保存在当前浏览器中；后端仅代理并缓存公开汇率数据。"
+  },
+  "apiAddress": {
+    "message": "后端接口地址"
+  },
+  "saveAndTest": {
+    "message": "保存并测试连接"
+  },
+  "privacyTitle": {
+    "message": "隐私与运行方式"
+  },
+  "privacyBody": {
+    "message": "插件不会发送邮件。目标价默认只在你打开插件时比较；开启提醒后，后台只读取后端已缓存的数据，不会访问上游行情接口。部署后端可以保护行情服务密钥，并减少重复请求。"
+  },
+  "checking": {
+    "message": "正在检查服务器…"
+  },
+  "saveFailed": {
+    "message": "保存失败：$1"
+  },
+  "connectedWaiting": {
+    "message": "连接成功，等待首次采集"
+  },
+  "connectedMock": {
+    "message": "连接成功，当前为模拟数据"
+  },
+  "connectedSaved": {
+    "message": "连接成功，设置已保存。"
+  },
+  "serverPermissionDenied": {
+    "message": "未获得访问该服务器的权限"
+  },
+  "invalidUrl": {
+    "message": "请输入有效的HTTP或HTTPS地址"
+  },
+  "sourceChanged": {
+    "message": "数据源已更改，请重试"
+  },
+  "hoverSectionTitle": {
+    "message": "网页悬停换算"
+  },
+  "hoverDescription": {
+    "message": "悬停与工具栏共用后端、行情缓存、语言和自选设置，无需油猴。开启后仅在本机识别网页金额，不上传网页内容。请停用旧油猴脚本，避免重复显示。"
+  },
+  "hoverEnable": {
+    "message": "开启网页悬停换算"
+  },
+  "hoverTargetLabel": {
+    "message": "悬停目标币种"
+  },
+  "cardSize": {
+    "message": "卡片大小"
+  },
+  "sizeS": {
+    "message": "小号卡片"
+  },
+  "sizeM": {
+    "message": "标准卡片"
+  },
+  "sizeL": {
+    "message": "大号卡片"
+  },
+  "cardMode": {
+    "message": "卡片模式"
+  },
+  "modeSimple": {
+    "message": "简洁模式"
+  },
+  "modeDetail": {
+    "message": "详细模式"
+  },
+  "settingsSaved": {
+    "message": "设置已保存"
+  },
+  "hoverPermissionDenied": {
+    "message": "未获得网页访问权限，悬停未开启"
+  },
+  "hoverEnabledMessage": {
+    "message": "已开启，请刷新网页后使用"
+  },
+  "hoverDisabledMessage": {
+    "message": "已关闭网页悬停换算"
+  },
+  "hoverFailed": {
+    "message": "悬停设置失败，请重新加载插件"
+  },
+  "alertsSectionTitle": {
+    "message": "目标价提醒"
+  },
+  "alertsDescription": {
+    "message": "提醒只读取后端已缓存的数据，不会消耗行情接口额度。"
+  },
+  "alertsEnable": {
+    "message": "开启目标价提醒（后台定时检查）"
+  },
+  "alertIntervalLabel": {
+    "message": "提醒检查间隔"
+  },
+  "interval30": {
+    "message": "30分钟"
+  },
+  "interval60": {
+    "message": "1小时"
+  },
+  "interval180": {
+    "message": "3小时"
+  },
+  "interval360": {
+    "message": "6小时"
+  },
+  "alertsOn": {
+    "message": "已开启目标价提醒"
+  },
+  "alertsOff": {
+    "message": "已关闭目标价提醒"
+  },
+  "alertsPermissionDenied": {
+    "message": "未获得通知权限，提醒未开启"
+  },
+  "alertsFailed": {
+    "message": "提醒设置失败，请重新加载插件"
+  },
+  "targetAlertBody": {
+    "message": "$1 $2 $3 已达到，当前 $4"
+  },
+  "hoverSource": {
+    "message": "原始币种"
+  },
+  "hoverTargetField": {
+    "message": "目标币种"
+  },
+  "hoverCopy": {
+    "message": "复制"
+  },
+  "hoverClose": {
+    "message": "关闭"
+  },
+  "hoverUnavailable": {
+    "message": "行情不可用，请检查后端连接"
+  },
+  "hoverUnsupported": {
+    "message": "此币种未配置或尚未采集"
+  },
+  "hoverStale": {
+    "message": "数据较旧"
+  },
+  "hoverGuessed": {
+    "message": "币种为自动识别，可手动校准"
+  },
+  "hoverDisclaimer": {
+    "message": "市场中间价，仅供参考，不含手续费。"
+  },
+  "hoverManual": {
+    "message": "自动复制失败，请手动复制"
+  },
+  "hoverOfficial": {
+    "message": "官方参考价 · 日更 · 非成交价"
+  },
+  "bid": {
+    "message": "买入"
+  },
+  "ask": {
+    "message": "卖出"
+  }
+}
