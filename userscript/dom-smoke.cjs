@@ -91,13 +91,24 @@ globalThis.getComputedStyle = (el) => ({ backgroundColor: el._bg || 'rgba(0, 0, 
 globalThis.CustomEvent = class CustomEvent { constructor(type, opts) { this.type = type; this.detail = opts && opts.detail; } };
 const originalInterval = globalThis.setInterval;
 globalThis.setInterval = (...args) => { const timer = originalInterval(...args); timer.unref(); return timer; };
-globalThis.fetch = async () => ({
-  ok: true,
-  text: async () => JSON.stringify({
-    rates: { USD: 1, CNY: 6.6976, JPY: 150, EUR: 0.9, GBP: 0.8, HKD: 7.8, TWD: 32, KRW: 1300, SGD: 1.3, AUD: 1.5, CAD: 1.4, NZD: 1.6, SEK: 9.3, NOK: 10, DKK: 6.5, THB: 33, MYR: 4.1, PHP: 62, VND: 26000, INR: 83, BRL: 5 },
-    time_last_update_utc: 'TEST-2026-09-20',
-  }),
-});
+const bridgeListeners = new Map();
+documentStub.addEventListener = (name, fn) => {
+  if (!bridgeListeners.has(name)) bridgeListeners.set(name, new Set());
+  bridgeListeners.get(name).add(fn);
+};
+documentStub.removeEventListener = (name, fn) => bridgeListeners.get(name)?.delete(fn);
+documentStub.dispatchEvent = event => {
+  if (event.type !== 'fx-pulse-request') return;
+  const request = JSON.parse(event.detail);
+  const data = request.type === 'FX_SNAPSHOT' ? {rates: [
+    {base_currency:'USD',quote_currency:'CNY',midpoint:6.6976,provider:'alpha_vantage',captured_at:'2026-09-20T00:00:00Z'},
+    {base_currency:'USD',quote_currency:'JPY',midpoint:150,provider:'alpha_vantage',captured_at:'2026-09-20T00:00:00Z'},
+  ],offline:false} : [];
+  for (const listener of bridgeListeners.get('fx-pulse-response') || []) {
+    listener({detail:JSON.stringify({id:request.id,ok:true,data})});
+  }
+};
+globalThis.fetch = () => { throw new Error('Direct fetch forbidden'); };
 
 /* ---------------- 加载脚本（isBrowser 为真 → init() 会执行） ---------------- */
 const fx = require('./fx-pulse-hover.user.js');
@@ -139,7 +150,7 @@ function analyze(text, offset, background = 'rgb(255, 255, 255)') {
 }
 
 (async function run() {
-  await new Promise((r) => setTimeout(r, 60));   // 等 ensureRates() 走完（桩 fetch 立即返回）
+  await new Promise((r) => setTimeout(r, 60));   // 等 ensureRates() 走完（桩插件桥接 立即返回）
 
   console.log('\n[1] 注入与发布');
   assert(!globalThis.window.__fxph, '网页不能访问内部状态');
@@ -147,7 +158,7 @@ function analyze(text, offset, background = 'rgb(255, 255, 255)') {
   assert(!documentStub.documentElement.dataset.fxphError, 'init() 没抛错（dataset.fxphError 为空）');
   assert(!!card(), '#fxph-host 已插入并建好 card');
 
-  console.log('\n[2] 汇率（桩 fetch）');
+  console.log('\n[2] 汇率（桩插件桥接）');
   const rates = api.rates();
   assert(rates.table && rates.table.JPY === 150, '汇率表已载入：' + rates.source);
 
