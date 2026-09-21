@@ -40,6 +40,17 @@ const fmt = (value, digits = 4) => Number(value).toLocaleString(docLocale(), {
   minimumFractionDigits: digits,
   maximumFractionDigits: digits,
 });
+// Display rounding never changes the numeric quote used for conversion.
+function formatRate(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return "—";
+  if (number < 1e-8) return number.toLocaleString(docLocale(), {
+    notation: "scientific", maximumSignificantDigits: 5,
+  });
+  const digits = number >= 100 ? 3 : number >= 1 ? 4
+    : Math.min(12, Math.max(6, 4 - Math.floor(Math.log10(number))));
+  return fmt(number, digits);
+}
 const pairOf = (rate) => `${rate.base_currency}/${rate.quote_currency}`;
 const changeText = (value) => value === null || value === undefined ? t("noComparison") :
   `${Number(value) >= 0 ? "+" : ""}${Number(value).toFixed(2)}%`;
@@ -70,11 +81,10 @@ async function request(path) {
 function rateCard(rate) {
   const pair = pairOf(rate);
   const change = Number(rate.change_percent || 0);
-  const digits = pair.includes("JPY") ? 3 : 4;
   return `<button class="rate-card ${pair === selectedPair ? "selected" : ""}" data-pair="${pair}">
     <div class="rate-top"><span class="pair">${pair}</span><span class="change ${rate.change_percent === null || rate.change_percent === undefined ? "" : change >= 0 ? "positive" : "negative"}">${changeText(rate.change_percent)}</span></div>
-    <strong>${fmt(rate.midpoint, digits)}</strong>
-    <div class="rate-bottom"><span>${t("bid")} ${fmt(rate.bid, digits)} · ${t("ask")} ${fmt(rate.ask, digits)}</span><span class="${offline || rate.is_stale ? "stale" : ""}">${offline ? t("offlineCache") : rate.is_stale ? t("outdated") : t("updated")}</span></div>
+    <strong>${formatRate(rate.midpoint)}</strong>
+    <div class="rate-bottom"><span>${t("bid")} ${formatRate(rate.bid)} · ${t("ask")} ${formatRate(rate.ask)}</span><span class="${offline || rate.is_stale ? "stale" : ""}">${offline ? t("offlineCache") : rate.is_stale ? t("outdated") : t("updated")}</span></div>
     <small class="quote-time">${chartTimeLabel(rate.captured_at)}</small>
   </button>`;
 }
@@ -108,7 +118,7 @@ function renderRates() {
     const value = document.createElement("strong");
     const source = document.createElement("small");
     const available = converterQuote && selectedPair === $("converter-from").value + "/" + $("converter-to").value;
-    value.textContent = available ? fmt(converterQuote.rate, 6) : "—";
+    value.textContent = available ? formatRate(converterQuote.rate) : "—";
     source.textContent = available ? converterStatus() : offline ? t("dataUnavailable") : t("converterNoRate");
     card.append(title, value, source);
     $("rates").append(card);
@@ -190,7 +200,6 @@ function drawChart(points) {
   const range = high - low || 1;
   const start = parseUtc(points[0].captured_at);
   const duration = parseUtc(points.at(-1).captured_at) - start;
-  const digits = selectedPair.includes("JPY") ? 3 : 4;
   const plotted = values.map((value, index) => {
     const x = duration ? (parseUtc(points[index].captured_at) - start) / duration * width : width / 2;
     const y = high === low ? height / 2 : 7 + ((high - value) / range) * (height - 14);
@@ -224,8 +233,8 @@ function drawChart(points) {
     </div>
   ${points.length === 1 ? `<span class="single-point-note">${t("singlePoint")}</span>` : ""}`;
 
-  $("stat-low").textContent = fmt(low, digits);
-  $("stat-high").textContent = fmt(high, digits);
+  $("stat-low").textContent = formatRate(low);
+  $("stat-high").textContent = formatRate(high);
   const position = high === low ? 50 : ((values.at(-1) - low) / (high - low)) * 100;
   $("stat-position").textContent = `${position.toFixed(0)}%`;
 
@@ -247,7 +256,7 @@ function drawChart(points) {
     dot.setAttribute("cy", point.y);
     dot.setAttribute("visibility", "visible");
     tipTime.textContent = chartTimeLabel(point.time);
-    tipValue.textContent = `${selectedPair}  ${fmt(point.value, digits)}`;
+    tipValue.textContent = `${selectedPair}  ${formatRate(point.value)}`;
     const percent = width ? (point.x / width) * 100 : 50;
     tip.style.left = `${Math.min(92, Math.max(8, percent))}%`;
     tip.style.top = `${(point.y / height) * 100}%`;
@@ -343,6 +352,10 @@ function updateConverter() {
   $("to-label").textContent = `${t("convertedLabel")} (${quote})`;
   $("amount-error").textContent = "";
   $("converter-status").textContent = converterStatus();
+  $("conversion-rate").textContent = converterQuote
+    ? `1 ${base} ≈ ${formatRate(converterQuote.rate)} ${quote}` : "";
+  $("conversion-rate").title = converterQuote
+    ? `1 ${base} = ${converterQuote.rate} ${quote}` : "";
   renderRates();
   const market = currentRate();
   $("status").textContent = market ? t("statusLine", chartTimeLabel(market.captured_at),
@@ -563,7 +576,7 @@ async function loadOfficial() {
       const value = document.createElement("div");
       value.className = "official-value";
       const number = document.createElement("strong");
-      number.textContent = fmt(item.rate, pair.includes("JPY") ? 3 : 4);
+      number.textContent = formatRate(item.rate);
       value.append(number);
       row.append(label, value);
       $("official-rates").append(row);

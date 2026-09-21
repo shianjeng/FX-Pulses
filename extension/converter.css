@@ -22,3 +22,6 @@
 
 main > .currency-selects { margin: 12px 0; }
 main > .currency-selects select { font-size: 16px; min-height: 44px; }
+
+#conversion-rate { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.rate-card strong, .official-value strong { overflow-wrap: anywhere; }
