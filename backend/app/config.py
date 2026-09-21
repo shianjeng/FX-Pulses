@@ -64,14 +64,22 @@ class Settings(BaseSettings):
         names = [str(item).strip().lower() for item in value if str(item).strip()]
         unknown = sorted(set(names) - set(PROVIDERS))
         if unknown:
-            raise ValueError(f"Unknown OFFICIAL_SOURCES entry: {', '.join(unknown)}")
+            raise ValueError(
+                f"Unknown OFFICIAL_SOURCES entry: {', '.join(unknown)}. "
+                f"Valid names: {', '.join(sorted(PROVIDERS))}"
+            )
         return list(dict.fromkeys(names))
 
     @model_validator(mode="after")
     def validate_live(self):
         if self.fx_provider == "alpha_vantage":
             if not self.alpha_vantage_api_key:
-                raise ValueError("ALPHA_VANTAGE_API_KEY is required in live mode")
+                raise ValueError(
+                    "ALPHA_VANTAGE_API_KEY is required when FX_PROVIDER=alpha_vantage "
+                    "(the default). Run `cp .env.example .env` and add your key from "
+                    "https://www.alphavantage.co/support/#api-key, or set FX_PROVIDER=mock "
+                    "to start with demo data."
+                )
             import math
             calls = math.ceil(1440 / self.refresh_interval_minutes) * len(self.tracked_pairs)
             if calls > self.provider_daily_budget:

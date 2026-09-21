@@ -2,6 +2,8 @@ from decimal import Decimal
 
 from fastapi.testclient import TestClient
 
+from app.config import get_settings
+
 
 def test_public_rates_need_no_login(client: TestClient):
     response = client.get("/api/v1/rates")
@@ -45,7 +47,10 @@ def test_health_describes_provider_and_collector(client: TestClient):
     assert payload["status"] == "ok"
     assert payload["provider"] == "mock"
     # A collector that has never reported is stalled, not merely "stale data".
-    assert {job["job"] for job in payload["collector"]} == {"market", "official"}
+    jobs = {job["job"] for job in payload["collector"]}
+    assert {"market", "official"} <= jobs
+    # One heartbeat per configured source, so a dead source cannot hide.
+    assert {f"official:{name}" for name in get_settings().official_sources} <= jobs
     assert all(job["is_stalled"] for job in payload["collector"])
 
 

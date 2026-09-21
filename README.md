@@ -44,7 +44,7 @@ The extension and hover converter share the same backend, one-minute cache, watc
 | 🌐 | Three languages | Complete Chinese, English, and Japanese interfaces |
 | 🔒 | Privacy first | No account, analytics SDK, or server-side storage of personal preferences |
 
-Hover conversion is **off by default**. Enable it from Settings, grant access only to the websites you choose, and refresh those pages. If using Tampermonkey, update the script to 2.5.0 and reload webpages. The native hover interface yields while the userscript is connected. Disable older scripts.
+Hover conversion is **off by default**. Enable it from Settings, grant access only to the websites you choose, and refresh those pages. If using Tampermonkey, update the script to 2.5.0 and reload webpages. To let the legacy userscript drive the data instead, also enable userscript compatibility in Settings (off by default); the native hover card then yields once per page. Otherwise, disable older scripts.
 
 ## Data sources
 
@@ -161,7 +161,7 @@ docker compose logs --tail=100 collector
 
 Reload the extension in `chrome://extensions`, verify version **2.5.0**, then refresh open webpages. For the optional Tampermonkey interface, update `userscript/fx-pulse-hover.user.js` too. Enable hover and approve website access in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
 
-Confirm that `/health` reports `"provider": "alpha_vantage"`. Initial collection may take time; existing demo observations remain marked as mock until replaced. The userscript keeps separate appearance, target-currency and calibration preferences; only the data service is shared.
+Confirm that `/health` reports `"provider": "alpha_vantage"`. Its `collector` array carries one heartbeat per configured official source, so a source that quietly stopped publishing surfaces instead of hiding behind the ones that still work. Initial collection may take time; existing demo observations remain marked as mock until replaced. The userscript keeps separate appearance, target-currency and calibration preferences; only the data service is shared.
 
 The included profile collects three pairs every four hours (18 scheduled calls/day), spaces requests by 15 seconds, and caps attempts at 25 per rolling 24-hour window. [Alpha Vantage documents a standard free limit of 25 requests/day](https://www.alphavantage.co/support/). Restarts and retries also consume attempts. Adding pairs requires adjusting the interval or using a higher-quota key. Browser refreshes do not trigger upstream collection.
 
@@ -173,7 +173,7 @@ All application endpoints are public, cached, rate-limited, and read-only.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/health` | API, provider, and collector status |
+| `GET` | `/health` | API, provider, and per-source collector status |
 | `GET` | `/api/v1/pairs` | Configured market pairs |
 | `GET` | `/api/v1/currencies` | Market and official-source coverage |
 | `GET` | `/api/v1/rates` | Latest cached market quotes |
@@ -245,7 +245,14 @@ ruff check .
 
 GitHub Actions runs migrations, backend and extension tests, linting, localization consistency checks, version consistency checks, and a Docker build on every push and pull request.
 
-## Privacy and security
+## Privacy
+
+The page-facing userscript bridge is **off by default**. While it is enabled, any
+site you allowed hover on can read cached public quote data, detect that the
+extension is installed, and make the hover card stand down once per page. Enable
+it only if you still run the legacy userscript. The backend address, preferences
+and keys are never exposed to a page.
+ and security
 
 - API keys remain server-side and `.env` is ignored by Git.
 - The extension contains no account system or analytics SDK.
@@ -273,7 +280,7 @@ FX Pulse 是一个免登录、重视隐私的汇率浏览器插件与 FastAPI �
 
 2.5.0 默认使用 Alpha Vantage 市场数据，需在后端配置自己的 API Key。油猴 2.5.0 移除了 ER-API/Frankfurter 请求，通过已授权的插件读取同一快照及官方参考价。油猴需要插件与网页悬停权限，外观、目标币种和校准设置仍独立保存。
 
-插件界面支持中文、English 和日本語；油猴保留原有中文界面。详细迁移和统一服务设计请参阅 [UNIFIED-SERVICE.md](UNIFIED-SERVICE.md)。
+插件界面支持中文、English 和日本語；油猴保留原有中文界面。详细迁移和统一服务设计请参阅 [UNIFIED-SERVICE.md](docs/archive/UNIFIED-SERVICE.md)。
 
 ## License
 

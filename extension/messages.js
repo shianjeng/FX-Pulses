@@ -154,7 +154,16 @@ globalThis.FXMessages = {
     "converterSameCurrency": "同币种换算 · 1:1",
     "converterOfficialSource": "官方日参考价 · $1 · $2",
     "converterMarketSource": "市场中间价 · $1",
-    "loadingConverterRate": "正在读取换算汇率…"
+    "loadingConverterRate": "正在读取换算汇率…",
+    "bridgeSectionTitle": "油猴脚本兼容",
+    "bridgeDescription": "仅当你仍在使用旧版 FX Pulse 油猴脚本时才需要开启。开启后，你授权悬停的网站可以读取本扩展已缓存的公开汇率数据，也能探测到本扩展已安装，并可让本扩展的悬停卡片在该页面内让位一次。后端地址、偏好设置和密钥永远不会暴露给网页。",
+    "bridgeEnable": "允许网页内的油猴脚本读取本扩展数据",
+    "bridgeOn": "已开启油猴兼容，请刷新网页",
+    "bridgeOff": "已关闭油猴兼容",
+    "bridgeRequiresHover": "请先开启网页悬停换算",
+    "sourceStale": "$1 天未更新",
+    "converterUnavailableCurrency": "$1（暂不可用）",
+    "converterViaCurrency": "经 $1 推算"
   },
   "en": {
     "extensionName": "FX Pulse — exchange rates at hand",
@@ -310,7 +319,16 @@ globalThis.FXMessages = {
     "converterSameCurrency": "Same currency · 1:1",
     "converterOfficialSource": "Official daily reference · $1 · $2",
     "converterMarketSource": "Market midpoint · $1",
-    "loadingConverterRate": "Loading conversion rate…"
+    "loadingConverterRate": "Loading conversion rate…",
+    "bridgeSectionTitle": "Userscript compatibility",
+    "bridgeDescription": "Only needed if you still run the legacy FX Pulse userscript. While it is on, sites you allowed hover on can read cached public quote data, detect that the extension is installed, and make the extension's own hover card stand down once per page. The backend address, preferences and keys are never exposed to a page.",
+    "bridgeEnable": "Let in-page userscripts read this extension's data",
+    "bridgeOn": "Userscript compatibility enabled. Reload your pages.",
+    "bridgeOff": "Userscript compatibility disabled",
+    "bridgeRequiresHover": "Enable hover conversion first",
+    "sourceStale": "$1 days without an update",
+    "converterUnavailableCurrency": "$1 (unavailable)",
+    "converterViaCurrency": "via $1"
   },
   "ja": {
     "extensionName": "FX Pulse — 手元で為替レート",
@@ -466,6 +484,15 @@ globalThis.FXMessages = {
     "converterSameCurrency": "同一通貨 · 1:1",
     "converterOfficialSource": "公式日次参考レート · $1 · $2",
     "converterMarketSource": "市場仲値 · $1",
-    "loadingConverterRate": "換算レートを取得中…"
+    "loadingConverterRate": "換算レートを取得中…",
+    "bridgeSectionTitle": "ユーザースクリプト互換",
+    "bridgeDescription": "旧版 FX Pulse ユーザースクリプトを使い続ける場合のみ有効にしてください。有効な間、ホバーを許可したサイトは保存済みの公開レートを読み取れ、拡張機能の導入を検知でき、そのページで一度だけホバーカードを停止できます。サーバーアドレス・設定・キーがページに渡ることはありません。",
+    "bridgeEnable": "ページ内のユーザースクリプトにデータの読み取りを許可する",
+    "bridgeOn": "ユーザースクリプト互換を有効にしました。ページを再読み込みしてください。",
+    "bridgeOff": "ユーザースクリプト互換を無効にしました",
+    "bridgeRequiresHover": "先にホバー換算を有効にしてください",
+    "sourceStale": "$1 日更新なし",
+    "converterUnavailableCurrency": "$1 (unavailable)",
+    "converterViaCurrency": "$1 経由"
   }
 };

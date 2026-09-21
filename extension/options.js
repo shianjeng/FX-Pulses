@@ -92,7 +92,8 @@ hoverEnabled.addEventListener("change", async () => {
       hoverResult.textContent = t("hoverPermissionDenied");
       return;
     }
-    await chrome.storage.local.set({hoverEnabled: enabled});
+    await chrome.storage.local.set(enabled ? {hoverEnabled: true} : {hoverEnabled: false, bridgeEnabled: false});
+    if (!enabled) { const box = document.getElementById("bridge-enabled"); if (box) box.checked = false; }
     const reply = await chrome.runtime.sendMessage({type: "FX_SYNC_HOVER"});
     if (!reply?.ok) throw new Error(reply?.error || t("cannotConnect"));
     hoverResult.textContent = t(enabled ? "hoverEnabledMessage" : "hoverDisabledMessage");
@@ -163,4 +164,47 @@ intervalSelect.addEventListener("change", async () => {
   await chrome.storage.local.set({alertIntervalMinutes: Number(intervalSelect.value)});
   try { await syncAlerts(); alertResult.textContent = t("settingsSaved"); }
   catch { alertResult.textContent = t("alertsFailed"); }
+});
+
+/* ---- Userscript bridge (opt-in) ------------------------------------------- */
+const bridgeInfo = document.createElement("section");
+const bridgeHeading = document.createElement("h2");
+bridgeHeading.textContent = t("bridgeSectionTitle");
+const bridgeDescription = document.createElement("p");
+bridgeDescription.textContent = t("bridgeDescription");
+const bridgeLabel = document.createElement("label");
+bridgeLabel.className = "hover-toggle";
+const bridgeEnabled = document.createElement("input");
+bridgeEnabled.id = "bridge-enabled"; bridgeEnabled.type = "checkbox";
+const bridgeLabelText = document.createElement("span");
+bridgeLabelText.textContent = t("bridgeEnable");
+bridgeLabel.append(bridgeEnabled, bridgeLabelText);
+const bridgeResult = document.createElement("p");
+bridgeResult.id = "bridge-result"; bridgeResult.setAttribute("role", "status");
+bridgeInfo.append(bridgeHeading, bridgeDescription, bridgeLabel, bridgeResult);
+document.querySelector("main").append(bridgeInfo);
+
+chrome.storage.local.get({bridgeEnabled: false}).then(value => {
+  bridgeEnabled.checked = value.bridgeEnabled;
+});
+
+bridgeEnabled.addEventListener("change", async () => {
+  const enabled = bridgeEnabled.checked;
+  bridgeEnabled.disabled = true;
+  try {
+    // The bridge only exists inside the hover content script.
+    if (enabled && !(await chrome.storage.local.get({hoverEnabled: false})).hoverEnabled) {
+      bridgeEnabled.checked = false;
+      bridgeResult.textContent = t("bridgeRequiresHover");
+      return;
+    }
+    await chrome.storage.local.set({bridgeEnabled: enabled});
+    const reply = await chrome.runtime.sendMessage({type: "FX_SYNC_HOVER"});
+    if (!reply?.ok) throw new Error(reply?.error || t("cannotConnect"));
+    bridgeResult.textContent = t(enabled ? "bridgeOn" : "bridgeOff");
+  } catch {
+    await chrome.storage.local.set({bridgeEnabled: false});
+    bridgeEnabled.checked = false;
+    bridgeResult.textContent = t("hoverFailed");
+  } finally { bridgeEnabled.disabled = false; }
 });

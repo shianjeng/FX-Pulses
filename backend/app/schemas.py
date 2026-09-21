@@ -36,6 +36,7 @@ class OfficialRateOut(BaseModel):
     fetched_at: datetime
     source_url: str
     is_derived: bool
+    via_currency: str | None = None
     market_deviation_percent: Decimal | None = None
     model_config = ConfigDict(from_attributes=True)
 
