@@ -3,7 +3,7 @@
     "message": "FX Pulse — 随手汇率"
   },
   "extensionDescription": {
-    "message": "免登录查看人民币、美元和日元的市场中间价、走势与快捷换算。"
+    "message": "免登录查看市场行情、走势与官方参考价，支持多种主流货币换算。"
   },
   "noAccount": {
     "message": "免登录"
@@ -110,11 +110,8 @@
   "convertedLabel": {
     "message": "换算结果"
   },
-  "converterPair": {
-    "message": "换算货币对"
-  },
   "converterHint": {
-    "message": "按市场中间价估算，不包含银行手续费与点差。"
+    "message": "优先使用市场中间价；无市场行情时使用标明来源和日期的官方日参考价。不包含手续费与点差。"
   },
   "targetTitle": {
     "message": "目标价状态"
@@ -442,5 +439,26 @@
   },
   "ask": {
     "message": "卖出"
+  },
+  "converterFromCurrency": {
+    "message": "源货币"
+  },
+  "converterToCurrency": {
+    "message": "目标货币"
+  },
+  "converterNoRate": {
+    "message": "暂无可用汇率：可能尚未采集，或没有同一机构覆盖这两种货币。"
+  },
+  "converterSameCurrency": {
+    "message": "同币种换算 · 1:1"
+  },
+  "converterOfficialSource": {
+    "message": "官方日参考价 · $1 · $2"
+  },
+  "converterMarketSource": {
+    "message": "市场中间价 · $1"
+  },
+  "loadingConverterRate": {
+    "message": "正在读取换算汇率…"
   }
 }

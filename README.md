@@ -11,7 +11,7 @@
 
   <p>
     <a href="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml"><img src="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
-    <img src="https://img.shields.io/badge/version-2.3.0-36D9A0" alt="Version 2.3.0" />
+    <img src="https://img.shields.io/badge/version-2.4.0-36D9A0" alt="Version 2.4.0" />
     <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
     <img src="https://img.shields.io/badge/FastAPI-0.116-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.116" />
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Manifest V3" />
@@ -39,7 +39,7 @@ The extension and hover converter share the same backend, one-minute cache, watc
 | 📈 | Interactive history | Switch between 1, 7, 30, and 90-day SVG charts |
 | 🏛️ | Official references | Compare market midpoints with central-bank reference observations |
 | ⚡ | Hover conversion | Point at an amount on a webpage to convert it without leaving the page |
-| 🧮 | Quick converter | Reverse conversion direction and copy results in one click |
+| 🧮 | Quick converter | Choose source and target currencies, swap direction, and see the rate source and date |
 | 🔔 | Optional alerts | Local target-price alerts powered by `chrome.alarms` |
 | 🌐 | Three languages | Complete Chinese, English, and Japanese interfaces |
 | 🔒 | Privacy first | No account, analytics SDK, or server-side storage of personal preferences |
@@ -59,6 +59,8 @@ FX Pulse labels each data layer instead of presenting unrelated rates as if they
 | Official references | Federal Reserve Board | H.10 business-day release | Daily exchange-rate observations |
 | Official references | Bank of Japan | Tokyo business days | USD/JPY spot rate at 17:00 JST |
 | Official references | People's Bank of China | Business days | RMB central parity reference |
+
+The popup converter discovers available currencies from `/api/v1/currencies` instead of limiting selection to the three default market pairs. It prefers direct or inverse market quotes, then selects the newest available official reference for the chosen pair. Official coverage depends on successfully collected tables; a pair requires one institution covering both currencies. Missing rates are shown explicitly. History and target alerts continue to use configured market pairs.
 
 Official cross-rates retain their institution, reference date, fetch time, source URL, and an `is_derived` marker. They are never described as live or tradable quotes.
 

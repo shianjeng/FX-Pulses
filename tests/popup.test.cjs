@@ -26,6 +26,11 @@ async function setup({ clipboardFails = false, watchlist = ["USD/CNY"] } = {}) {
     },
   } });
   w.fetch = async url => ({ ok: true, json: async () => {
+    if (url.endsWith('/currencies')) return {official_currencies: ['EUR', 'GBP', 'USD', 'CNY', 'JPY']};
+    if (url.includes('/official-rates/')) return [
+      {rate: 7, institution: 'Bank of Canada', reference_date: '2026-09-17'},
+      {rate: 8, institution: 'European Central Bank', reference_date: '2026-09-18'},
+    ];
     if (url.endsWith('/pairs')) return ['USD/CNY','USD/JPY','CNY/JPY'];
     if (url.includes("history")) {
       return [{ midpoint: "7.12", captured_at: "2026-09-18T00:00:00Z" }];
@@ -84,4 +89,50 @@ test("converter reverses and target persists locally", async () => {
   assert.equal(app.state.targets["USD/CNY"].value, 7);
   assert.match(app.w.document.getElementById("target-message").textContent, /已达到/);
   app.close();
+});
+
+test("official-only conversion selects the newest reference and preserves preferences", async () => {
+  const app = await setup();
+  try {
+    const el = id => app.w.document.getElementById(id);
+    assert.equal(el('converter-from').options.length, 5);
+    el('converter-from').value = 'EUR';
+    el('converter-from').dispatchEvent(new app.w.Event('change'));
+    await tick();
+    assert.equal(el('converted').textContent, '8,000.00 CNY');
+    assert.match(el('converter-status').textContent, /官方日参考价.*欧洲央行.*2026-09-18/);
+    assert.equal(app.state.converterFrom, 'EUR');
+    el('amount').value = '2';
+    el('amount').dispatchEvent(new app.w.Event('input'));
+    assert.equal(el('converted').textContent, '16.00 CNY');
+    el('converter-to').value = 'EUR';
+    el('converter-to').dispatchEvent(new app.w.Event('change'));
+    await tick();
+    assert.equal(el('converted').textContent, '2.00 EUR');
+    assert.match(el('converter-status').textContent, /1:1/);
+  } finally { app.close(); }
+});
+
+test("late official response cannot replace a newer currency selection; missing rates stay explicit", async () => {
+  const app = await setup();
+  try {
+    const el = id => app.w.document.getElementById(id);
+    let finish;
+    app.w.fetch = async () => ({ok: true, json: () => new Promise(resolve => { finish = resolve; })});
+    el('converter-from').value = 'EUR';
+    el('converter-from').dispatchEvent(new app.w.Event('change'));
+    await tick();
+    el('converter-from').value = 'USD';
+    el('converter-from').dispatchEvent(new app.w.Event('change'));
+    finish([{rate: 99, institution: 'Bank of Canada', reference_date: '2026-09-20'}]);
+    await tick();
+    assert.equal(el('converted').textContent, '7,120.00 CNY');
+    assert.match(el('converter-status').textContent, /市场中间价/);
+    app.w.fetch = async () => ({ok: true, json: async () => []});
+    el('converter-from').value = 'GBP';
+    el('converter-from').dispatchEvent(new app.w.Event('change'));
+    await tick();
+    assert.equal(el('converted').textContent, '—');
+    assert.match(el('converter-status').textContent, /暂无可用汇率/);
+  } finally { app.close(); }
 });
