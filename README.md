@@ -16,11 +16,11 @@
 
 ---
 
-## Unified extension (2.1.0)
+## Unified extension (2.2.2)
 
 The toolbar popup and webpage hover converter now run inside **one Chrome extension**, using the same FastAPI backend, one-minute quote cache, language and watchlist. Tampermonkey is no longer required. Hover is off by default; enable it in extension settings, grant website access, and reload the page. Disable the old userscript to prevent duplicate cards.
 
-See [migration and architecture](UNIFIED-SERVICE.md). The installed extension never falls back to a separate public-rate provider. Unsupported or uncollected currencies are clearly marked.
+See [migration and architecture](UNIFIED-SERVICE.md). The installed extension never calls a separate public-rate provider: every number comes from your own backend. Where the market feed has no pair, hover offers the official daily reference rate instead, labelled as such.
 
 FX Pulse is more than a currency converter. It combines live market bid/ask data with daily reference rates published by monetary authorities, normalizes different quotation conventions, and exposes the result through a compact browser interface and a read-only REST API.
 
@@ -40,6 +40,15 @@ Most exchange-rate tools display one number without explaining what it represent
 | Official reference | Daily indicative/reference observation | European Central Bank and Bank of Canada |
 | Comparison | Percentage difference between market midpoint and official reference | Calculated by the FX Pulse API |
 
+The People's Bank of China central parity rate — the rate the midpoint disclaimer
+refers to — can be collected as a third source by setting
+`OFFICIAL_SOURCES=ecb,bank_of_canada,pboc`. It is off by default because it comes
+from a website data endpoint rather than a documented statistical API; run
+`python -m app.check_official` after enabling it to see exactly what was parsed.
+Japan has no equivalent daily central-bank fixing, and a commercial bank's TTM
+would blur the market/official split this project exists to keep, so JPY
+reference observations come from the ECB and Bank of Canada tables instead.
+
 Official observations are never presented as tradable live prices. Cross-calculated values are marked with `is_derived=true`, and every official record keeps its institution, reference date, fetch time, and source URL.
 
 ## Highlights
@@ -47,10 +56,13 @@ Official observations are never presented as tradable live prices. Cross-calcula
 ### Browser experience
 
 - Market bid, ask, midpoint, spread, and 24-hour movement
-- Seven-day SVG trend chart with interactive values
+- SVG trend chart over 1, 7, 30 or 90 days with interactive values
 - Official reference-rate comparison for the selected pair
 - Quick currency converter with direction reversal
 - Local watchlist and target-price preferences
+- Optional background target alerts through `chrome.alarms`, off by default
+- Hover falls back to a clearly labelled official reference rate for currencies
+  the market feed does not track
 - One-click copy with a selectable-text fallback
 - No account or analytics SDK; shared on-demand requests, no scheduled collection on hidden pages
 
@@ -64,13 +76,17 @@ Official observations are never presented as tradable live prices. Cross-calcula
 - Request spacing for Alpha Vantage free-key burst limits
 - Provider isolation: mock and live observations never mix
 - Retention cleanup, stale-data flags, CORS restrictions, and read rate limiting
-- Official-source adapters with normalized cross-rate calculation
+- Official-source adapters store the whole published table, so any covered pair
+  can be crossed without another upstream request
+- Per-client sliding-window read limiting, ETag and `Cache-Control` on reads
+- Collector heartbeats, so `/health` separates "stopped" from "stale"
 
 ### Quality and operations
 
 - Backend tests with `pytest` and `pytest-asyncio`
 - Extension DOM tests with Node.js and JSDOM
 - Python linting with Ruff and JavaScript linting with ESLint
+- `python -m app.check_official` verifies every configured official source live
 - GitHub Actions CI
 - Non-root Docker image and explicit migration step
 - API keys remain server-side and are excluded from Git
@@ -157,14 +173,24 @@ Alpha Vantage returns a real-time observation when queried, but the free profile
 | --- | --- | --- |
 | `GET` | `/health` | Service status and configured market provider |
 | `GET` | `/api/v1/pairs` | Tracked currency pairs |
+| `GET` | `/api/v1/currencies` | Tracked pairs plus official-only currencies |
 | `GET` | `/api/v1/rates` | Latest cached market quotes |
 | `GET` | `/api/v1/rates/{base}/{quote}` | Latest quote for one pair |
 | `GET` | `/api/v1/rates/{base}/{quote}/history?days=7` | One to 90 days of market history |
 | `GET` | `/api/v1/official-rates` | Latest normalized official observations |
-| `GET` | `/api/v1/official-rates/{base}/{quote}` | Official observations for one pair |
+| `GET` | `/api/v1/official-rates/{base}/{quote}` | Official observations for any covered pair |
 | `GET` | `/api/v1/comparisons/{base}/{quote}` | Market midpoint and official-rate comparison |
 
 All application endpoints are public and read-only. Reading cached rates never spends upstream API quota.
+Responses carry an `ETag`; a conditional request for unchanged data is answered with `304`.
+
+`/health` also reports each collector job's last success, consecutive failures and
+whether it has gone silent for several collection intervals. Only the collector
+status degrades there — `status` stays `ok` while the API itself is serving.
+
+Official endpoints are not limited to `TRACKED_PAIRS`: the ECB and Bank of Canada
+tables cover roughly thirty currencies each, and any pair within one table can be
+crossed. Market endpoints remain limited to the configured pairs.
 
 ## Local development
 
@@ -203,7 +229,8 @@ npm test
 npm run lint
 ```
 
-CI runs the backend and extension checks on every push and pull request.
+CI runs the backend suite, migrations, the extension suite, ESLint, a version
+consistency check and a Docker build on every push and pull request.
 
 ## Configuration
 
@@ -218,6 +245,9 @@ CI runs the backend and extension checks on every push and pull request.
 | `STALE_AFTER_MINUTES` | `360` | Age at which a market quote becomes stale |
 | `OFFICIAL_REFRESH_INTERVAL_MINUTES` | `360` | Official-source collection interval |
 | `RETENTION_DAYS` | `90` | Snapshot retention period |
+| `RESPONSE_CACHE_SECONDS` | `60` | `Cache-Control: max-age` on read endpoints |
+| `COLLECTOR_STALL_FACTOR` | `3` | Silent intervals before a job counts as stalled |
+| `TRUST_FORWARDED_FOR` | `false` | Read client IPs from `X-Forwarded-For` |
 | `DATABASE_URL` | SQLite | SQLAlchemy database connection URL |
 
 ## Privacy and security
@@ -228,14 +258,20 @@ CI runs the backend and extension checks on every push and pull request.
 - `.env` is ignored by Git
 - Extension CORS is restricted to browser-extension origins
 - Provider URLs containing credentials are not emitted at normal log levels
-- Public endpoints are read-only and protected by a fixed-window request limit
+- Public endpoints are read-only and protected by a per-client sliding-window limit
+- Content scripts may only read one official cross rate through the gateway; every
+  other API path is reachable from extension pages alone
+- Official XML is parsed with `defusedxml`
 
 ## Data limitations
 
 - A market midpoint is `(bid + ask) / 2`; it is not a bank, card-network, or remittance settlement rate.
 - ECB and Bank of Canada observations are daily reference/indicative rates, not tradable quotes.
 - Cross-rates may combine two observations from the same institution and are explicitly marked as derived.
-- Target prices are informational and checked only when the popup is opened.
+- Target prices are informational. They are checked when the popup is opened and,
+  if background alerts are enabled, on a timer that only reads already-cached
+  backend data. Alerts are suppressed for stale or offline quotes.
+- Official reference rates shown by hover are daily observations, never live quotes.
 - The included free Alpha Vantage profile refreshes periodically rather than continuously.
 
 ## 中文简介
