@@ -1,17 +1,13 @@
 // ==UserScript==
 // @name         FX Pulse Hover（页面金额就地换算）
 // @namespace    https://github.com/shianjeng/FX-Pulses
-// @version      0.3.1
-// @description  悬停页面金额就地换算：报纸风自适应配色、简单/详细模式、证据式币种识别。只读、不改页面、30 分钟缓存。
+// @version      2.5.0
+// @description  悬停页面金额就地换算：报纸风自适应配色、简单/详细模式、证据式币种识别。通过 FX Pulse 插件统一取数；需要插件及网页悬停权限。
 // @author       Hank
 // @match        *://*/*
-// @match        file:///*
-// @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_registerMenuCommand
-// @connect      open.er-api.com
-// @connect      api.frankfurter.app
 // @run-at       document-idle
 // @noframes
 // ==/UserScript==
@@ -35,7 +31,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.3.1';
+  const VERSION = '2.5.0';
   try {
     console.log('%c[FXPH] FX Pulse Hover v' + VERSION + ' 开始执行（GM_info=' +
       (typeof GM_info !== 'undefined' ? 'yes' : 'no') + '）', 'color:#56e39f;font-weight:bold');
@@ -558,91 +554,98 @@
 
   function saveCfg() { store.set('config', cfg); }
 
-  function xhrText(url) {
+  // No provider requests or persisted quote cache in the userscript.
+  // Only the extension service worker owns source selection and caching.
+  const RATES = {table: null, source: '', updated: '', fetchedAt: 0, stale: false, offline: false, error: ''};
+  let quotes = [], quoteVersion = 0;
+  const official = new Map();
+  let ratesRequest = null, retryAfter = 0, requestId = 0;
+  function bridge(type, path) {
     return new Promise(function (resolve, reject) {
-      if (typeof GM_xmlhttpRequest === 'function') {
-        GM_xmlhttpRequest({
-          method: 'GET', url: url, timeout: 12000,
-          onload: function (r) { (r.status >= 200 && r.status < 300) ? resolve(r.responseText) : reject(new Error('HTTP ' + r.status)); },
-          onerror: function () { reject(new Error('network')); },
-          ontimeout: function () { reject(new Error('timeout')); },
-        });
-      } else if (typeof fetch === 'function') {
-        const controller = new AbortController();
-        const timer = setTimeout(function () { controller.abort(); }, 12000);
-        fetch(url, { signal: controller.signal }).then(function (r) { return r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status)); }).then(resolve, reject).finally(function () { clearTimeout(timer); });
-      } else { reject(new Error('no transport')); }
+      const id = 'fx-' + Date.now() + '-' + (++requestId);
+      const timer = setTimeout(function () {
+        document.removeEventListener('fx-pulse-response', listener);
+        document.removeEventListener('fx-pulse-ready', send);
+        reject(new Error('请安装或重新加载 FX Pulse 2.5.0 插件，开启网页悬停权限后刷新页面'));
+      }, 12000);
+      function listener(event) {
+        if (typeof event.detail !== 'string') return;
+        let reply;
+        try { reply = JSON.parse(event.detail); } catch (_) { return; }
+        if (reply.id !== id) return;
+        clearTimeout(timer);
+        document.removeEventListener('fx-pulse-response', listener);
+        document.removeEventListener('fx-pulse-ready', send);
+        if (reply.ok) resolve(reply.data);
+        else reject(new Error('插件数据不可用，请检查插件后端与网页权限'));
+      }
+      function send() {
+        document.dispatchEvent(new CustomEvent('fx-pulse-request', {detail: JSON.stringify({id: id, type: type, path: path})}));
+      }
+      document.addEventListener('fx-pulse-response', listener);
+      document.addEventListener('fx-pulse-ready', send);
+      send();
     });
   }
-
-  const SOURCES = [
-    { name: 'ER-API', url: 'https://open.er-api.com/v6/latest/USD',
-      pick: function (j) { return { table: j.rates, updated: j.time_last_update_utc, note: '日更' }; } },
-    { name: 'ECB/Frankfurter', url: 'https://api.frankfurter.app/latest?from=USD',
-      pick: function (j) { return { table: Object.assign({ USD: 1 }, j.rates), updated: j.date, note: 'ECB 参考汇率' }; } },
-  ];
-
-  const RATES = { table: null, source: '', updated: '', fetchedAt: 0, stale: false, offline: false, error: '' };
-  let ratesRequest = null;
-  let retryAfter = 0;
-
-  function validTable(table) {
-    return !!table && table.USD === 1 && Object.keys(table).length > 1 &&
-      Object.entries(table).every(function (entry) {
-        return /^[A-Z]{3}$/.test(entry[0]) && Number.isFinite(entry[1]) && entry[1] > 0;
-      });
+  function redraw() {
+    if (current && card && card.style.display !== 'none') { renderCard(current); place(currentRect, lastPoint); }
   }
-
-  function hydrateRates(c) {
-    RATES.table = Object.assign({}, c.table); RATES.source = c.source || ''; RATES.updated = c.updated || '';
-    RATES.fetchedAt = c.fetchedAt || 0; RATES.offline = !!c.offline;
-  }
-
   function ensureRates(force) {
     if (ratesRequest) return ratesRequest;
-    const cached = store.get('rates', null);
-    if (cached && validTable(cached.table) && !cached.offline) hydrateRates(cached);
-    const age = Date.now() - RATES.fetchedAt;
-    const fresh = RATES.fetchedAt && age >= 0 && age < cfg.ttlMinutes * 60000;
-    if (RATES.table && fresh && !force) return Promise.resolve(RATES);
-    RATES.stale = true;
     if (!force && Date.now() < retryAfter) return Promise.resolve(RATES);
-    const errors = [];
-    const tryNext = function (i) {
-      if (i >= SOURCES.length) {
-        RATES.error = errors.join(' | ');
-        retryAfter = Date.now() + 60000;
-        if (RATES.table) { RATES.stale = true; return RATES; }
-        RATES.offline = true;
-        RATES.stale = true;
-        return RATES;
-      }
-      const s = SOURCES[i];
-      return xhrText(s.url).then(function (t) {
-        const picked = s.pick(JSON.parse(t));
-        if (!picked || !validTable(picked.table)) throw new Error('bad payload');
-        hydrateRates({ table: picked.table, source: s.name + ' · ' + picked.note, updated: picked.updated, fetchedAt: Date.now() });
-        RATES.stale = false; RATES.error = '';
-        retryAfter = 0;
-        store.set('rates', { table: RATES.table, source: RATES.source, updated: RATES.updated, fetchedAt: RATES.fetchedAt });
-        return RATES;
-      }).catch(function (e) {
-        errors.push(s.name + ': ' + e.message);
-        return tryNext(i + 1);
+    if (!force && RATES.fetchedAt && Date.now() - RATES.fetchedAt < 60000) return Promise.resolve(RATES);
+    ratesRequest = bridge('FX_SNAPSHOT').then(function (data) {
+      if (!Array.isArray(data?.rates) || !data.rates.every(function (r) {
+        return /^[A-Z]{3}$/.test(r.base_currency) && /^[A-Z]{3}$/.test(r.quote_currency) &&
+          Number.isFinite(Number(r.midpoint)) && Number(r.midpoint) > 0 &&
+          ['mock', 'alpha_vantage'].includes(r.provider);
+      })) throw new Error('插件返回的行情格式无效');
+      quotes = data.rates;
+      quoteVersion++;
+      official.clear();
+      RATES.table = {USD: 1};
+      quotes.forEach(function (r) {
+        if (r.base_currency === 'USD') RATES.table[r.quote_currency] = Number(r.midpoint);
       });
-    };
-    ratesRequest = Promise.resolve(tryNext(0)).then(function (result) {
-      ratesRequest = null;
-      if (current && card && card.style.display !== 'none') {
-        renderCard(current);
-        place(currentRect, lastPoint);
-      }
-      return result;
-    }, function (err) {
-      ratesRequest = null;
-      throw err;
-    });
+      RATES.fetchedAt = Date.now();
+      RATES.offline = Boolean(data.offline);
+      RATES.stale = RATES.offline || quotes.some(function (r) { return r.is_stale; });
+      RATES.error = '';
+      retryAfter = 0;
+      return RATES;
+    }).catch(function (error) {
+      RATES.error = error.message; RATES.stale = true; RATES.offline = true;
+      retryAfter = Date.now() + 60000;
+      return RATES;
+    }).finally(function () { ratesRequest = null; redraw(); });
     return ratesRequest;
+  }
+  function quoteFor(from, to) {
+    if (from === to) return {rate: 1, source: '同币种 1:1', date: ''};
+    const direct = quotes.find(function (r) { return r.base_currency === from && r.quote_currency === to; });
+    const reverse = quotes.find(function (r) { return r.base_currency === to && r.quote_currency === from; });
+    const market = direct || reverse;
+    if (market) return {
+      rate: direct ? Number(market.midpoint) : 1 / Number(market.midpoint),
+      source: market.provider === 'mock' ? '模拟数据 · 非真实行情' : 'Alpha Vantage · 市场中间价',
+      date: market.captured_at,
+    };
+    const key = from + '/' + to;
+    if (official.has(key)) return official.get(key);
+    official.set(key, null);
+    const version = quoteVersion;
+    bridge('FX_OFFICIAL', '/official-rates/' + key).then(function (rows) {
+      if (version !== quoteVersion) return;
+      const row = Array.isArray(rows) ? rows.filter(function (r) {
+        return Number.isFinite(Number(r.rate)) && Number(r.rate) > 0 && Number.isFinite(Date.parse(r.reference_date));
+      }).sort(function (a, b) { return b.reference_date.localeCompare(a.reference_date); })[0] : null;
+      if (row) official.set(key, {rate: Number(row.rate), source: '官方日参考价 · ' + row.institution, date: row.reference_date});
+    }).catch(function () { /* Missing pairs stay unavailable. */ }).finally(redraw);
+    return null;
+  }
+  function liveConvert(amount, from, to) {
+    const quote = quoteFor(from, to);
+    return quote && Number.isFinite(amount) && amount >= 0 ? amount * quote.rate : null;
   }
 
   /* ==========================================================================
@@ -920,9 +923,8 @@
   }
 
   function rateBetween(from, to) {
-    const t = RATES.table;
-    if (!t || !t[from] || !t[to]) return null;
-    return t[to] / t[from];
+    const quote = quoteFor(from, to);
+    return quote ? quote.rate : null;
   }
 
   function formatRate(value) {
@@ -939,11 +941,14 @@
   }
 
   function detailTimestamp() {
+    const selected = current && quoteFor(current.code, effectiveTarget());
+    RATES.source = selected ? selected.source : '暂无可用汇率';
+    RATES.updated = selected ? selected.date : '';
     const parts = [];
     parts.push('数据 ' + (RATES.updated || '未知'));
     parts.push('抓取 ' + (ageText() || '未知'));
     parts.push(RATES.source || '无源');
-    parts.push('TTL ' + cfg.ttlMinutes + ' 分钟');
+    parts.push('插件共享缓存');
     return parts.join(' · ');
   }
 
@@ -971,7 +976,7 @@
 
     if (detail) {
       // 详细模式与简单模式共用主换算值，原始金额保留独立标识。
-      const mainValue = convertAmount(RATES.table, match.amount, match.code, target);
+      const mainValue = liveConvert(match.amount, match.code, target);
       const main = el('div', 'amount-main');
       main.appendChild(document.createTextNode(mainValue == null ? '≈ ? ' : '≈ ' + formatMoney(mainValue, target) + ' '));
       main.appendChild(part(el('span', 'amount-main-code', target), 'amount-main-code'));
@@ -990,8 +995,10 @@
       codes.forEach(function (c) {
         const row = el('div', 'multi-row');
         part(row, 'multi-row');
-        const v = convertAmount(RATES.table, match.amount, match.code, c);
+        const v = liveConvert(match.amount, match.code, c);
         const val = el('span', 'multi-value', v == null ? '≈ ?' : '≈ ' + formatMoney(v, c));
+        const rowQuote = quoteFor(match.code, c);
+        if (rowQuote) val.title = rowQuote.source + ' · ' + rowQuote.date;
         part(val, 'multi-value');
         row.appendChild(val);
         const code = el('span', 'multi-code', c);
@@ -1047,7 +1054,7 @@
     } else {
       // 简单模式：原始金额 / 换算金额 / 两个校准下拉（目标 + 原始，常驻）/ 简单时间戳 / 右键复制
       const main = el('div', 'row-main');
-      const value = convertAmount(RATES.table, match.amount, match.code, target);
+      const value = liveConvert(match.amount, match.code, target);
       const big = el('div', 'amount-main');
       big.appendChild(document.createTextNode(value == null ? '≈ ?' : '≈ ' + formatMoney(value, target) + ' '));
       big.appendChild(part(el('span', 'amount-main-code', target), 'amount-main-code'));
@@ -1097,7 +1104,7 @@
 
   function appendWarnings() {
     if (!RATES.table) {
-      card.appendChild(part(el('div', 'warn-offline', '汇率暂不可用，请稍后重试'), 'warn-offline'));
+      card.appendChild(part(el('div', 'warn-offline', RATES.error || '汇率暂不可用，请检查插件'), 'warn-offline'));
     } else if (RATES.offline) {
       const w = el('div', 'warn-offline', '⚠ 汇率暂不可用');
       part(w, 'warn-offline');
@@ -1145,7 +1152,7 @@
   function copyCurrent() {
     if (!current) return;
     const target = effectiveTarget();
-    const v = convertAmount(RATES.table, current.amount, current.code, target);
+    const v = liveConvert(current.amount, current.code, target);
     if (v == null) { showToast('汇率不可用，无法复制换算结果'); return; }
     const line = current.raw.trim() + ' → ≈ ' + (v == null ? '?' : formatMoney(v, target)) + ' ' + target;
     if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
@@ -1328,15 +1335,7 @@
     });
     row('详细模式显示', multi, 'col');
 
-    // 缓存
-    const ttlSel = el('select');
-    [[30, '30 分钟'], [60, '1 小时'], [240, '4 小时'], [1440, '1 天']].forEach(function (o) {
-      const opt = el('option', null, o[1]); opt.value = String(o[0]);
-      if (cfg.ttlMinutes === o[0]) opt.selected = true;
-      ttlSel.appendChild(opt);
-    });
-    ttlSel.dataset.cfg = 'ttlMinutes';
-    row('汇率缓存时间', ttlSel);
+    row('汇率缓存', el('span', null, '由插件统一管理 · 市场 1 分钟 / 官方 10 分钟'));
 
     // 右键复制
     const rcc = el('input'); rcc.type = 'checkbox'; rcc.checked = !!cfg.rightClickCopy; rcc.dataset.cfg = 'rightClickCopy';
@@ -1562,7 +1561,7 @@
     profile: pageProfile,
     buildProfile: buildProfile,
     markerCensus: markerCensus,
-    convert: function (amount, from, to) { return convertAmount(RATES.table, amount, from, to); },
+    convert: function (amount, from, to) { return liveConvert(amount, from, to); },
     rates: function () { return JSON.parse(JSON.stringify(RATES)); },
     refresh: function () { return ensureRates(true); },
     scan: scanPage,
@@ -1732,7 +1731,7 @@
       if (document.visibilityState === 'visible') void ensureRates(false);
     });
     const refreshTimer = setInterval(function () {
-      if (document.visibilityState === 'visible' && current && card.style.display !== 'none') void ensureRates(false);
+      if (document.visibilityState === 'visible') void ensureRates(false);
     }, 60000);
     window.addEventListener('pagehide', function () { clearInterval(refreshTimer); }, { once: true });
     registerMenu();
