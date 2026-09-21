@@ -1,0 +1,440 @@
+{
+  "extensionName": {
+    "message": "FX Pulse — exchange rates at hand"
+  },
+  "extensionDescription": {
+    "message": "Login-free market midpoints, trends and quick conversion for CNY, USD and JPY."
+  },
+  "noAccount": {
+    "message": "No account"
+  },
+  "settings": {
+    "message": "Settings"
+  },
+  "refresh": {
+    "message": "Refresh"
+  },
+  "languageLabel": {
+    "message": "Interface language"
+  },
+  "langZh": {
+    "message": "Chinese"
+  },
+  "langEn": {
+    "message": "English"
+  },
+  "langJa": {
+    "message": "Japanese"
+  },
+  "eyebrowMarket": {
+    "message": "MARKET MIDPOINT"
+  },
+  "watchlistTitle": {
+    "message": "Watchlist"
+  },
+  "loadingRates": {
+    "message": "Loading rates…"
+  },
+  "refreshHint": {
+    "message": "Refresh reloads stored backend data; it does not trigger a new provider collection."
+  },
+  "eyebrowOfficial": {
+    "message": "OFFICIAL REFERENCE"
+  },
+  "officialTitle": {
+    "message": "Reference rates"
+  },
+  "officialTitleFor": {
+    "message": "$1 reference rates"
+  },
+  "daily": {
+    "message": "Daily"
+  },
+  "loadingOfficial": {
+    "message": "Loading reference rates…"
+  },
+  "eyebrowTrend": {
+    "message": "PRICE TREND"
+  },
+  "trendTitle": {
+    "message": "Rate history"
+  },
+  "trendTitleFor": {
+    "message": "$1 history"
+  },
+  "change24h": {
+    "message": "24h · $1"
+  },
+  "rangeGroup": {
+    "message": "History range"
+  },
+  "loadingChart": {
+    "message": "Loading chart…"
+  },
+  "chartAria": {
+    "message": "$1 $2 chart"
+  },
+  "range1": {
+    "message": "1-day"
+  },
+  "range7": {
+    "message": "7-day"
+  },
+  "range30": {
+    "message": "30-day"
+  },
+  "range90": {
+    "message": "90-day"
+  },
+  "statLow": {
+    "message": "Low"
+  },
+  "statHigh": {
+    "message": "High"
+  },
+  "statRange": {
+    "message": "Range"
+  },
+  "eyebrowConverter": {
+    "message": "QUICK CONVERTER"
+  },
+  "converterTitle": {
+    "message": "Convert"
+  },
+  "reverse": {
+    "message": "Swap"
+  },
+  "amountLabel": {
+    "message": "Amount"
+  },
+  "convertedLabel": {
+    "message": "You receive"
+  },
+  "converterPair": {
+    "message": "Currency pair"
+  },
+  "converterHint": {
+    "message": "Estimated at the midpoint; bank fees and spreads excluded."
+  },
+  "targetTitle": {
+    "message": "Rate alerts"
+  },
+  "targetOnOpen": {
+    "message": "Checked on opening"
+  },
+  "targetBackground": {
+    "message": "Checked in the background"
+  },
+  "above": {
+    "message": "At or above"
+  },
+  "below": {
+    "message": "At or below"
+  },
+  "targetPlaceholder": {
+    "message": "Enter target midpoint"
+  },
+  "saveLocal": {
+    "message": "Save target"
+  },
+  "manageWatchlist": {
+    "message": "Edit watchlist"
+  },
+  "savedLocally": {
+    "message": "Saved on this device"
+  },
+  "midpointDisclaimer": {
+    "message": "The midpoint averages bid and ask prices. It is not the official RMB fixing or a bank transaction rate. For reference only."
+  },
+  "midpointFormula": {
+    "message": "Midpoint = (Bid + Ask) ÷ 2"
+  },
+  "copyRate": {
+    "message": "Copy rate"
+  },
+  "copyManual": {
+    "message": "Automatic copy failed. Press Ctrl/Cmd+C to copy."
+  },
+  "noComparison": {
+    "message": "No comparison"
+  },
+  "waitingCollection": {
+    "message": "Waiting for collection"
+  },
+  "dataUnavailable": {
+    "message": "Data unavailable"
+  },
+  "pairNotConfigured": {
+    "message": "Pair not configured on the server"
+  },
+  "offlineCache": {
+    "message": "Offline · cached quote"
+  },
+  "outdated": {
+    "message": "Outdated"
+  },
+  "updated": {
+    "message": "Updated"
+  },
+  "chartCollecting": {
+    "message": "Collecting historical data"
+  },
+  "singlePoint": {
+    "message": "Only one observation"
+  },
+  "amountRange": {
+    "message": "Enter a valid amount from 0 to 1 trillion"
+  },
+  "targetPaused": {
+    "message": "Quotes unavailable; target checks paused"
+  },
+  "noTarget": {
+    "message": "No target set"
+  },
+  "targetReached": {
+    "message": "● Target reached $1 $2"
+  },
+  "targetNotReached": {
+    "message": "○ Not reached · Target $1 $2"
+  },
+  "targetPositive": {
+    "message": "Enter a target above 0"
+  },
+  "copied": {
+    "message": "Copied"
+  },
+  "dataUnavailableCheck": {
+    "message": "Data unavailable. Check your connection."
+  },
+  "officialUnavailable": {
+    "message": "Reference rates unavailable. Please refresh later."
+  },
+  "officialDaily": {
+    "message": "Daily reference · Not a bank transaction rate"
+  },
+  "noOfficial": {
+    "message": "No reference rates available"
+  },
+  "crossRate": {
+    "message": "Cross rate"
+  },
+  "mockData": {
+    "message": "Demo data · Not live quotes"
+  },
+  "providerLive": {
+    "message": "Alpha Vantage"
+  },
+  "asOf": {
+    "message": "As of"
+  },
+  "statusLine": {
+    "message": "As of $1 · $2"
+  },
+  "connectionFailed": {
+    "message": "Connection failed"
+  },
+  "collectorStopped": {
+    "message": "Collector stopped"
+  },
+  "serverReturned": {
+    "message": "Server returned $1"
+  },
+  "tooManyRequests": {
+    "message": "Too many requests. Try again later."
+  },
+  "timeout": {
+    "message": "Request timed out. Please retry."
+  },
+  "badFormat": {
+    "message": "Unexpected API response format"
+  },
+  "cannotConnect": {
+    "message": "Unable to connect to the server"
+  },
+  "checkBackend": {
+    "message": "Unable to connect to the server. Check the backend address and connection."
+  },
+  "institutionEcb": {
+    "message": "European Central Bank"
+  },
+  "institutionBoc": {
+    "message": "Bank of Canada"
+  },
+  "institutionPboc": {
+    "message": "People's Bank of China"
+  },
+  "optionsDocTitle": {
+    "message": "FX Pulse Settings"
+  },
+  "eyebrowSettings": {
+    "message": "EXTENSION SETTINGS"
+  },
+  "settingsTitle": {
+    "message": "Data source settings"
+  },
+  "settingsIntro": {
+    "message": "No account required. Your watchlist, targets and conversion preferences stay in this browser. The backend retrieves and caches public exchange rates."
+  },
+  "apiAddress": {
+    "message": "Backend API address"
+  },
+  "saveAndTest": {
+    "message": "Save and test connection"
+  },
+  "privacyTitle": {
+    "message": "Privacy and operation"
+  },
+  "privacyBody": {
+    "message": "The extension never sends email. Targets are compared when you open it; with alerts enabled, background checks read only already-cached backend data and never reach the upstream provider. The backend protects provider keys and reduces duplicate requests."
+  },
+  "checking": {
+    "message": "Checking connection…"
+  },
+  "saveFailed": {
+    "message": "Could not save: $1"
+  },
+  "connectedWaiting": {
+    "message": "Connected. Waiting for first collection."
+  },
+  "connectedMock": {
+    "message": "Connected. Demo data is active."
+  },
+  "connectedSaved": {
+    "message": "Connected. Settings saved."
+  },
+  "serverPermissionDenied": {
+    "message": "Permission to access this server was denied"
+  },
+  "invalidUrl": {
+    "message": "Enter a valid HTTP or HTTPS address"
+  },
+  "sourceChanged": {
+    "message": "Data source changed. Please retry."
+  },
+  "hoverSectionTitle": {
+    "message": "Hover conversion"
+  },
+  "hoverDescription": {
+    "message": "Hover and toolbar share the backend, quote cache, language and watchlist. No userscript manager is needed. Amounts are detected locally; page content is not uploaded. Disable the old userscript to avoid duplicate cards."
+  },
+  "hoverEnable": {
+    "message": "Enable hover conversion on websites"
+  },
+  "hoverTargetLabel": {
+    "message": "Hover target currency"
+  },
+  "cardSize": {
+    "message": "Card size"
+  },
+  "sizeS": {
+    "message": "Small"
+  },
+  "sizeM": {
+    "message": "Medium"
+  },
+  "sizeL": {
+    "message": "Large"
+  },
+  "cardMode": {
+    "message": "Card mode"
+  },
+  "modeSimple": {
+    "message": "Simple"
+  },
+  "modeDetail": {
+    "message": "Detailed"
+  },
+  "settingsSaved": {
+    "message": "Settings saved"
+  },
+  "hoverPermissionDenied": {
+    "message": "Website permission denied. Hover remains off."
+  },
+  "hoverEnabledMessage": {
+    "message": "Enabled. Reload your web pages to use it."
+  },
+  "hoverDisabledMessage": {
+    "message": "Hover conversion disabled"
+  },
+  "hoverFailed": {
+    "message": "Could not configure hover. Reload the extension."
+  },
+  "alertsSectionTitle": {
+    "message": "Target alerts"
+  },
+  "alertsDescription": {
+    "message": "Alerts read already-cached backend data and never spend provider quota."
+  },
+  "alertsEnable": {
+    "message": "Enable target alerts (background checks)"
+  },
+  "alertIntervalLabel": {
+    "message": "Alert check interval"
+  },
+  "interval30": {
+    "message": "30 minutes"
+  },
+  "interval60": {
+    "message": "1 hour"
+  },
+  "interval180": {
+    "message": "3 hours"
+  },
+  "interval360": {
+    "message": "6 hours"
+  },
+  "alertsOn": {
+    "message": "Target alerts enabled"
+  },
+  "alertsOff": {
+    "message": "Target alerts disabled"
+  },
+  "alertsPermissionDenied": {
+    "message": "Notification permission denied. Alerts stay off."
+  },
+  "alertsFailed": {
+    "message": "Could not configure alerts. Reload the extension."
+  },
+  "targetAlertBody": {
+    "message": "$1 $2 $3 reached, now $4"
+  },
+  "hoverSource": {
+    "message": "Source currency"
+  },
+  "hoverTargetField": {
+    "message": "Target currency"
+  },
+  "hoverCopy": {
+    "message": "Copy"
+  },
+  "hoverClose": {
+    "message": "Close"
+  },
+  "hoverUnavailable": {
+    "message": "Quotes unavailable. Check the backend connection."
+  },
+  "hoverUnsupported": {
+    "message": "Currency not configured or not collected yet"
+  },
+  "hoverStale": {
+    "message": "Outdated quote"
+  },
+  "hoverGuessed": {
+    "message": "Currency detected automatically; adjust if needed"
+  },
+  "hoverDisclaimer": {
+    "message": "Midpoint estimate; fees excluded."
+  },
+  "hoverManual": {
+    "message": "Automatic copy failed. Copy the selected text."
+  },
+  "hoverOfficial": {
+    "message": "Official reference · daily · not a dealing rate"
+  },
+  "bid": {
+    "message": "BID"
+  },
+  "ask": {
+    "message": "ASK"
+  }
+}

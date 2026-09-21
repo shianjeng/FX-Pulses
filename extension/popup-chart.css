@@ -42,3 +42,7 @@
   color:var(--green);
   font-weight:650;
 }
+
+.range-buttons { display: flex; gap: 6px; margin: 0 0 8px; }
+.range-buttons .mini { flex: 1; font-variant-numeric: tabular-nums; opacity: .6; }
+.range-buttons .mini.selected { opacity: 1; font-weight: 700; }

@@ -5,24 +5,24 @@
   const parser = globalThis.FXAmountParser;
   const defaults = {hoverEnabled: false, hoverTarget: "CNY", hoverSize: "m", hoverMode: "simple", language: "zh", watchlist: ["USD/CNY", "USD/JPY", "CNY/JPY"]};
   let settings = {...defaults}, host, shadow, card, active, snapshot, error = "", timer, hiding, version = 0, pointerVersion = 0;
-  const words = {
-    title: ["网页悬停换算", "Hover conversion", "ページ上での通貨換算"],
-    source: ["原始币种", "Source currency", "元の通貨"], target: ["目标币种", "Target currency", "換算先の通貨"],
-    copy: ["复制", "Copy", "コピー"], settings: ["设置", "Settings", "設定"], close: ["关闭", "Close", "閉じる"],
-    loading: ["正在读取行情…", "Loading rates…", "レートを読み込み中…"],
-    unavailable: ["行情不可用，请检查后端连接", "Quotes unavailable. Check the backend connection.", "レートを取得できません。サーバー接続を確認してください。"],
-    unsupported: ["此币种未配置或尚未采集", "Currency not configured or not collected yet", "未登録または未取得の通貨です"],
-    mock: ["模拟数据 · 非真实行情", "Demo data · Not live quotes", "デモデータ · 実際の相場ではありません"],
-    live: ["行情服务", "Alpha Vantage", "為替データ"],
-    offline: ["离线缓存", "Offline · cached quote", "オフライン・保存済みレート"],
-    stale: ["数据较旧", "Outdated quote", "古いレート"],
-    time: ["数据时间", "As of", "更新日時"],
-    guessed: ["币种为自动识别，可手动校准", "Currency detected automatically; adjust if needed", "通貨は自動判定です。必要に応じて修正してください"],
-    disclaimer: ["市场中间价，仅供参考，不含手续费。", "Midpoint estimate; fees excluded.", "仲値による概算です。手数料は含みません。"],
-    manual: ["自动复制失败，请手动复制", "Automatic copy failed. Copy the selected text.", "自動コピーに失敗しました。選択した文字列をコピーしてください。"],
-    copied: ["已复制", "Copied", "コピーしました"],
+  const MEMORY_LIMIT = 200;
+  const officialCache = new Map();   // "FROM/TO" -> observation | null
+  const officialPending = new Set();
+  /* Shared with the popup: extension/messages.js is generated from _locales. */
+  const KEYS = {
+    title: "hoverSectionTitle", source: "hoverSource", target: "hoverTargetField",
+    copy: "hoverCopy", settings: "settings", close: "hoverClose", loading: "loadingRates",
+    unavailable: "hoverUnavailable", unsupported: "hoverUnsupported", mock: "mockData",
+    live: "providerLive", offline: "offlineCache", stale: "hoverStale", time: "asOf",
+    guessed: "hoverGuessed", disclaimer: "hoverDisclaimer", manual: "hoverManual",
+    copied: "copied", cross: "crossRate", official: "hoverOfficial",
+    officialLoading: "loadingOfficial",
   };
-  const tr = key => words[key][{zh: 0, en: 1, ja: 2}[settings.language] ?? 0];
+  const tr = key => {
+    const table = globalThis.FXMessages || {};
+    const name = KEYS[key];
+    return table[settings.language]?.[name] ?? table.zh?.[name] ?? name;
+  };
   const locale = () => ({zh: "zh-CN", en: "en-US", ja: "ja-JP"}[settings.language] || "zh-CN");
   const el = (tag, text, className) => { const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node; };
   const validCode = code => typeof code === "string" && /^[A-Z]{3}$/.test(code);
@@ -42,6 +42,45 @@
   }
   const format = (amount, code) => new Intl.NumberFormat(locale(), {minimumFractionDigits: code === "JPY" ? 0 : 2, maximumFractionDigits: code === "JPY" ? 0 : 4}).format(amount);
   const memoryKey = match => `hoverMemory:${globalThis.location.hostname}|${match.marker}`;
+
+  /* Per-site currency corrections used to be written forever, eventually filling
+     the 10 MB chrome.storage.local quota. Keep the most recently used ones. */
+  async function rememberCode(match, code) {
+    const key = memoryKey(match);
+    try {
+      const all = await chrome.storage.local.get(null);
+      const keys = Object.keys(all).filter(name => name.startsWith("hoverMemory:") && name !== key);
+      if (keys.length >= MEMORY_LIMIT) {
+        const stale = keys
+          .map(name => [name, all[name]?.at ?? 0])
+          .sort((a, b) => a[1] - b[1])
+          .slice(0, keys.length - MEMORY_LIMIT + 1)
+          .map(([name]) => name);
+        if (stale.length) await chrome.storage.local.remove(stale);
+      }
+      await chrome.storage.local.set({[key]: {code, at: Date.now()}});
+    } catch { /* a full quota must not break the card */ }
+  }
+  const storedCode = value => validCode(value) ? value : validCode(value?.code) ? value.code : null;
+
+  function officialFor(from, to) {
+    const key = `${from}/${to}`;
+    if (officialCache.has(key)) return officialCache.get(key);
+    if (officialPending.has(key) || from === to) return undefined;
+    officialPending.add(key);
+    chrome.runtime.sendMessage({type: "FX_OFFICIAL", path: `/official-rates/${from}/${to}`})
+      .then(reply => {
+        const rows = reply?.ok && Array.isArray(reply.data) ? reply.data : [];
+        const best = rows.find(row => Number(row?.rate) > 0);
+        officialCache.set(key, best ? {
+          value: Number(best.rate), institution: best.institution,
+          date: best.reference_date, derived: best.is_derived,
+        } : null);
+      })
+      .catch(() => officialCache.set(key, null))
+      .finally(() => { officialPending.delete(key); render(); });
+    return undefined;
+  }
 
   function build() {
     if (host) return;
@@ -68,8 +107,15 @@
     heading.append(logo, el("strong", "FX Pulse"));
     const close = el("button", "×"); close.setAttribute("aria-label", tr("close")); close.onclick = hide; heading.append(close); card.append(heading);
     const from = active.match.code, to = settings.hoverTarget;
-    const current = quote(from, to), value = current ? active.match.amount * current.value : null;
+    const current = quote(from, to);
+    // The parser recognises far more currencies than the market feed tracks;
+    // an official daily reference is offered instead of an empty card, labelled
+    // as such so a reference rate is never shown as a live quote.
+    const fallback = current || !snapshot ? undefined : officialFor(from, to);
+    const rate = current || fallback || null;
+    const value = rate ? active.match.amount * rate.value : null;
     const available = value !== null && Number.isFinite(value);
+    const isOfficial = !current && Boolean(fallback);
     card.append(el("div", available ? `≈ ${format(value, to)} ${to}` : "—", "amount"));
     card.append(el("div", `${active.match.raw.trim()} · ${from}`, "origin"));
     const codes = [...new Set([from, to, ...(snapshot?.pairs || settings.watchlist).flatMap(pair => pair.split("/"))])].filter(validCode).sort();
@@ -81,7 +127,7 @@
       select.value = selected;
       select.onchange = async () => {
         if (!active) return;
-        if (key === "source") { active.match.code = select.value; await chrome.storage.local.set({[memoryKey(active.match)]: select.value}); }
+        if (key === "source") { active.match.code = select.value; await rememberCode(active.match, select.value); }
         else { settings.hoverTarget = select.value; await chrome.storage.local.set({hoverTarget: select.value}); }
         render();
       };
@@ -89,16 +135,21 @@
     }
     card.append(fields, el("p", tr("guessed"), "note"));
     if (available) {
-      card.append(el("div", `1 ${from} = ${new Intl.NumberFormat(locale(), {maximumSignificantDigits: 7}).format(current.value)} ${to}`));
-      const source = current.provider === "mock" ? tr("mock") : tr("live");
-      card.append(el("p", source, current.provider === "mock" ? "note warning" : "note"));
-      card.append(el("p", `${tr("time")} ${new Date(current.captured_at).toLocaleString(locale())}`, "note"));
-      if (snapshot.offline || current.is_stale) card.append(el("p", tr(snapshot.offline ? "offline" : "stale"), "note warning"));
-    } else card.append(el("p", error ? tr("unavailable") : snapshot ? tr("unsupported") : tr("loading"), "note warning"));
+      card.append(el("div", `1 ${from} = ${new Intl.NumberFormat(locale(), {maximumSignificantDigits: 7}).format(rate.value)} ${to}`));
+      if (isOfficial) {
+        card.append(el("p", tr("official"), "note warning"));
+        card.append(el("p", `${rate.institution} · ${rate.date}${rate.derived ? ` · ${tr("cross")}` : ""}`, "note"));
+      } else {
+        const source = current.provider === "mock" ? tr("mock") : tr("live");
+        card.append(el("p", source, current.provider === "mock" ? "note warning" : "note"));
+        card.append(el("p", `${tr("time")} ${new Date(current.captured_at).toLocaleString(locale())}`, "note"));
+        if (snapshot.offline || current.is_stale) card.append(el("p", tr(snapshot.offline ? "offline" : "stale"), "note warning"));
+      }
+    } else card.append(el("p", error ? tr("unavailable") : officialPending.size ? tr("officialLoading") : snapshot ? tr("unsupported") : tr("loading"), "note warning"));
     if (settings.hoverMode === "detail" && snapshot) {
       const targets = [...new Set(settings.watchlist.flatMap(pair => pair.split("/")))].filter(code => code !== to && code !== from);
       for (const code of targets) {
-        const other = quote(from, code);
+        const other = quote(from, code) || officialCache.get(`${from}/${code}`);
         if (other) { const row = el("div", "", "detail"); row.append(el("span", code), el("span", format(active.match.amount * other.value, code))); card.append(row); }
       }
     }
@@ -106,7 +157,9 @@
     const actions = el("div", "", "actions"), copy = el("button", tr("copy")), options = el("button", tr("settings"));
     copy.disabled = !available;
     copy.onclick = async () => {
-      const text = `${active.match.raw.trim()} → ≈ ${format(value, to)} ${to} · ${current.provider === "mock" ? tr("mock") : tr("live")}${snapshot.offline ? ` · ${tr("offline")}` : current.is_stale ? ` · ${tr("stale")}` : ""}`;
+      const origin = isOfficial ? `${tr("official")} · ${rate.institution}`
+        : `${current.provider === "mock" ? tr("mock") : tr("live")}${snapshot.offline ? ` · ${tr("offline")}` : current.is_stale ? ` · ${tr("stale")}` : ""}`;
+      const text = `${active.match.raw.trim()} → ≈ ${format(value, to)} ${to} · ${origin}`;
       try { await navigator.clipboard.writeText(text); copy.textContent = tr("copied"); }
       catch { const input = el("input"); input.readOnly = true; input.value = text; input.setAttribute("aria-label", tr("manual")); card.append(el("p", tr("manual"), "note"), input); input.focus(); input.select(); }
     };
@@ -146,7 +199,8 @@
     const own = ++version, pointer = pointerVersion;
     const saved = await chrome.storage.local.get(memoryKey(match));
     if (own !== version || pointer !== pointerVersion || !settings.hoverEnabled) return;
-    if (validCode(saved[memoryKey(match)])) match.code = saved[memoryKey(match)];
+    const remembered = storedCode(saved[memoryKey(match)]);
+    if (remembered) match.code = remembered;
     active = {match, rect}; error = ""; globalThis.clearTimeout(hiding); render(); void refresh();
   }
 
@@ -168,7 +222,7 @@
     if (area !== "local") return;
     for (const key of Object.keys(defaults)) if (changes[key]) settings[key] = changes[key].newValue ?? defaults[key];
     if (!settings.hoverEnabled) { hide(); return; }
-    if (changes.apiUrl) { snapshot = null; version++; void refresh(); }
+    if (changes.apiUrl) { snapshot = null; version++; officialCache.clear(); void refresh(); }
     render();
   });
   chrome.storage.local.get(defaults).then(value => { settings = value; });

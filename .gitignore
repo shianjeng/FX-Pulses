@@ -9,3 +9,4 @@ test_fx_pulse.db
 backend/.venv/
 backend/*.egg-info/
 .DS_Store
+node_modules/

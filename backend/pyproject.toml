@@ -7,7 +7,7 @@ include = ["app*"]
 
 [project]
 name = "fx-pulse-api"
-version = "2.2.1"
+version = "2.2.2"
 description = "Public exchange-rate midpoint API for a login-free browser extension"
 requires-python = ">=3.12"
 dependencies = [
@@ -21,6 +21,7 @@ dependencies = [
   "alembic>=1.16,<2",
   "filelock>=3.18,<4",
   "tzdata>=2025.2",
+  "defusedxml>=0.7.1,<0.8",
 ]
 
 [project.optional-dependencies]
