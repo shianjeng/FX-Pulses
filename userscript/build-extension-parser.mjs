@@ -1,6 +1,8 @@
 // Share the proven parser without shipping the legacy userscript's network/UI code.
 import {readFileSync, writeFileSync} from 'node:fs';
-const source = readFileSync(new URL('./fx-pulse-hover.user.js', import.meta.url), 'utf8');
+// A Windows checkout can hand us CRLF even though the blob is LF, which breaks the
+// newline-based marker search below. Normalize first so extraction is line-ending agnostic.
+const source = readFileSync(new URL('./fx-pulse-hover.user.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const start = source.indexOf('  const CURRENCIES =');
 const end = source.indexOf('  /* ==========================================================================\n   * B.');
 if (start < 0 || end <= start) throw new Error('Parser source markers missing');
