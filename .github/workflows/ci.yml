@@ -19,3 +19,23 @@ jobs:
       - run: pip install ".[dev]"
       - run: ruff check .
       - run: pytest
+
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - name: Legacy parser fixtures still pass
+        run: node userscript/node-check.mjs
+      - name: Card rendering contract
+        run: node userscript/dom-smoke.cjs
+      - name: Generated parser matches its source
+        run: |
+          node userscript/build-extension-parser.mjs
+          git diff --exit-code -- extension/amount-parser.js
