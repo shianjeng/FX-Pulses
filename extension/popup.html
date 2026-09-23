@@ -108,9 +108,13 @@
         </form>
       </details>
 
-      <details class="panel collapsible">
+      <details id="watchlist-panel" class="panel collapsible">
         <summary><span data-i18n="manageWatchlist">管理自选</span><small data-i18n="savedLocally">设置保存在本机</small></summary>
-        <div id="watchlist-options" class="watchlist-options"></div>
+        <div class="watchlist">
+          <div id="watchlist-options" class="watchlist-options"></div>
+          <button id="watch-add" class="watch-add" type="button">加入自选</button>
+          <p class="hint" data-i18n="watchHint">在上方任选两种货币后加入；点一行即可切换到该币对。</p>
+        </div>
       </details>
 
       <footer class="footnote">
