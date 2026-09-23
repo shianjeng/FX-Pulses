@@ -5,13 +5,13 @@
 
   **Exchange rates at a glance — live market quotes, official references, and instant webpage conversion.**
 
-  A privacy-friendly Chrome extension backed by a FastAPI service — self-hosted, or published as static files on GitHub Pages at no cost.
+  A privacy-friendly Chrome extension that works out of the box: rates come from a free static backend on GitHub Pages, or from your own FastAPI server.
 
-  [What's New](#whats-new-in-270) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
+  [What's New](#whats-new-in-280) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
 
   <p>
     <a href="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml"><img src="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
-    <img src="https://img.shields.io/badge/version-2.7.0-36D9A0" alt="Version 2.7.0" />
+    <img src="https://img.shields.io/badge/version-2.8.0-36D9A0" alt="Version 2.8.0" />
     <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
     <img src="https://img.shields.io/badge/FastAPI-0.116-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.116" />
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Manifest V3" />
@@ -30,13 +30,17 @@ The extension and hover converter share the same backend, one-minute cache, watc
 
 > **Market midpoint** = `(bid + ask) / 2`. It is not a bank settlement rate, card-network rate, or central-bank fixing.
 
+## What's new in 2.8.0
+
+- **No server needed.** The extension now reads a public backend that this repository publishes to GitHub Pages every four hours. Install it and open it; rates are there. No Docker, no server, and no Alpha Vantage key.
+- **Your own server still works.** The settings page now recognises both a running API and a static host, and stores which one an address is. An address you saved before 2.8.0 keeps being reached as an API; only installs that never changed the address move to the public backend.
+
 ## What's new in 2.7.0
 
 - **Simple view by default.** The popup opens on the midpoint and the converter. Bid/ask, official references, the trend chart and target alerts are one click away under **Show details**, and your choice is remembered. The simple view does not request history or official comparisons at all, so opening the popup costs fewer calls.
 - **Clearer trend chart.** One line over a soft fill, with markers only on the period high and low. The statistics below it — High, Low, Average and Change — all describe the selected range (24h, 7d, 1m or 3m). Collection outages stay visible as gaps rather than being bridged.
 - **Optional static backend.** The read-only API can be exported as JSON and published on GitHub Pages by a scheduled workflow, so the extension can run without anyone operating a server. See [Static backend on GitHub Pages](#static-backend-on-github-pages).
 
-The shipped default is still a self-hosted backend at `http://localhost:8000`; nothing changes for existing installs until you switch it.
 
 ### Rate display
 
@@ -125,14 +129,23 @@ User watchlists, targets, language selection, hover preferences, and per-site cu
 
 ## Quick start
 
-### Requirements
+FX Pulse works out of the box. The extension reads a public backend that this repository refreshes every four hours on GitHub Pages, so you do not need Docker, a server, or an API key.
 
-- Docker Desktop or Docker Engine with Compose
-- Chrome or Microsoft Edge
+### 1. Load the extension
 
-### 1. Configure Alpha Vantage
+You need Chrome or Microsoft Edge.
 
-Obtain your private key from [Alpha Vantage](https://www.alphavantage.co/support/#api-key).
+1. Open `chrome://extensions` or `edge://extensions`.
+2. Enable **Developer mode**.
+3. Select **Load unpacked**.
+4. Choose this repository's `extension` directory.
+5. Pin FX Pulse to the browser toolbar and open it.
+
+Rates appear immediately. The extension reads `https://shianjeng.github.io/FX-Pulses/api/v1`; to use your own backend instead, enter its address on the settings page.
+
+### 2. Run your own backend (optional)
+
+Only needed if you want your own schedule, currency pairs, or database. You need Docker Desktop or Docker Engine with Compose, and a private key from [Alpha Vantage](https://www.alphavantage.co/support/#api-key).
 
 ```bash
 cp .env.example .env
@@ -157,26 +170,20 @@ Alpha Vantage is the default provider. A missing key prevents startup with a con
 | Latest rates | <http://localhost:8000/api/v1/rates> |
 | Interactive API docs | <http://localhost:8000/docs> |
 
-### 2. Load the extension
-
-1. Open `chrome://extensions` or `edge://extensions`.
-2. Enable **Developer mode**.
-3. Select **Load unpacked**.
-4. Choose this repository's `extension` directory.
-5. Pin FX Pulse to the browser toolbar.
-
-The default backend address is `http://localhost:8000/api/v1`. You can change it from the extension settings page.
+Then open the extension's settings page and enter `http://localhost:8000/api/v1`. The page checks the backend before saving and remembers whether it is a running API or a static host.
 
 ### 3. Upgrading
 
-**From 2.6.x to 2.7.0** no database migration is needed. Pull, rebuild, and reload the extension:
+**To 2.8.0**: reload the extension in `chrome://extensions` and verify version **2.8.0**. If you never changed the backend address, the extension now reads the public backend and you can stop a local stack you ran only for it. If you saved your own address, nothing changes.
+
+**Self-hosted, from 2.6.x** no database migration is needed. Pull, rebuild, and reload the extension:
 
 ```bash
 git pull
 docker compose up -d --build
 ```
 
-Reload the extension in `chrome://extensions` and verify version **2.7.0**. The popup now opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
+Reload the extension in `chrome://extensions` and verify version **2.8.0**. Since 2.7.0 the popup opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
 
 **From 2.5.0**, the notes below also apply. The 2.6.0 compatibility patch is based on commit `5816065` (including PR #14). It preserves the opt-in userscript bridge, per-source health checks, triangulated official rates, stale-source labels, and saved unavailable currencies.
 
@@ -187,7 +194,7 @@ docker compose up -d --build --force-recreate
 docker compose logs --tail=100 collector
 ```
 
-Reload the extension in `chrome://extensions`, verify version **2.7.0**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
+Reload the extension in `chrome://extensions`, verify version **2.8.0**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
 
 Confirm that `/health` reports `"provider": "alpha_vantage"`. Its `collector` array carries one heartbeat per configured official source, so a source that quietly stopped publishing surfaces instead of hiding behind the ones that still work. Initial collection may take time; existing demo observations remain marked as mock until replaced. The userscript keeps separate appearance, target-currency and calibration preferences; only the data service is shared.
 
@@ -207,7 +214,7 @@ One-time setup in the repository:
 
 Then run **Actions → Publish static backend → Run workflow** once. The API appears at `https://<user>.github.io/<repo>/api/v1/`.
 
-To ship an extension that uses it, edit `extension/config.js`:
+This repository's build already points at `https://shianjeng.github.io/FX-Pulses/api/v1`. A fork publishes to its own Pages address; to ship a build that uses it, edit `extension/config.js`:
 
 ```js
 globalThis.FXConfig = {
@@ -274,8 +281,8 @@ Extension build settings live in `extension/config.js`:
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
-| `defaultApiUrl` | `http://localhost:8000/api/v1` | Backend the extension ships with; must be covered by `host_permissions` |
-| `backendMode` | `"api"` | `"api"` for a running FastAPI service, `"static"` for exported JSON files |
+| `defaultApiUrl` | `https://shianjeng.github.io/FX-Pulses/api/v1` | Backend the extension ships with; must be covered by `host_permissions` |
+| `backendMode` | `"static"` | Mode of the default backend: `"api"` for a running FastAPI service, `"static"` for exported JSON files. An address saved on the settings page carries its own detected mode |
 
 ## Local development
 
@@ -330,6 +337,7 @@ extension is installed, and make the hover card stand down once per page. Enable
 it only if you still run the legacy userscript. The backend address, preferences
 and keys are never exposed to a page.
 
+- By default the extension fetches public files from GitHub Pages. Like any website, GitHub can see the requesting IP address; no preferences, identifiers, or page content are sent. Point the extension at your own backend to avoid this.
 - API keys remain server-side and `.env` is ignored by Git.
 - The extension contains no account system or analytics SDK.
 - Personal preferences are not uploaded to the backend.
@@ -355,9 +363,11 @@ FX Pulse 是一个免登录、重视隐私的汇率浏览器插件与 FastAPI �
 
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
 
+2.8.0 起插件默认读取本仓库每 4 小时发布到 GitHub Pages 的公共数据，安装后打开即可使用，无需 Docker、服务器或 API Key。仍可在设置页填写自己的后端地址；2.8.0 之前保存过自定义地址的用户不受影响。默认连接 GitHub Pages 时，GitHub 能看到请求方的 IP 地址，除此之外不会发送任何偏好设置或网页内容。
+
 2.7.0 起插件默认以简洁视图打开，只显示中间价与换算；买卖价、官方参考价、走势图和目标价提醒点击「显示详细数据」即可展开，选择会被记住。走势图改为单线加渐变填充，只标注区间最高点和最低点，下方显示所选区间的最高、最低、平均和涨跌幅。后端除了自行部署，也可以由 GitHub Actions 定时采集并导出为静态 JSON，发布到 GitHub Pages，无需常驻服务器，插件用户也不用申请 API Key。
 
-后端默认使用 Alpha Vantage 市场数据，需在后端配置自己的 API Key。油猴 2.5.0 起移除了 ER-API/Frankfurter 请求，通过已授权的插件读取同一快照及官方参考价。油猴需要插件与网页悬停权限，外观、目标币种和校准设置仍独立保存。
+自建后端默认使用 Alpha Vantage 市场数据，需在后端配置自己的 API Key。油猴 2.5.0 起移除了 ER-API/Frankfurter 请求，通过已授权的插件读取同一快照及官方参考价。油猴需要插件与网页悬停权限，外观、目标币种和校准设置仍独立保存。
 
 插件界面支持中文、English 和日本語；油猴保留原有中文界面。详细迁移和统一服务设计请参阅 [UNIFIED-SERVICE.md](docs/archive/UNIFIED-SERVICE.md)。
 

@@ -29,6 +29,6 @@
  * therefore never changes how an existing custom backend is reached.
  */
 globalThis.FXConfig = {
-  defaultApiUrl: "http://localhost:8000/api/v1",
-  backendMode: "api",
+  defaultApiUrl: "https://shianjeng.github.io/FX-Pulses/api/v1",
+  backendMode: "static",
 };
