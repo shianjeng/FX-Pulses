@@ -514,5 +514,23 @@
   },
   "statChange": {
     "message": "Change"
+  },
+  "watchAdd": {
+    "message": "Add $1 to watchlist"
+  },
+  "watchSaved": {
+    "message": "$1 is in your watchlist"
+  },
+  "watchFull": {
+    "message": "Watchlist is full (up to $1)"
+  },
+  "watchPick": {
+    "message": "Choose two different currencies first"
+  },
+  "watchRemove": {
+    "message": "Remove $1 from watchlist"
+  },
+  "watchHint": {
+    "message": "Pick any two currencies above, then add them. Select a row to switch to that pair."
   }
 }

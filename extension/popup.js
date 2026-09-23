@@ -105,6 +105,96 @@ async function reconcileWatchlist() {
   if (validPair(pair)) selectedPair = pair;
 }
 
+/* The watchlist is a set of saved pairs, any two currencies the picker offers.
+   Each row shows its rate and switches the picker to it. Market quotes are
+   already in memory; official-only pairs are fetched when the panel opens, so
+   a closed panel costs nothing. */
+const WATCH_LIMIT = 8;
+const watchOfficial = new Map();
+let watchVersion = 0;
+
+function watchRate(pair) {
+  const [base, quote] = pair.split("/");
+  const market = marketConverterQuote(base, quote);
+  if (market) return market.rate;
+  return watchOfficial.get(pair) ?? null;
+}
+
+function pickerPair() {
+  const base = $("converter-from").value, quote = $("converter-to").value;
+  return base && quote && base !== quote ? `${base}/${quote}` : null;
+}
+
+function renderWatchlist() {
+  const list = $("watchlist-options");
+  if (!list) return;
+  list.replaceChildren();
+  for (const pair of settings.watchlist) {
+    const row = document.createElement("div");
+    row.className = pair === selectedPair ? "watch-item selected" : "watch-item";
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "watch-open";
+    const name = document.createElement("span");
+    name.textContent = pair;
+    const value = document.createElement("span");
+    value.className = "watch-rate";
+    const rate = watchRate(pair);
+    value.textContent = rate === null ? "—" : formatRate(rate);
+    open.append(name, value);
+    open.addEventListener("click", () => { void selectPair(pair); });
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "watch-remove";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", t("watchRemove", pair));
+    // Hover conversion reads its extra currencies from this list.
+    remove.disabled = settings.watchlist.length <= 1;
+    remove.addEventListener("click", () => { void removeWatch(pair); });
+    row.append(open, remove);
+    list.append(row);
+  }
+  const current = pickerPair(), add = $("watch-add");
+  const saved = current && settings.watchlist.includes(current);
+  const full = settings.watchlist.length >= WATCH_LIMIT;
+  add.textContent = !current ? t("watchPick") : saved ? t("watchSaved", current) : full ? t("watchFull", WATCH_LIMIT) : t("watchAdd", current);
+  add.disabled = !current || saved || full;
+}
+
+async function saveWatchlist(next) {
+  settings.watchlist = next;
+  await chrome.storage.local.set({watchlist: next});
+  renderSelects();
+}
+
+async function addWatch() {
+  const pair = pickerPair();
+  if (!pair || settings.watchlist.includes(pair) || settings.watchlist.length >= WATCH_LIMIT) return;
+  await saveWatchlist([...settings.watchlist, pair]);
+  await loadWatchRates();
+}
+
+async function removeWatch(pair) {
+  if (settings.watchlist.length <= 1) return;
+  await saveWatchlist(settings.watchlist.filter(item => item !== pair));
+}
+
+async function loadWatchRates() {
+  if (!$("watchlist-panel")?.open) return;
+  const version = ++watchVersion;
+  const missing = settings.watchlist.filter(pair => {
+    const [base, quote] = pair.split("/");
+    return !marketConverterQuote(base, quote) && !watchOfficial.has(pair);
+  });
+  await Promise.all(missing.map(async pair => {
+    try {
+      const newest = newestOfficial(await request(`/official-rates/${pair}`));
+      if (newest) watchOfficial.set(pair, Number(newest.rate));
+    } catch { /* Shown as "—"; the next opening tries again. */ }
+  }));
+  if (version === watchVersion) renderWatchlist();
+}
+
 function renderRates() {
   const rate = currentRate();
   if (rate) $("rates").innerHTML = rateCard(rate);
@@ -125,11 +215,14 @@ function renderRates() {
     $("rates").append(card);
   }
   $("copy-button").disabled = offline || (!rate && !converterQuote);
+  renderWatchlist();
 }
 
 function renderSelects() {
   const pairs = [...new Set([...supportedPairs, ...settings.watchlist])];
-  const options = pairs.map(pair => `<option value="${pair}">${pair}</option>`).join("");
+  // Alerts are checked against market quotes only; an official-only pair in this
+  // list would accept a target that can never fire.
+  const options = supportedPairs.map(pair => `<option value="${pair}">${pair}</option>`).join("");
   $("target-pair").innerHTML = options;
   $("target-pair").value = supportedPairs.includes(selectedPair) ? selectedPair : supportedPairs[0] || "";
   const available = [...new Set([
@@ -149,10 +242,7 @@ function renderSelects() {
   const [fallbackFrom, fallbackTo] = selectedPair.split("/");
   $("converter-from").value = currencies.includes(settings.converterFrom) ? settings.converterFrom : fallbackFrom;
   $("converter-to").value = currencies.includes(settings.converterTo) ? settings.converterTo : fallbackTo;
-  $("watchlist-options").innerHTML = pairs.map((pair) => {
-    return `<label class="watch-option"><span>${pair}</span><input type="checkbox" value="${pair}" ${settings.watchlist.includes(pair) ? "checked" : ""}></label>`;
-  }).join("");
-  document.querySelectorAll(".watch-option input").forEach((input) => input.addEventListener("change", saveWatchlist));
+  renderWatchlist();
   void loadConverterRate();
   loadTarget();
 }
@@ -417,6 +507,12 @@ function updateConverter() {
   $("converted").textContent = `${fmt(value, 2)} ${quote}`;
 }
 
+function newestOfficial(rows) {
+  return Array.isArray(rows) ? rows
+    .filter(item => Number.isFinite(Number(item?.rate)) && Number(item.rate) > 0 && /^\d{4}-\d{2}-\d{2}$/.test(item?.reference_date || ""))
+    .sort((a, b) => b.reference_date.localeCompare(a.reference_date))[0] || null : null;
+}
+
 async function loadConverterRate() {
   const version = ++converterVersion;
   const base = $("converter-from").value;
@@ -434,9 +530,7 @@ async function loadConverterRate() {
   try {
     const rows = await request(`/official-rates/${base}/${quote}`);
     if (version !== converterVersion) return;
-    const newest = Array.isArray(rows) ? rows
-      .filter(item => Number.isFinite(Number(item?.rate)) && Number(item.rate) > 0 && /^\d{4}-\d{2}-\d{2}$/.test(item?.reference_date || ""))
-      .sort((a, b) => b.reference_date.localeCompare(a.reference_date))[0] : null;
+    const newest = newestOfficial(rows);
     if (newest) converterQuote = {
       kind: "official", rate: Number(newest.rate), institution: newest.institution,
       referenceDate: newest.reference_date, via: newest.via_currency || null,
@@ -464,19 +558,6 @@ function loadTarget() {
   $("target-message").textContent = targetStatus(pair);
 }
 
-async function saveWatchlist() {
-  const checked = [...document.querySelectorAll(".watch-option input:checked")].map((input) => input.value);
-  if (!checked.length) {
-    this.checked = true;
-    return;
-  }
-  settings.watchlist = checked;
-  await chrome.storage.local.set({ watchlist: checked });
-  await reconcileWatchlist();
-  renderRates();
-  renderSelects();
-  await loadHistory();
-}
 
 async function loadData(force = false) {
   const version = ++refreshVersion;
@@ -531,7 +612,9 @@ async function loadData(force = false) {
   }
 }
 
-$("refresh-button").addEventListener("click", () => { void loadData(true); });
+$("refresh-button").addEventListener("click", () => { watchOfficial.clear(); void loadData(true); });
+$("watch-add").addEventListener("click", () => { void addWatch(); });
+$("watchlist-panel").addEventListener("toggle", () => { void loadWatchRates(); });
 $("settings-button").addEventListener("click", () => chrome.runtime.openOptionsPage());
 $("view-toggle").addEventListener("click", async () => {
   settings.viewMode = detailed() ? "simple" : "detail";
@@ -667,7 +750,7 @@ async function init() {
 init();
 chrome.storage.onChanged?.addListener((changes, area) => {
   if (area !== "local") return;
-  if (changes.apiUrl) { converterVersion++; converterQuote = null; officialCurrencies = []; rates = []; }
+  if (changes.apiUrl) { converterVersion++; converterQuote = null; officialCurrencies = []; rates = []; watchOfficial.clear(); }
   if (changes.apiUrl || changes.watchlist) void init();
   if (changes.language) globalThis.location.reload();
 });

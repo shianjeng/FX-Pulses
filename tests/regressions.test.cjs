@@ -29,7 +29,7 @@ test('missing quotes remain selectable and saved preferences survive recovery',a
  await w.eval('selectPair("USD/JPY")');
  assert.deepEqual(state.watchlist,['USD/JPY']);
  assert.match(el('rates').textContent,/暂无可用汇率/);
- assert.equal(el('watchlist-options').querySelectorAll('input').length,3);
+ assert.deepEqual([...el('watchlist-options').querySelectorAll('.watch-open span:first-child')].map(n=>n.textContent),['USD/JPY']);
  w.fetch=async url=>url.endsWith('/rates')?response([{...quote(150),quote_currency:'JPY'}]):other(url);
  await w.eval('loadData()');assert.match(el('rates').textContent,/150/);
  assert.deepEqual(state.watchlist,['USD/JPY']);

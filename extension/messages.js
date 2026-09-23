@@ -172,7 +172,13 @@ globalThis.FXMessages = {
     "rangeTab30": "1个月",
     "rangeTab90": "3个月",
     "statAvg": "平均",
-    "statChange": "涨跌幅"
+    "statChange": "涨跌幅",
+    "watchAdd": "加入自选 $1",
+    "watchSaved": "$1 已在自选中",
+    "watchFull": "自选已满（最多 $1 个）",
+    "watchPick": "请先选择两种不同的货币",
+    "watchRemove": "从自选移除 $1",
+    "watchHint": "在上方任选两种货币后加入；点一行即可切换到该币对。"
   },
   "en": {
     "extensionName": "FX Pulse — exchange rates at hand",
@@ -346,7 +352,13 @@ globalThis.FXMessages = {
     "rangeTab30": "1M",
     "rangeTab90": "3M",
     "statAvg": "Average",
-    "statChange": "Change"
+    "statChange": "Change",
+    "watchAdd": "Add $1 to watchlist",
+    "watchSaved": "$1 is in your watchlist",
+    "watchFull": "Watchlist is full (up to $1)",
+    "watchPick": "Choose two different currencies first",
+    "watchRemove": "Remove $1 from watchlist",
+    "watchHint": "Pick any two currencies above, then add them. Select a row to switch to that pair."
   },
   "ja": {
     "extensionName": "FX Pulse — 手元で為替レート",
@@ -520,6 +532,12 @@ globalThis.FXMessages = {
     "rangeTab30": "1ヶ月",
     "rangeTab90": "3ヶ月",
     "statAvg": "平均",
-    "statChange": "騰落率"
+    "statChange": "騰落率",
+    "watchAdd": "$1 をウォッチリストに追加",
+    "watchSaved": "$1 は追加済みです",
+    "watchFull": "ウォッチリストは最大 $1 件です",
+    "watchPick": "異なる2つの通貨を選んでください",
+    "watchRemove": "$1 をウォッチリストから削除",
+    "watchHint": "上で任意の2通貨を選んで追加します。行を選ぶとその通貨ペアに切り替わります。"
   }
 };
