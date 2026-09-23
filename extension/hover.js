@@ -8,6 +8,7 @@
   const MEMORY_LIMIT = 200;
   const officialCache = new Map();   // "FROM/TO" -> observation | null
   const officialPending = new Set();
+  let coverage = [], coverageAt = 0, coveragePending = false;
   /* Shared with the popup: extension/messages.js is generated from _locales. */
   const KEYS = {
     title: "hoverSectionTitle", source: "hoverSource", target: "hoverTargetField",
@@ -127,6 +128,26 @@
     return undefined;
   }
 
+  /* Every covered currency, so both pickers offer what the popup offers. Asked
+     for once a page and cached by the worker for every tab; the message carries
+     nothing from the page. A failure retries after a minute, not on every hover. */
+  function loadCoverage() {
+    if (coveragePending || Date.now() - coverageAt < 600000) return;
+    coveragePending = true;
+    chrome.runtime.sendMessage({type: "FX_CURRENCIES"})
+      .then(reply => {
+        const data = reply?.ok ? reply.data : null;
+        const codes = [
+          ...(Array.isArray(data?.market_pairs) ? data.market_pairs.flatMap(pair => String(pair).split("/")) : []),
+          ...(Array.isArray(data?.official_currencies) ? data.official_currencies : []),
+        ].filter(validCode);
+        if (codes.length) { coverage = [...new Set(codes)]; coverageAt = Date.now(); }
+        else coverageAt = Date.now() - 540000;
+      })
+      .catch(() => { coverageAt = Date.now() - 540000; })
+      .finally(() => { coveragePending = false; if (active) render(); });
+  }
+
   function build() {
     if (host) return;
     host = document.createElement("div");
@@ -230,10 +251,11 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
     else amount.textContent = "—";
     card.append(amount, el("div", `${active.match.raw.trim()} · ${from}`, "origin"));
 
-    // Offer the parser's candidates, the market currencies and the ones the user
-    // saved to their watchlist. No extra request: the full list lives in Settings.
+    // Every covered currency, plus the parser's candidates and saved pairs so a
+    // choice stays listed even before the list arrives or while offline.
+    loadCoverage();
     const alts = Array.isArray(active.match.alts) ? active.match.alts : [];
-    const codes = [...new Set([from, to, ...alts, ...(snapshot?.pairs || []), ...settings.watchlist]
+    const codes = [...new Set([from, to, ...alts, ...coverage, ...(snapshot?.pairs || []), ...settings.watchlist]
       .flatMap(item => String(item).split("/")))].filter(validCode).sort();
     const fields = el("div", "", "fields");
     for (const [key, selected] of [["source", from], ["target", to]]) {
@@ -372,7 +394,7 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
     if (area !== "local") return;
     for (const key of Object.keys(defaults)) if (changes[key]) settings[key] = changes[key].newValue ?? defaults[key];
     if (!settings.hoverEnabled) { hide(); return; }
-    if (changes.apiUrl) { snapshot = null; version++; officialCache.clear(); void refresh(); }
+    if (changes.apiUrl) { snapshot = null; version++; officialCache.clear(); coverage = []; coverageAt = 0; void refresh(); }
     render();
   });
   chrome.storage.local.get(defaults).then(value => { settings = value; });

@@ -15,7 +15,7 @@ const quote = (base_currency, quote_currency, midpoint) => ({base_currency, quot
 const snapshot = {pairs: ['USD/CNY', 'USD/JPY', 'CNY/JPY'], offline: false,
   rates: [quote('USD', 'CNY', '7.1'), quote('USD', 'JPY', '150'), quote('CNY', 'JPY', '23.51135')]};
 
-async function page(t, {text, settings = {}, official = {}, rect = {left: 10, right: 100, top: 10, bottom: 30}, innerHeight}) {
+async function page(t, {text, settings = {}, official = {}, coverage = null, rect = {left: 10, right: 100, top: 10, bottom: 30}, innerHeight}) {
   const dom = new JSDOM('<body><span id="price"></span></body>', {runScripts: 'outside-only', url: 'https://example.com'});
   t.after(() => dom.window.close());
   const w = dom.window, requests = [];
@@ -25,6 +25,7 @@ async function page(t, {text, settings = {}, official = {}, rect = {left: 10, ri
       requests.push(message);
       if (message.type === 'FX_SNAPSHOT') return {ok: true, data: snapshot};
       if (message.type === 'FX_OFFICIAL') return {ok: true, data: official[message.path] || []};
+      if (message.type === 'FX_CURRENCIES') return coverage ? {ok: true, data: coverage} : {ok: false};
       return {ok: true};
     }},
     storage: {local: {
@@ -53,7 +54,11 @@ async function page(t, {text, settings = {}, official = {}, rect = {left: 10, ri
   await tick(300);
   const card = () => shadow.querySelector('.card');
   const host = () => w.document.getElementById('fx-pulse-unified-hover');
-  return {w, local, requests, card, host, q: selector => shadow.querySelector(selector), all: selector => [...shadow.querySelectorAll(selector)]};
+  const rehover = async () => {
+    price.dispatchEvent(new w.MouseEvent('mousemove', {bubbles: true, clientX: rect.left + 5, clientY: rect.top + 5}));
+    await tick(300);
+  };
+  return {w, local, requests, card, host, rehover, q: selector => shadow.querySelector(selector), all: selector => [...shadow.querySelectorAll(selector)]};
 }
 
 test('money uses the currency\'s own minor unit', async t => {
@@ -124,4 +129,24 @@ test('the settings page offers every covered currency and keeps the saved one', 
   const select = w.document.getElementById('hoverTarget');
   assert.deepEqual([...select.options].map(option => option.value), ['CNY', 'EUR', 'KRW', 'SGD', 'USD']);
   assert.equal(select.value, 'SGD');
+});
+
+test('both pickers list every covered currency, asked for once per page', async t => {
+  const covered = ['AUD', 'CNY', 'EUR', 'GBP', 'JPY', 'KRW', 'SGD', 'USD'];
+  const app = await page(t, {text: '4,590円', coverage: {market_pairs: ['USD/CNY', 'USD/JPY', 'CNY/JPY'], official_currencies: covered}});
+  await tick(60);
+  const [source, target] = app.all('select');
+  assert.deepEqual([...source.options].map(option => option.value), covered);
+  assert.deepEqual([...target.options].map(option => option.value), covered);
+  assert.equal(source.value, 'JPY');
+  assert.equal(target.value, 'CNY');
+
+  await app.rehover(); await app.rehover();
+  assert.equal(app.requests.filter(message => message.type === 'FX_CURRENCIES').length, 1);
+});
+
+test('without the list the pickers still offer what is known', async t => {
+  const app = await page(t, {text: '4,590円'});
+  const [source] = app.all('select');
+  assert.deepEqual([...source.options].map(option => option.value), ['CNY', 'JPY', 'USD']);
 });
