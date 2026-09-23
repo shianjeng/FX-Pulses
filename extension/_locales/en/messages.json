@@ -86,12 +86,6 @@
   "statHigh": {
     "message": "High"
   },
-  "eyebrowConverter": {
-    "message": "QUICK CONVERTER"
-  },
-  "converterTitle": {
-    "message": "Convert"
-  },
   "reverse": {
     "message": "Swap"
   },
@@ -493,9 +487,6 @@
   },
   "showSimple": {
     "message": "Simplify"
-  },
-  "simpleHint": {
-    "message": "Midpoint and converter only. Bid/ask, official references and trends are under details."
   },
   "rangeTab1": {
     "message": "24H"

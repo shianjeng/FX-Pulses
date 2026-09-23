@@ -86,12 +86,6 @@
   "statHigh": {
     "message": "最高"
   },
-  "eyebrowConverter": {
-    "message": "快捷换算"
-  },
-  "converterTitle": {
-    "message": "快捷换算"
-  },
   "reverse": {
     "message": "反转"
   },
@@ -493,9 +487,6 @@
   },
   "showSimple": {
     "message": "精简显示"
-  },
-  "simpleHint": {
-    "message": "只显示中间价与换算。买卖价、官方参考价和走势在详细数据里。"
   },
   "rangeTab1": {
     "message": "24小时"
