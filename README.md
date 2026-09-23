@@ -7,11 +7,11 @@
 
   A privacy-friendly Chrome extension that works out of the box: rates come from a free static backend on GitHub Pages, or from your own FastAPI server.
 
-  [What's New](#whats-new-in-280) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
+  [What's New](#whats-new-in-281) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
 
   <p>
     <a href="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml"><img src="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
-    <img src="https://img.shields.io/badge/version-2.8.0-36D9A0" alt="Version 2.8.0" />
+    <img src="https://img.shields.io/badge/version-2.8.1-36D9A0" alt="Version 2.8.1" />
     <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
     <img src="https://img.shields.io/badge/FastAPI-0.116-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.116" />
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Manifest V3" />
@@ -29,6 +29,12 @@ FX Pulse brings a compact exchange-rate dashboard and webpage hover converter in
 The extension and hover converter share the same backend, one-minute cache, watchlist, target currency, and language preference. No Tampermonkey script is required. The optional 2.5.0 userscript also reads quotes through the extension; it no longer requests ER-API or Frankfurter or keeps a separate persistent quote cache.
 
 > **Market midpoint** = `(bid + ask) / 2`. It is not a bank settlement rate, card-network rate, or central-bank fixing.
+
+## What's new in 2.8.1
+
+- **Redesigned popup.** Picking a pair, reading the rate and converting now happen in one card, with the rate as the largest element. A dark theme follows the system appearance.
+- **Watchlist of any pairs.** Choose any two currencies in the picker and add them to the watchlist. Each saved pair shows its rate; select a row to switch to it.
+- **Less repetition.** For a pair with only an official reference, the source is stated once instead of three times.
 
 ## What's new in 2.8.0
 
@@ -51,6 +57,7 @@ Rates below 1 show at least six decimal places, with more precision for smaller 
 | | Capability | Details |
 | --- | --- | --- |
 | 📊 | Currency explorer | Select any two available currencies and view their rate, source and date |
+| ⭐ | Watchlist | Save up to eight pairs of any currencies and switch between them in one click |
 | 👁️ | Simple view | Opens on the midpoint and converter; full detail is one click away |
 | ↕️ | Market quote detail | Bid, ask, midpoint, spread, freshness, and 24-hour movement (detailed view) |
 | 📈 | Trend chart | 24-hour, 7-day, 1-month and 3-month lines with the period high, low, average and change |
@@ -59,6 +66,7 @@ Rates below 1 show at least six decimal places, with more precision for smaller 
 | 🧮 | Quick converter | Choose source and target currencies, swap direction, and see the rate source and date |
 | 🔔 | Optional alerts | Local target-price alerts powered by `chrome.alarms` |
 | 🌐 | Three languages | Complete Chinese, English, and Japanese interfaces |
+| 🌙 | Dark mode | The popup follows the system's light or dark appearance |
 | 🔒 | Privacy first | No account, analytics SDK, or server-side storage of personal preferences |
 
 Hover conversion is **off by default**. Enable it from Settings, grant access only to the websites you choose, and refresh those pages. If using Tampermonkey, update the script to 2.5.0 and reload webpages. To let the legacy userscript drive the data instead, also enable userscript compatibility in Settings (off by default); the native hover card then yields once per page. Otherwise, disable older scripts.
@@ -174,7 +182,7 @@ Then open the extension's settings page and enter `http://localhost:8000/api/v1`
 
 ### 3. Upgrading
 
-**To 2.8.0**: reload the extension in `chrome://extensions` and verify version **2.8.0**. If you never changed the backend address, the extension now reads the public backend and you can stop a local stack you ran only for it. If you saved your own address, nothing changes.
+**To 2.8.x**: reload the extension in `chrome://extensions` and verify version **2.8.1**. If you never changed the backend address, the extension now reads the public backend and you can stop a local stack you ran only for it. If you saved your own address, nothing changes.
 
 **Self-hosted, from 2.6.x** no database migration is needed. Pull, rebuild, and reload the extension:
 
@@ -183,7 +191,7 @@ git pull
 docker compose up -d --build
 ```
 
-Reload the extension in `chrome://extensions` and verify version **2.8.0**. Since 2.7.0 the popup opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
+Reload the extension in `chrome://extensions` and verify version **2.8.1**. Since 2.7.0 the popup opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
 
 **From 2.5.0**, the notes below also apply. The 2.6.0 compatibility patch is based on commit `5816065` (including PR #14). It preserves the opt-in userscript bridge, per-source health checks, triangulated official rates, stale-source labels, and saved unavailable currencies.
 
@@ -194,7 +202,7 @@ docker compose up -d --build --force-recreate
 docker compose logs --tail=100 collector
 ```
 
-Reload the extension in `chrome://extensions`, verify version **2.8.0**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
+Reload the extension in `chrome://extensions`, verify version **2.8.1**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
 
 Confirm that `/health` reports `"provider": "alpha_vantage"`. Its `collector` array carries one heartbeat per configured official source, so a source that quietly stopped publishing surfaces instead of hiding behind the ones that still work. Initial collection may take time; existing demo observations remain marked as mock until replaced. The userscript keeps separate appearance, target-currency and calibration preferences; only the data service is shared.
 
@@ -362,6 +370,8 @@ and keys are never exposed to a page.
 FX Pulse 是一个免登录、重视隐私的汇率浏览器插件与 FastAPI 后端项目。插件通过两个货币选择框自由选择已覆盖的源币种和目标币种，统一查看当前汇率、官方参考价和可用走势，也能在网页中悬停识别金额并快速换算。
 
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
+
+2.8.1 重新设计了弹窗界面：选币种、看汇率、换算合并在一张卡片里，并支持跟随系统的深色模式；自选可以收藏任意两种货币的组合，点一下即可切换。
 
 2.8.0 起插件默认读取本仓库每 4 小时发布到 GitHub Pages 的公共数据，安装后打开即可使用，无需 Docker、服务器或 API Key。仍可在设置页填写自己的后端地址；2.8.0 之前保存过自定义地址的用户不受影响。默认连接 GitHub Pages 时，GitHub 能看到请求方的 IP 地址，除此之外不会发送任何偏好设置或网页内容。
 

@@ -211,6 +211,9 @@ function renderRates() {
     const available = converterQuote && selectedPair === $("converter-from").value + "/" + $("converter-to").value;
     value.textContent = available ? formatRate(converterQuote.rate) : "—";
     source.textContent = available ? converterStatus() : offline ? t("dataUnavailable") : t("converterNoRate");
+    // Without a market quote the subtitle already carries this exact sentence;
+    // only the offline notice says something the subtitle does not.
+    source.hidden = !offline;
     card.append(title, value, source);
     $("rates").append(card);
   }
@@ -493,6 +496,9 @@ function updateConverter() {
   const market = currentRate();
   $("status").textContent = market ? t("statusLine", chartTimeLabel(market.captured_at),
     market.provider === "mock" ? t("mockData") : t("providerLive")) : converterStatus();
+  // Same reason: for an official-only pair the subtitle states the source, so a
+  // third copy under the converter was noise. A market pair's line differs.
+  $("converter-status").hidden = !market;
   if (offline) $("status").textContent += " · " + t("offlineCache");
   if (!converterQuote) { $("converted").textContent = "—"; return; }
   const raw = $("amount").value.trim();
