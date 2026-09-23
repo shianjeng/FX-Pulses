@@ -31,7 +31,12 @@ function worker({session = {}, initial = {}} = {}) {
     scripting: {getRegisteredContentScripts: async () => registered, registerContentScripts: async items => { registered = items; }, unregisterContentScripts: async () => { registered = []; }},
   };
   const context = vm.createContext({chrome, URL, console, setTimeout, clearTimeout: globalThis.clearTimeout, AbortController: globalThis.AbortController,
-    importScripts: (...names) => names.forEach(name => vm.runInContext(source(name), context)),
+    // This suite was written against a local API backend and asserts its
+    // address; the shipped default is now a static host, so pin the old one.
+    importScripts: (...names) => names.forEach(name => {
+      vm.runInContext(source(name), context);
+      if (name === 'config.js') Object.assign(context.FXConfig, {defaultApiUrl: 'http://localhost:8000/api/v1', backendMode: 'api'});
+    }),
     Date: class extends Date { static now() { return now; } },
     fetch: async url => {
       calls.push(url);
