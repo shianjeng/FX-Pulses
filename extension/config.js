@@ -20,7 +20,13 @@
  *             windows) itself from the thresholds in meta.json.
  *
  * Both modes present the same data to popup and hover, which never learn which
- * one is in use. The options page detects the mode of a user-supplied backend.
+ * one is in use.
+ *
+ * `backendMode` only applies while the user keeps the shipped default. When they
+ * save their own address, the options page detects its mode (a 404 on /health
+ * followed by a valid meta.json means static) and stores it with the URL; an
+ * address saved before modes existed is treated as an API. Switching the default
+ * therefore never changes how an existing custom backend is reached.
  */
 globalThis.FXConfig = {
   defaultApiUrl: "http://localhost:8000/api/v1",
