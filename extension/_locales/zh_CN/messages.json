@@ -59,9 +59,6 @@
   "trendTitleFor": {
     "message": "$1 走势"
   },
-  "change24h": {
-    "message": "24小时 · $1"
-  },
   "rangeGroup": {
     "message": "历史区间"
   },
@@ -84,13 +81,10 @@
     "message": "九十日"
   },
   "statLow": {
-    "message": "低"
+    "message": "最低"
   },
   "statHigh": {
-    "message": "高"
-  },
-  "statRange": {
-    "message": "区间"
+    "message": "最高"
   },
   "eyebrowConverter": {
     "message": "快捷换算"
@@ -502,5 +496,23 @@
   },
   "simpleHint": {
     "message": "只显示中间价与换算。买卖价、官方参考价和走势在详细数据里。"
+  },
+  "rangeTab1": {
+    "message": "24小时"
+  },
+  "rangeTab7": {
+    "message": "7天"
+  },
+  "rangeTab30": {
+    "message": "1个月"
+  },
+  "rangeTab90": {
+    "message": "3个月"
+  },
+  "statAvg": {
+    "message": "平均"
+  },
+  "statChange": {
+    "message": "涨跌幅"
   }
 }

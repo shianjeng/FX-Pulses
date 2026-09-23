@@ -59,9 +59,6 @@
   "trendTitleFor": {
     "message": "$1 の推移"
   },
-  "change24h": {
-    "message": "24時間 · $1"
-  },
   "rangeGroup": {
     "message": "表示期間"
   },
@@ -88,9 +85,6 @@
   },
   "statHigh": {
     "message": "高値"
-  },
-  "statRange": {
-    "message": "レンジ"
   },
   "eyebrowConverter": {
     "message": "通貨換算"
@@ -502,5 +496,23 @@
   },
   "simpleHint": {
     "message": "仲値と換算のみ表示します。売買値・公式参考値・推移は詳細にあります。"
+  },
+  "rangeTab1": {
+    "message": "24時間"
+  },
+  "rangeTab7": {
+    "message": "7日"
+  },
+  "rangeTab30": {
+    "message": "1ヶ月"
+  },
+  "rangeTab90": {
+    "message": "3ヶ月"
+  },
+  "statAvg": {
+    "message": "平均"
+  },
+  "statChange": {
+    "message": "騰落率"
   }
 }

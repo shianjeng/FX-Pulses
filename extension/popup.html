@@ -42,15 +42,20 @@
       </section>
 
       <section class="panel trend-panel pro-only">
-        <div class="panel-title"><div><p class="eyebrow" data-i18n="eyebrowTrend">价格走势</p><h2 id="trend-title" data-i18n="trendTitle">汇率走势</h2></div><span id="trend-change" class="change">—</span></div>
+        <div class="panel-title"><div><p class="eyebrow" data-i18n="eyebrowTrend">价格走势</p><h2 id="trend-title" data-i18n="trendTitle">汇率走势</h2></div></div>
         <div id="range-buttons" class="range-buttons" role="group" data-i18n-attr="aria-label:rangeGroup" aria-label="历史区间">
-          <button type="button" class="mini" data-days="1">1D</button>
-          <button type="button" class="mini selected" data-days="7">7D</button>
-          <button type="button" class="mini" data-days="30">30D</button>
-          <button type="button" class="mini" data-days="90">90D</button>
+          <button type="button" class="range-tab" data-days="1" data-i18n="rangeTab1">24小时</button>
+          <button type="button" class="range-tab selected" data-days="7" data-i18n="rangeTab7">7天</button>
+          <button type="button" class="range-tab" data-days="30" data-i18n="rangeTab30">1个月</button>
+          <button type="button" class="range-tab" data-days="90" data-i18n="rangeTab90">3个月</button>
         </div>
         <div id="chart" class="chart"><span data-i18n="loadingChart">载入走势…</span></div>
-        <div class="stats"><span><span data-i18n="statLow">低</span> <b id="stat-low">—</b></span><span><span data-i18n="statHigh">高</span> <b id="stat-high">—</b></span><span><span data-i18n="statRange">区间</span> <b id="stat-position">—</b></span></div>
+        <div class="stats">
+          <span><span data-i18n="statHigh">最高</span><b id="stat-high">—</b></span>
+          <span><span data-i18n="statLow">最低</span><b id="stat-low">—</b></span>
+          <span><span data-i18n="statAvg">平均</span><b id="stat-avg">—</b></span>
+          <span><span data-i18n="statChange">涨跌幅</span><b id="stat-change">—</b></span>
+        </div>
       </section>
 
       <section class="panel">

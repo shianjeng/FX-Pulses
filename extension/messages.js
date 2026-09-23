@@ -21,7 +21,6 @@ globalThis.FXMessages = {
     "eyebrowTrend": "价格走势",
     "trendTitle": "汇率走势",
     "trendTitleFor": "$1 走势",
-    "change24h": "24小时 · $1",
     "rangeGroup": "历史区间",
     "loadingChart": "载入走势…",
     "chartAria": "$1 $2走势图",
@@ -29,9 +28,8 @@ globalThis.FXMessages = {
     "range7": "七日",
     "range30": "三十日",
     "range90": "九十日",
-    "statLow": "低",
-    "statHigh": "高",
-    "statRange": "区间",
+    "statLow": "最低",
+    "statHigh": "最高",
     "eyebrowConverter": "快捷换算",
     "converterTitle": "快捷换算",
     "reverse": "反转",
@@ -168,7 +166,13 @@ globalThis.FXMessages = {
     "viewModeLabel": "视图模式",
     "showDetails": "显示详细数据",
     "showSimple": "精简显示",
-    "simpleHint": "只显示中间价与换算。买卖价、官方参考价和走势在详细数据里。"
+    "simpleHint": "只显示中间价与换算。买卖价、官方参考价和走势在详细数据里。",
+    "rangeTab1": "24小时",
+    "rangeTab7": "7天",
+    "rangeTab30": "1个月",
+    "rangeTab90": "3个月",
+    "statAvg": "平均",
+    "statChange": "涨跌幅"
   },
   "en": {
     "extensionName": "FX Pulse — exchange rates at hand",
@@ -191,7 +195,6 @@ globalThis.FXMessages = {
     "eyebrowTrend": "PRICE TREND",
     "trendTitle": "Rate history",
     "trendTitleFor": "$1 history",
-    "change24h": "24h · $1",
     "rangeGroup": "History range",
     "loadingChart": "Loading chart…",
     "chartAria": "$1 $2 chart",
@@ -201,7 +204,6 @@ globalThis.FXMessages = {
     "range90": "90-day",
     "statLow": "Low",
     "statHigh": "High",
-    "statRange": "Range",
     "eyebrowConverter": "QUICK CONVERTER",
     "converterTitle": "Convert",
     "reverse": "Swap",
@@ -338,7 +340,13 @@ globalThis.FXMessages = {
     "viewModeLabel": "View mode",
     "showDetails": "Show details",
     "showSimple": "Simplify",
-    "simpleHint": "Midpoint and converter only. Bid/ask, official references and trends are under details."
+    "simpleHint": "Midpoint and converter only. Bid/ask, official references and trends are under details.",
+    "rangeTab1": "24H",
+    "rangeTab7": "7D",
+    "rangeTab30": "1M",
+    "rangeTab90": "3M",
+    "statAvg": "Average",
+    "statChange": "Change"
   },
   "ja": {
     "extensionName": "FX Pulse — 手元で為替レート",
@@ -361,7 +369,6 @@ globalThis.FXMessages = {
     "eyebrowTrend": "価格推移",
     "trendTitle": "為替推移",
     "trendTitleFor": "$1 の推移",
-    "change24h": "24時間 · $1",
     "rangeGroup": "表示期間",
     "loadingChart": "チャートを読み込み中…",
     "chartAria": "$1 $2チャート",
@@ -371,7 +378,6 @@ globalThis.FXMessages = {
     "range90": "90日間",
     "statLow": "安値",
     "statHigh": "高値",
-    "statRange": "レンジ",
     "eyebrowConverter": "通貨換算",
     "converterTitle": "通貨換算",
     "reverse": "入れ替え",
@@ -508,6 +514,12 @@ globalThis.FXMessages = {
     "viewModeLabel": "表示モード",
     "showDetails": "詳細を表示",
     "showSimple": "簡易表示",
-    "simpleHint": "仲値と換算のみ表示します。売買値・公式参考値・推移は詳細にあります。"
+    "simpleHint": "仲値と換算のみ表示します。売買値・公式参考値・推移は詳細にあります。",
+    "rangeTab1": "24時間",
+    "rangeTab7": "7日",
+    "rangeTab30": "1ヶ月",
+    "rangeTab90": "3ヶ月",
+    "statAvg": "平均",
+    "statChange": "騰落率"
   }
 };
