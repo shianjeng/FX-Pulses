@@ -144,7 +144,11 @@ function worker({initial = {}, official = []} = {}) {
   };
   const context = vm.createContext({chrome, URL, console, setTimeout, Date,
     clearTimeout: globalThis.clearTimeout, AbortController: globalThis.AbortController,
-    importScripts: (...names) => names.forEach(name => vm.runInContext(source(name), context)),
+    // This suite exercises the API backend; the shipped default is a static host.
+    importScripts: (...names) => names.forEach(name => {
+      vm.runInContext(source(name), context);
+      if (name === 'config.js') context.FXConfig.backendMode = 'api';
+    }),
     fetch: async url => {
       calls.push(url);
       const data = url.endsWith('/pairs') ? pairs
