@@ -1,0 +1,96 @@
+name: Publish static backend
+
+# Collects a round of rates and publishes the read-only API as static JSON on
+# GitHub Pages, so the extension needs no server and no user needs a key.
+#
+# The runner is destroyed after every run, but history has to survive it or the
+# 90-day chart would only ever hold one point. The SQLite file therefore lives
+# on an orphan `data` branch that this job force-pushes as a single commit:
+# always one copy of the database, never a growing pile of binary diffs.
+
+on:
+  schedule:
+    # Market data refreshes every 4 hours; official sources publish daily.
+    - cron: "5 */4 * * *"
+  workflow_dispatch:
+
+concurrency:
+  # Two overlapping runs would race on the data branch and lose a collection.
+  group: publish-static
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      FX_PROVIDER: alpha_vantage
+      ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+      OFFICIAL_SOURCES: ecb,bank_of_canada,federal_reserve,bank_of_japan,pboc
+      DATABASE_URL: sqlite:///./fx_pulse.db
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -e ".[dev]"
+        working-directory: backend
+
+      - name: Restore the collected history
+        run: |
+          # First run has no data branch yet; start from an empty database.
+          if git fetch origin data --depth 1 2>/dev/null; then
+            git show origin/data:fx_pulse.db > backend/fx_pulse.db
+            echo "restored $(stat -c%s backend/fx_pulse.db) bytes of history"
+          else
+            echo "no data branch yet, starting fresh"
+          fi
+
+      - name: Apply migrations
+        run: alembic upgrade head
+        working-directory: backend
+
+      - name: Collect one round
+        run: python -m app.collector --once
+        working-directory: backend
+
+      - name: Export the API as static files
+        run: python -m app.export_static --out ../public/api/v1
+        working-directory: backend
+
+      - name: Persist the history
+        run: |
+          # Built in a scratch repository rather than by branching this one:
+          # rewriting HEAD in the workspace leaves the checked-out files
+          # untracked, which strands the export the next step has to upload.
+          # A fresh repository also guarantees the single commit that keeps the
+          # branch from growing by one binary blob per collection.
+          scratch="$(mktemp -d)"
+          cp backend/fx_pulse.db "$scratch/fx_pulse.db"
+          cd "$scratch"
+          git init -q -b data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fx_pulse.db
+          git commit -qm "data: collected $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push --force -q \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" data:data
+        env:
+          GIT_TERMINAL_PROMPT: "0"
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - uses: actions/deploy-pages@v4
+        id: deploy
