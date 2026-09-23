@@ -514,5 +514,23 @@
   },
   "statChange": {
     "message": "騰落率"
+  },
+  "watchAdd": {
+    "message": "$1 をウォッチリストに追加"
+  },
+  "watchSaved": {
+    "message": "$1 は追加済みです"
+  },
+  "watchFull": {
+    "message": "ウォッチリストは最大 $1 件です"
+  },
+  "watchPick": {
+    "message": "異なる2つの通貨を選んでください"
+  },
+  "watchRemove": {
+    "message": "$1 をウォッチリストから削除"
+  },
+  "watchHint": {
+    "message": "上で任意の2通貨を選んで追加します。行を選ぶとその通貨ペアに切り替わります。"
   }
 }
