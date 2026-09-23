@@ -86,12 +86,6 @@
   "statHigh": {
     "message": "高値"
   },
-  "eyebrowConverter": {
-    "message": "通貨換算"
-  },
-  "converterTitle": {
-    "message": "通貨換算"
-  },
   "reverse": {
     "message": "入れ替え"
   },
@@ -493,9 +487,6 @@
   },
   "showSimple": {
     "message": "簡易表示"
-  },
-  "simpleHint": {
-    "message": "仲値と換算のみ表示します。売買値・公式参考値・推移は詳細にあります。"
   },
   "rangeTab1": {
     "message": "24時間"
