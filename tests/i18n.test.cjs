@@ -90,6 +90,7 @@ for (const language of ['zh', 'en', 'ja']) {
               captured_at: '2026-09-20T00:00:00Z', change_percent: null,
             }))};
       };
+      w.eval(read('config.js'));
       w.eval(read('messages.js'));
       w.eval(read('i18n.js'));
       w.eval(read('popup.js'));

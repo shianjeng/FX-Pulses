@@ -1,5 +1,5 @@
 const t = (key, ...values) => globalThis.FXI18N.t(key, ...values);
-const DEFAULT_API_URL = "http://localhost:8000/api/v1";
+const DEFAULT_API_URL = globalThis.FXConfig.defaultApiUrl;
 const apiInput = document.getElementById("api-url");
 const result = document.getElementById("result");
 
@@ -26,7 +26,8 @@ async function checkJson(url) {
 
 async function requestOriginPermission(url) {
   const origin = new URL(url).origin;
-  if (origin === "http://localhost:8000") return true;
+  // The shipped default is already in manifest host_permissions.
+  if (origin === new URL(DEFAULT_API_URL).origin) return true;
   return chrome.permissions.request({ origins: [`${origin}/*`] });
 }
 

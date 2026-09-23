@@ -15,7 +15,7 @@ async function popup(t,watchlist=pairs){
  w.chrome={storage:{local:{get:async defaults=>({...defaults,...state}),set:async changes=>Object.assign(state,changes)}},runtime:{openOptionsPage(){}}};
  const other=url=>response(url.endsWith('/pairs')?pairs:url.includes('/comparisons/')?{official:[]}:[]);
  w.fetch=async url=>url.endsWith('/rates')?response([quote()]):other(url);
- w.eval(read('messages.js'));w.eval(read('i18n.js'));w.eval(read('popup.js'));await tick();
+ w.eval(read('config.js'));w.eval(read('messages.js'));w.eval(read('i18n.js'));w.eval(read('popup.js'));await tick();
  return {w,state,other,el:id=>w.document.getElementById(id)};
 }
 test('late refresh cannot overwrite a more recent response',async t=>{
@@ -82,7 +82,7 @@ async function options(t,{permission=true,data={}}={}){
  const w=dom.window,state={},calls=[];
  w.chrome={storage:{local:{get:async defaults=>defaults,set:async changes=>Object.assign(state,changes)}},permissions:{request:async()=>permission}};
  w.fetch=async url=>{calls.push(url);if(data.status)return {ok:false,status:data.status};return response(url.endsWith('/health')?{status:'ok',provider:'alpha_vantage'}:url.endsWith('/pairs')?pairs: data.rates ?? [quote()]);};
- w.eval(read('messages.js'));w.eval(read('i18n.js'));w.eval(read('options.js'));await tick();
+ w.eval(read('config.js'));w.eval(read('messages.js'));w.eval(read('i18n.js'));w.eval(read('options.js'));await tick();
  const submit=async value=>{w.document.getElementById('api-url').value=value;w.document.getElementById('settings-form').dispatchEvent(new w.Event('submit',{cancelable:true}));await tick();};
  return {w,state,calls,submit,result:()=>w.document.getElementById('result').textContent};
 }

@@ -10,3 +10,4 @@ backend/.venv/
 backend/*.egg-info/
 .DS_Store
 node_modules/
+backend/collector.lock
