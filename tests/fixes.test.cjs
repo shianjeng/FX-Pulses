@@ -21,7 +21,8 @@ const response = data => ({ok: true, json: async () => data});
 async function popup(t, {watchlist = pairs, onUrl} = {}) {
   const dom = new JSDOM(source('popup.html'), {runScripts: 'outside-only', url: 'https://test.invalid'});
   t.after(() => dom.window.close());
-  const w = dom.window, state = {watchlist, targets: {}}, urls = [];
+  // The full interface: the simple view skips history and official requests.
+  const w = dom.window, state = {watchlist, targets: {}, viewMode: 'detail'}, urls = [];
   w.chrome = {storage: {local: {
     get: async defaults => ({...defaults, ...state}),
     set: async changes => Object.assign(state, changes),

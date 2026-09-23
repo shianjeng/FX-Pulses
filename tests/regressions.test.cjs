@@ -11,7 +11,7 @@ const response=data=>({ok:true,json:async()=>data});
 async function popup(t,watchlist=pairs){
  const dom=new JSDOM(read('popup.html'),{runScripts:'outside-only',url:'https://test.invalid'});
  t.after(()=>dom.window.close());
- const w=dom.window,state={watchlist,targets:{'USD/CNY':{direction:'above',value:1}}};
+ const w=dom.window,state={watchlist,targets:{'USD/CNY':{direction:'above',value:1}},viewMode:'detail'};
  w.chrome={storage:{local:{get:async defaults=>({...defaults,...state}),set:async changes=>Object.assign(state,changes)}},runtime:{openOptionsPage(){}}};
  const other=url=>response(url.endsWith('/pairs')?pairs:url.includes('/comparisons/')?{official:[]}:[]);
  w.fetch=async url=>url.endsWith('/rates')?response([quote()]):other(url);

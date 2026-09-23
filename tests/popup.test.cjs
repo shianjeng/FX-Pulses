@@ -14,7 +14,8 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 20));
 async function setup({ clipboardFails = false, watchlist = ["USD/CNY"] } = {}) {
   const dom = new JSDOM(html, { runScripts: "outside-only", url: "https://test.invalid" });
   const w = dom.window;
-  const state = { watchlist, targets: {}, apiUrl: "https://api.invalid" };
+  // These tests cover the full interface, which the simple view folds away.
+  const state = { watchlist, targets: {}, apiUrl: "https://api.invalid", viewMode: "detail" };
   let copied;
   w.chrome = { storage: { local: {
     get: async defaults => ({ ...defaults, ...state }),

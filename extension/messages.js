@@ -164,7 +164,11 @@ globalThis.FXMessages = {
     "explorerTitle": "汇率查询",
     "explorerEyebrow": "选择两种货币",
     "noMarketHistory": "该货币对暂无市场历史数据。当前换算可使用下方标明日期的官方参考价。",
-    "displayRoundingHint": "汇率显示值经过四舍五入；换算使用完整精度，结果保留两位小数。"
+    "displayRoundingHint": "汇率显示值经过四舍五入；换算使用完整精度，结果保留两位小数。",
+    "viewModeLabel": "视图模式",
+    "showDetails": "显示详细数据",
+    "showSimple": "精简显示",
+    "simpleHint": "只显示中间价与换算。买卖价、官方参考价和走势在详细数据里。"
   },
   "en": {
     "extensionName": "FX Pulse — exchange rates at hand",
@@ -330,7 +334,11 @@ globalThis.FXMessages = {
     "explorerTitle": "Currency explorer",
     "explorerEyebrow": "CHOOSE TWO CURRENCIES",
     "noMarketHistory": "No market history is collected for this pair. Conversion may use dated official reference rates.",
-    "displayRoundingHint": "Displayed rates are rounded. Conversion uses full precision; amounts are rounded to two decimal places."
+    "displayRoundingHint": "Displayed rates are rounded. Conversion uses full precision; amounts are rounded to two decimal places.",
+    "viewModeLabel": "View mode",
+    "showDetails": "Show details",
+    "showSimple": "Simplify",
+    "simpleHint": "Midpoint and converter only. Bid/ask, official references and trends are under details."
   },
   "ja": {
     "extensionName": "FX Pulse — 手元で為替レート",
@@ -496,6 +504,10 @@ globalThis.FXMessages = {
     "explorerTitle": "為替レート検索",
     "explorerEyebrow": "2つの通貨を選択",
     "noMarketHistory": "この通貨ペアの市場履歴は収集されていません。換算には日付付きの公式参考レートを使用できます。",
-    "displayRoundingHint": "表示レートは丸められています。換算は元の精度で計算し、結果を小数点以下2桁に丸めます。"
+    "displayRoundingHint": "表示レートは丸められています。換算は元の精度で計算し、結果を小数点以下2桁に丸めます。",
+    "viewModeLabel": "表示モード",
+    "showDetails": "詳細を表示",
+    "showSimple": "簡易表示",
+    "simpleHint": "仲値と換算のみ表示します。売買値・公式参考値・推移は詳細にあります。"
   }
 };

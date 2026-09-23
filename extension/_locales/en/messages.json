@@ -490,5 +490,17 @@
   },
   "displayRoundingHint": {
     "message": "Displayed rates are rounded. Conversion uses full precision; amounts are rounded to two decimal places."
+  },
+  "viewModeLabel": {
+    "message": "View mode"
+  },
+  "showDetails": {
+    "message": "Show details"
+  },
+  "showSimple": {
+    "message": "Simplify"
+  },
+  "simpleHint": {
+    "message": "Midpoint and converter only. Bid/ask, official references and trends are under details."
   }
 }

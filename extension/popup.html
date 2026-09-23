@@ -13,7 +13,7 @@
   <body>
     <header>
       <div class="brand"><img class="brand-logo" src="icons/icon.svg" width="32" height="32" alt="" /><span class="brand-name">FX Pulse</span></div>
-      <div class="header-actions"><span class="privacy" data-i18n="noAccount">免登录</span><button id="settings-button" class="icon" data-i18n-attr="title:settings,aria-label:settings" title="设置" aria-label="设置">⚙</button></div>
+      <div class="header-actions"><button id="view-toggle" class="mini" data-i18n-attr="aria-label:viewModeLabel" aria-label="视图模式">显示详细数据</button><span class="privacy pro-only" data-i18n="noAccount">免登录</span><button id="settings-button" class="icon" data-i18n-attr="title:settings,aria-label:settings" title="设置" aria-label="设置">⚙</button></div>
     </header>
 
     <main>
@@ -22,8 +22,9 @@
         <button id="refresh-button" class="icon" data-i18n-attr="title:refresh,aria-label:refresh" title="刷新" aria-label="刷新">↻</button>
       </section>
       <p id="status" class="status" data-i18n="loadingRates">正在读取行情…</p>
-      <p class="hint" data-i18n="refreshHint">刷新只重新读取后端数据，不会立即触发上游采集。</p>
+      <p class="hint pro-only" data-i18n="refreshHint">刷新只重新读取后端数据，不会立即触发上游采集。</p>
       <div id="error" class="error hidden"></div>
+      <p class="hint simple-only" data-i18n="simpleHint">只显示中间价与换算。买卖价、官方参考价和走势在详细数据里。</p>
         <div class="currency-selects">
           <label><span data-i18n="converterFromCurrency">从</span><select id="converter-from" data-i18n-attr="aria-label:converterFromCurrency" aria-label="源货币"></select></label>
           <label><span data-i18n="converterToCurrency">到</span><select id="converter-to" data-i18n-attr="aria-label:converterToCurrency" aria-label="目标货币"></select></label>
@@ -31,7 +32,7 @@
       <button id="reverse-button" class="mini">⇄ <span data-i18n="reverse">反转</span></button>
       <section id="rates" class="rate-list" aria-live="polite"></section>
 
-      <section class="panel official-panel">
+      <section class="panel official-panel pro-only">
         <div class="panel-title">
           <div><p class="eyebrow" data-i18n="eyebrowOfficial">官方参考价</p><h2 id="official-title" data-i18n="officialTitle">官方参考价</h2></div>
           <span class="reference-badge" data-i18n="daily">日更</span>
@@ -40,7 +41,7 @@
         <div id="official-rates" class="official-list" aria-live="polite"></div>
       </section>
 
-      <section class="panel trend-panel">
+      <section class="panel trend-panel pro-only">
         <div class="panel-title"><div><p class="eyebrow" data-i18n="eyebrowTrend">价格走势</p><h2 id="trend-title" data-i18n="trendTitle">汇率走势</h2></div><span id="trend-change" class="change">—</span></div>
         <div id="range-buttons" class="range-buttons" role="group" data-i18n-attr="aria-label:rangeGroup" aria-label="历史区间">
           <button type="button" class="mini" data-days="1">1D</button>
@@ -65,7 +66,7 @@
         <p class="hint" data-i18n="converterHint">优先使用市场中间价；无市场行情时使用标明来源和日期的官方日参考价。不包含手续费与点差。</p>
       </section>
 
-      <details class="panel collapsible">
+      <details class="panel collapsible pro-only">
         <summary><span data-i18n="targetTitle">目标价状态</span><small id="target-mode" data-i18n="targetOnOpen">仅打开插件时检查</small></summary>
         <form id="target-form">
           <div class="form-row"><select id="target-pair"></select><select id="target-direction"><option value="above" data-i18n="above">高于或等于</option><option value="below" data-i18n="below">低于或等于</option></select></div>
@@ -81,7 +82,7 @@
       </details>
 
       <p class="hint" data-i18n="midpointDisclaimer">市场中间价为买卖报价的平均值，非人民币官方中间价或银行成交价。仅供参考。</p>
-      <footer><span data-i18n="midpointFormula">中间价 =（买入价 + 卖出价）÷ 2</span><button id="copy-button" data-i18n="copyRate">复制当前汇率</button></footer>
+      <footer><span class="pro-only" data-i18n="midpointFormula">中间价 =（买入价 + 卖出价）÷ 2</span><button id="copy-button" data-i18n="copyRate">复制当前汇率</button></footer>
       <label id="copy-fallback" class="hidden hint"><span data-i18n="copyManual">自动复制失败，请按 Ctrl/Cmd+C 手动复制</span><input id="copy-value" readonly /></label>
     </main>
     <script src="config.js"></script>
