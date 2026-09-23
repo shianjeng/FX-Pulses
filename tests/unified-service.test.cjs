@@ -133,8 +133,11 @@ test('integrated hover uses shared service, closed shadow and no uploaded page t
   const h = await hover(t);
   assert.match(h.shadow().querySelector('.amount').textContent, /70\.00 CNY/);
   assert.equal(h.w.document.getElementById('fx-pulse-unified-hover').shadowRoot, null);
-  assert.equal(JSON.stringify(h.requests), JSON.stringify([{type: 'FX_SNAPSHOT'}]));
-  assert.equal(h.calls.length, 2);
+  // The card asks for the shared snapshot and, once per page, the public list of
+  // covered currencies. A message is its type alone, so no page text can ride along.
+  assert.deepEqual(h.requests.map(message => message.type).sort(), ['FX_CURRENCIES', 'FX_SNAPSHOT']);
+  assert.ok(h.requests.every(message => Object.keys(message).join() === 'type'), JSON.stringify(h.requests));
+  assert.deepEqual(h.calls.map(url => url.split('/').pop()).sort(), ['currencies', 'pairs', 'rates']);
 });
 
 test('hover uses the direct CNY/JPY quote instead of a different cross-rate provider', async t => {

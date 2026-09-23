@@ -187,8 +187,9 @@ async function snapshot(force = false) {
 }
 
 const UI_PATHS = /^\/(?:comparisons\/[A-Z]{3}\/[A-Z]{3}|currencies|official-rates\/[A-Z]{3}\/[A-Z]{3}|rates\/[A-Z]{3}\/[A-Z]{3}\/history\?days=(?:1|7|30|90))$/;
-/* Content scripts may only read a single official cross rate, never arbitrary paths. */
-const PAGE_PATHS = /^\/official-rates\/[A-Z]{3}\/[A-Z]{3}$/;
+/* Content scripts may read a single official cross rate or the list of covered
+   currencies (public, and it carries nothing from the page), never other paths. */
+const PAGE_PATHS = /^\/(?:official-rates\/[A-Z]{3}\/[A-Z]{3}|currencies)$/;
 
 async function apiRequest(path, {fromPage = false} = {}) {
   const allowed = fromPage ? PAGE_PATHS : UI_PATHS;
@@ -325,6 +326,10 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
     if (message?.type === "FX_OFFICIAL") {
       if (!isUi && !await pageAccessAllowed(message)) throw new Error("Hover is disabled");
       return apiRequest(message.path, {fromPage: !isUi});
+    }
+    if (message?.type === "FX_CURRENCIES") {
+      if (!isUi && !await pageAccessAllowed(message)) throw new Error("Hover is disabled");
+      return apiRequest("/currencies", {fromPage: !isUi});
     }
     if (message?.type === "FX_OPEN_SETTINGS") { await chrome.runtime.openOptionsPage(); return true; }
     if (message?.type === "FX_SYNC_HOVER" && isUi) { await queueRegistration(); return true; }
