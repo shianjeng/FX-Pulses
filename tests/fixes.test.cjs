@@ -38,6 +38,7 @@ async function popup(t, {watchlist = pairs, onUrl} = {}) {
     ]);
     return response([]);
   };
+  w.eval(source('config.js'));
   w.eval(source('messages.js'));
   w.eval(source('i18n.js'));
   w.eval(source('popup.js'));
@@ -142,7 +143,7 @@ function worker({initial = {}, official = []} = {}) {
   };
   const context = vm.createContext({chrome, URL, console, setTimeout, Date,
     clearTimeout: globalThis.clearTimeout, AbortController: globalThis.AbortController,
-    importScripts: name => vm.runInContext(source(name), context),
+    importScripts: (...names) => names.forEach(name => vm.runInContext(source(name), context)),
     fetch: async url => {
       calls.push(url);
       const data = url.endsWith('/pairs') ? pairs
