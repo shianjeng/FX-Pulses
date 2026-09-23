@@ -514,5 +514,23 @@
   },
   "statChange": {
     "message": "涨跌幅"
+  },
+  "watchAdd": {
+    "message": "加入自选 $1"
+  },
+  "watchSaved": {
+    "message": "$1 已在自选中"
+  },
+  "watchFull": {
+    "message": "自选已满（最多 $1 个）"
+  },
+  "watchPick": {
+    "message": "请先选择两种不同的货币"
+  },
+  "watchRemove": {
+    "message": "从自选移除 $1"
+  },
+  "watchHint": {
+    "message": "在上方任选两种货币后加入；点一行即可切换到该币对。"
   }
 }
