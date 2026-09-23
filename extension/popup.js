@@ -5,6 +5,7 @@ const DEFAULTS = {
   converterTo: "CNY",
   targets: {},
   alertsEnabled: false,
+  viewMode: "simple",
 };
 
 let settings = { ...DEFAULTS };
@@ -84,7 +85,7 @@ function rateCard(rate) {
   return `<button class="rate-card ${pair === selectedPair ? "selected" : ""}" data-pair="${pair}">
     <div class="rate-top"><span class="pair">${pair}</span><span class="change ${rate.change_percent === null || rate.change_percent === undefined ? "" : change >= 0 ? "positive" : "negative"}">${changeText(rate.change_percent)}</span></div>
     <strong>${formatRate(rate.midpoint)}</strong>
-    <div class="rate-bottom"><span>${t("bid")} ${formatRate(rate.bid)} · ${t("ask")} ${formatRate(rate.ask)}</span><span class="${offline || rate.is_stale ? "stale" : ""}">${offline ? t("offlineCache") : rate.is_stale ? t("outdated") : t("updated")}</span></div>
+    <div class="rate-bottom"><span class="pro-only">${t("bid")} ${formatRate(rate.bid)} · ${t("ask")} ${formatRate(rate.ask)}</span><span class="${offline || rate.is_stale ? "stale" : ""}">${offline ? t("offlineCache") : rate.is_stale ? t("outdated") : t("updated")}</span></div>
     <small class="quote-time">${chartTimeLabel(rate.captured_at)}</small>
   </button>`;
 }
@@ -280,7 +281,19 @@ function drawChart(points) {
   hit.addEventListener("mouseleave", hideTip);
 }
 
+function detailed() {
+  return settings.viewMode === "detail";
+}
+
+function applyViewMode() {
+  document.body.dataset.view = detailed() ? "detail" : "simple";
+  $("view-toggle").textContent = detailed() ? t("showSimple") : t("showDetails");
+}
+
 async function loadHistory() {
+  // Hiding the panels would still spend a request per pair selection on data
+  // nobody is looking at, so the simple view never asks for it.
+  if (!detailed()) return;
   void loadOfficial();
   const version = ++historyVersion;
   $("trend-title").textContent = t("trendTitleFor", selectedPair);
@@ -490,6 +503,13 @@ async function loadData(force = false) {
 
 $("refresh-button").addEventListener("click", () => { void loadData(true); });
 $("settings-button").addEventListener("click", () => chrome.runtime.openOptionsPage());
+$("view-toggle").addEventListener("click", async () => {
+  settings.viewMode = detailed() ? "simple" : "detail";
+  applyViewMode();
+  await chrome.storage.local.set({viewMode: settings.viewMode});
+  // Simple mode skipped these requests, so the panels are empty until now.
+  if (detailed()) await loadHistory();
+});
 $("amount").addEventListener("input", updateConverter);
 async function saveConverterCurrencies() {
   await selectPair($("converter-from").value + "/" + $("converter-to").value);
@@ -610,6 +630,7 @@ async function init() {
   $("target-mode").textContent = t(settings.alertsEnabled ? "targetBackground" : "targetOnOpen");
   settings.watchlist = Array.isArray(settings.watchlist) ? settings.watchlist.filter(validPair) : [...DEFAULTS.watchlist];
   if (!settings.watchlist.length) settings.watchlist = [...DEFAULTS.watchlist];
+  applyViewMode();
   await loadData();
 }
 

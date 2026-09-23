@@ -490,5 +490,17 @@
   },
   "displayRoundingHint": {
     "message": "汇率显示值经过四舍五入；换算使用完整精度，结果保留两位小数。"
+  },
+  "viewModeLabel": {
+    "message": "视图模式"
+  },
+  "showDetails": {
+    "message": "显示详细数据"
+  },
+  "showSimple": {
+    "message": "精简显示"
+  },
+  "simpleHint": {
+    "message": "只显示中间价与换算。买卖价、官方参考价和走势在详细数据里。"
   }
 }
