@@ -1,5 +1,5 @@
 const DEFAULTS = {
-  apiUrl: "http://localhost:8000/api/v1",
+  apiUrl: globalThis.FXConfig.defaultApiUrl,
   watchlist: ["USD/CNY", "USD/JPY", "CNY/JPY"],
   converterFrom: "USD",
   converterTo: "CNY",

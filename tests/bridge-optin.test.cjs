@@ -51,7 +51,7 @@ function worker(initial) {
   const calls = [];
   const context = vm.createContext({chrome, URL, console, setTimeout, Date,
     clearTimeout: globalThis.clearTimeout, AbortController: globalThis.AbortController,
-    importScripts: name => vm.runInContext(source(name), context),
+    importScripts: (...names) => names.forEach(name => vm.runInContext(source(name), context)),
     fetch: async url => {
       calls.push(url);
       const data = url.endsWith('/pairs') ? ['USD/CNY'] : url.endsWith('/rates') ? [rate] : [];

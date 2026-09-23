@@ -5,6 +5,7 @@ const { readFileSync } = require("node:fs");
 const { join } = require("node:path");
 const root = join(__dirname, "..", "extension");
 const html = readFileSync(join(root, "popup.html"), "utf8");
+const config = readFileSync(join(root, "config.js"), "utf8");
 const script = readFileSync(join(root, "popup.js"), "utf8");
 const messages = readFileSync(join(root, "messages.js"), "utf8");
 const i18n = readFileSync(join(root, "i18n.js"), "utf8");
@@ -45,6 +46,7 @@ async function setup({ clipboardFails = false, watchlist = ["USD/CNY"] } = {}) {
       bid: "7.119", ask: "7.121", provider: "mock", change_percent: null,
       captured_at: "2026-09-18T00:00:00Z", is_stale: false }];
   } });
+  w.eval(config);
   w.eval(messages);
   w.eval(i18n);
   w.eval(script);
