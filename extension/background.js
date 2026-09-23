@@ -1,6 +1,6 @@
 /* The only runtime network gateway for popup and hover. No provider keys here. */
 // Generated from _locales; the worker localizes the errors it hands to the UI.
-if (typeof importScripts === "function") importScripts("messages.js");
+if (typeof importScripts === "function") importScripts("config.js", "messages.js");
 const FX_LANGUAGES = ["zh", "en", "ja"];
 let workerLanguage = "zh";
 const t = (key, ...values) => {
@@ -13,7 +13,7 @@ const t = (key, ...values) => {
 chrome.storage.local.get({language: null}).then(({language}) => {
   if (FX_LANGUAGES.includes(language)) workerLanguage = language;
 }).catch(() => { /* keep the default */ });
-const FX_DEFAULT_URL = "http://localhost:8000/api/v1";
+const FX_DEFAULT_URL = globalThis.FXConfig.defaultApiUrl;
 const FX_MATCHES = ["https://*/*", "http://*/*"];
 const FX_TTL = 60000;
 const FX_OFFICIAL_TTL = 600000;
