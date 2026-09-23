@@ -59,9 +59,6 @@
   "trendTitleFor": {
     "message": "$1 history"
   },
-  "change24h": {
-    "message": "24h · $1"
-  },
   "rangeGroup": {
     "message": "History range"
   },
@@ -88,9 +85,6 @@
   },
   "statHigh": {
     "message": "High"
-  },
-  "statRange": {
-    "message": "Range"
   },
   "eyebrowConverter": {
     "message": "QUICK CONVERTER"
@@ -490,5 +484,35 @@
   },
   "displayRoundingHint": {
     "message": "Displayed rates are rounded. Conversion uses full precision; amounts are rounded to two decimal places."
+  },
+  "viewModeLabel": {
+    "message": "View mode"
+  },
+  "showDetails": {
+    "message": "Show details"
+  },
+  "showSimple": {
+    "message": "Simplify"
+  },
+  "simpleHint": {
+    "message": "Midpoint and converter only. Bid/ask, official references and trends are under details."
+  },
+  "rangeTab1": {
+    "message": "24H"
+  },
+  "rangeTab7": {
+    "message": "7D"
+  },
+  "rangeTab30": {
+    "message": "1M"
+  },
+  "rangeTab90": {
+    "message": "3M"
+  },
+  "statAvg": {
+    "message": "Average"
+  },
+  "statChange": {
+    "message": "Change"
   }
 }

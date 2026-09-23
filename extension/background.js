@@ -32,7 +32,81 @@ async function apiBase() {
   return url.toString().replace(/\/$/, "");
 }
 
-async function fetchJson(base, path) {
+/* ---- static backend adapter ----------------------------------------------
+   A static backend is a directory of JSON files with no server to compute
+   anything per request. The worker therefore maps each API path onto the file
+   holding that data and derives the time-dependent fields itself. Everything
+   above this layer sees identical results in both modes. */
+
+const FX_STATIC_ROUTES = new Set(["/pairs", "/rates", "/currencies", "/official-rates"]);
+
+function staticPathFor(path) {
+  const [route, query] = path.split("?");
+  if (FX_STATIC_ROUTES.has(route)) return {file: `${route}.json`, query};
+  // /rates/USD/CNY/history?days=7 -> one 90-day file, sliced below.
+  const history = route.match(/^\/rates\/([A-Z]{3})\/([A-Z]{3})\/history$/);
+  if (history) return {file: `/rates/${history[1]}/${history[2]}/history.json`, query};
+  const pair = route.match(/^\/(comparisons|official-rates)\/([A-Z]{3})\/([A-Z]{3})$/);
+  if (pair) return {file: `/${pair[1]}/${pair[2]}/${pair[3]}.json`, query};
+  throw new Error("Unsupported API path");
+}
+
+let metaCache = null;
+async function staticMeta(base) {
+  if (metaCache && metaCache.base === base && Date.now() - metaCache.at < FX_TTL) return metaCache.data;
+  const data = await fetchJson(base, "/meta.json", {raw: true});
+  metaCache = {base, at: Date.now(), data};
+  return data;
+}
+
+const olderThan = (timestamp, minutes) =>
+  !timestamp || Date.now() - Date.parse(timestamp) > minutes * 60000;
+
+/* Freshness is relative to now, and a CDN may serve a file long after it was
+   written, so these are never read from the file itself. */
+function applyFreshness(data, staleAfterMinutes) {
+  const mark = quote => quote && typeof quote === "object"
+    ? {...quote, is_stale: olderThan(quote.captured_at, staleAfterMinutes)}
+    : quote;
+  if (Array.isArray(data)) return data.map(mark);
+  if (data && typeof data === "object" && "market" in data) return {...data, market: mark(data.market)};
+  return data;
+}
+
+async function fetchStatic(base, path) {
+  const {file, query} = staticPathFor(path);
+  const data = await fetchJson(base, file, {raw: true});
+  if (file.endsWith("/history.json")) {
+    const days = Number(new globalThis.URLSearchParams(query || "").get("days")) || 7;
+    const since = Date.now() - days * 86400000;
+    return data.filter(point => Date.parse(point.captured_at) >= since);
+  }
+  const {stale_after_minutes: stale} = await staticMeta(base);
+  return applyFreshness(data, stale);
+}
+
+/* /health has no file of its own: meta.json carries the raw collector rows and
+   the stall thresholds, and the verdict is computed here. */
+async function staticHealth(base) {
+  const meta = await staticMeta(base);
+  return {
+    status: "ok",
+    provider: meta.provider,
+    collector: (meta.collector || []).map(job => ({
+      job: job.job,
+      finished_at: job.finished_at,
+      last_success_at: job.last_success_at,
+      consecutive_failures: job.consecutive_failures || 0,
+      last_error: job.last_error ?? null,
+      is_stalled: olderThan(job.last_success_at, job.stall_after_minutes),
+    })),
+  };
+}
+
+const staticMode = () => globalThis.FXConfig.backendMode === "static";
+
+async function fetchJson(base, path, {raw = false} = {}) {
+  if (!raw && staticMode()) return fetchStatic(base, path);
   const controller = new globalThis.AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
@@ -130,7 +204,8 @@ async function health() {
   const key = `${base}|health`;
   const saved = requests.get(key);
   if (saved && Date.now() - saved.at < FX_TTL) return saved.data;
-  const data = await fetchJson(new URL(base).origin, "/health");
+  // A static backend has no /health; its verdict is derived from meta.json.
+  const data = staticMode() ? await staticHealth(base) : await fetchJson(new URL(base).origin, "/health");
   remember(requests, key, {at: Date.now(), data});
   return data;
 }
