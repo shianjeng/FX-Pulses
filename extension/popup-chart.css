@@ -43,6 +43,24 @@
   font-weight:650;
 }
 
-.range-buttons { display: flex; gap: 6px; margin: 0 0 8px; }
-.range-buttons .mini { flex: 1; font-variant-numeric: tabular-nums; opacity: .6; }
-.range-buttons .mini.selected { opacity: 1; font-weight: 700; }
+/* Range tabs read as plain text; only the active one carries a background. */
+.range-buttons { display: flex; gap: 4px; margin: 8px 0 4px; }
+.range-tab {
+  flex: 1; border: 0; border-radius: 8px; padding: 6px 0; cursor: pointer;
+  background: transparent; color: #8795a4; font-size: 11px; font-variant-numeric: tabular-nums;
+}
+.range-tab:hover { color: #3c4f63; }
+.range-tab.selected { background: #e1e8ee; color: #1c2b3a; font-weight: 600; }
+
+/* The theme sizes .chart for a sparkline; the trend panel wants a real chart.
+   Two classes outrank the theme's single-class rule that loads after this file. */
+.trend-panel .chart { height: 128px; margin: 6px 0 2px; }
+.chart-extreme { fill: #168b79; stroke: #ffffff; stroke-width: 1.5; }
+.chart-lone { fill: #168b79; }
+
+/* 2 x 2: label on the left, value on the right, as in a quote sheet. */
+.trend-panel .stats { grid-template-columns: 1fr 1fr; column-gap: 24px; row-gap: 8px; }
+.trend-panel .stats > span { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; }
+.trend-panel .stats b { display: inline; margin: 0; font-size: 12px; }
+.trend-panel .stats b.positive { color: var(--green); }
+.trend-panel .stats b.negative { color: var(--red); }

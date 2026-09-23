@@ -5,6 +5,7 @@ const DEFAULTS = {
   converterTo: "CNY",
   targets: {},
   alertsEnabled: false,
+  viewMode: "simple",
 };
 
 let settings = { ...DEFAULTS };
@@ -84,7 +85,7 @@ function rateCard(rate) {
   return `<button class="rate-card ${pair === selectedPair ? "selected" : ""}" data-pair="${pair}">
     <div class="rate-top"><span class="pair">${pair}</span><span class="change ${rate.change_percent === null || rate.change_percent === undefined ? "" : change >= 0 ? "positive" : "negative"}">${changeText(rate.change_percent)}</span></div>
     <strong>${formatRate(rate.midpoint)}</strong>
-    <div class="rate-bottom"><span>${t("bid")} ${formatRate(rate.bid)} · ${t("ask")} ${formatRate(rate.ask)}</span><span class="${offline || rate.is_stale ? "stale" : ""}">${offline ? t("offlineCache") : rate.is_stale ? t("outdated") : t("updated")}</span></div>
+    <div class="rate-bottom"><span class="pro-only">${t("bid")} ${formatRate(rate.bid)} · ${t("ask")} ${formatRate(rate.ask)}</span><span class="${offline || rate.is_stale ? "stale" : ""}">${offline ? t("offlineCache") : rate.is_stale ? t("outdated") : t("updated")}</span></div>
     <small class="quote-time">${chartTimeLabel(rate.captured_at)}</small>
   </button>`;
 }
@@ -166,19 +167,42 @@ function chartTimeLabel(value) {
   return `${month}/${day} ${hours}:${minutes}`;
 }
 
-function smoothPath(points) {
-  // Straight segments cannot invent extrema between observations. The break
-  // threshold follows the observed sampling interval instead of a hardcoded six
-  // hours, which turned the whole line into loose dots on slower collectors.
+/* Split the samples wherever collection paused. The threshold follows the
+   observed sampling interval instead of a fixed six hours, which turned the
+   whole line into loose dots on slower collectors. */
+function chartSegments(points) {
   const gaps = points.slice(1)
     .map((point, index) => parseUtc(point.time) - parseUtc(points[index].time))
     .sort((a, b) => a - b);
   const typical = gaps.length ? gaps[(gaps.length - 1) >> 1] : 0;
   const limit = Math.max(typical * 2.5, 60000);
-  return points.map((point, index) => {
-    const gap = index && parseUtc(point.time) - parseUtc(points[index - 1].time) > limit;
-    return `${!index || gap ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
-  }).join(" ");
+  const segments = [];
+  points.forEach((point, index) => {
+    if (!index || parseUtc(point.time) - parseUtc(points[index - 1].time) > limit) segments.push([]);
+    segments.at(-1).push(point);
+  });
+  return segments;
+}
+
+// Straight segments cannot invent extrema between observations.
+function linePath(segments) {
+  return segments.map(segment => segment.map((point, index) =>
+    `${index ? "L" : "M"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" ")).join(" ");
+}
+
+/* Filled per segment and closed straight down to the baseline, so an outage
+   stays a visible gap instead of a slope, and a lone sample never becomes a
+   filled triangle. Polygons rather than paths keep the line the first path. */
+function areaPolygons(segments, height) {
+  return segments.filter(segment => segment.length > 1).map(segment => {
+    const top = segment.map(point => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
+    return `<polygon class="chart-area" points="${top} ${segment.at(-1).x.toFixed(2)},${height} ${segment[0].x.toFixed(2)},${height}" fill="url(#chart-fill)"></polygon>`;
+  }).join("");
+}
+
+function resetChartStats() {
+  ["stat-high", "stat-low", "stat-avg", "stat-change"].forEach(id => { $(id).textContent = "—"; });
+  $("stat-change").className = "";
 }
 
 function drawChart(points) {
@@ -186,9 +210,7 @@ function drawChart(points) {
   points = points.filter(point => Number.isFinite(Number(point.midpoint)) && Number(point.midpoint) > 0 && Number.isFinite(parseUtc(point.captured_at))).sort((a,b) => parseUtc(a.captured_at) - parseUtc(b.captured_at));
   if (!points.length) {
     root.innerHTML = `<span>${t("chartCollecting")}</span>`;
-    ["stat-low", "stat-high", "stat-position"].forEach((id) => {
-      $(id).textContent = "—";
-    });
+    resetChartStats();
     return;
   }
 
@@ -196,7 +218,7 @@ function drawChart(points) {
   const low = Math.min(...values);
   const high = Math.max(...values);
   const width = 340;
-  const height = 82;
+  const height = 120;
   const range = high - low || 1;
   const start = parseUtc(points[0].captured_at);
   const duration = parseUtc(points.at(-1).captured_at) - start;
@@ -211,18 +233,27 @@ function drawChart(points) {
     };
   });
 
-  const line = smoothPath(plotted);
+  const segments = chartSegments(plotted);
+  // Only the period's high and low get a marker; a dot on every sample turned
+  // a 90-day line into a string of beads that hid its own shape.
+  const marker = (point, name) =>
+    `<circle class="${name}" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="3"></circle>`;
+  const extremes = high === low ? "" :
+    marker(plotted[values.indexOf(high)], "chart-extreme") + marker(plotted[values.indexOf(low)], "chart-extreme");
+  // A segment of one sample has no length to stroke, so it would vanish.
+  const lone = segments.filter(segment => segment.length === 1).map(([point]) => marker(point, "chart-lone")).join("");
 
   root.innerHTML = `
     <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${t("chartAria", selectedPair, t(`range${historyDays}`))}">
       <defs>
-        <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#56e39f" stop-opacity=".22"/>
+        <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#56e39f" stop-opacity=".3"/>
           <stop offset="1" stop-color="#56e39f" stop-opacity="0"/>
         </linearGradient>
       </defs>
-      <path d="${line}" fill="none" stroke="#56e39f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
-      ${plotted.map(point => `<circle cx="${point.x}" cy="${point.y}" r="2.5" fill="#168b79"/>`).join("")}
+      ${areaPolygons(segments, height)}
+      <path class="chart-line" d="${linePath(segments)}" fill="none" stroke="#56e39f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+      ${lone}${extremes}
       <line class="chart-guide" x1="0" y1="4" x2="0" y2="${height - 2}" stroke="#edf8f2" stroke-opacity=".18" stroke-dasharray="3 4" visibility="hidden"></line>
       <circle class="chart-dot" cx="0" cy="0" r="3.6" fill="#07120e" stroke="#56e39f" stroke-width="2" visibility="hidden"></circle>
       <rect class="chart-hit" x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
@@ -233,10 +264,14 @@ function drawChart(points) {
     </div>
   ${points.length === 1 ? `<span class="single-point-note">${t("singlePoint")}</span>` : ""}`;
 
-  $("stat-low").textContent = formatRate(low);
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const change = points.length > 1 ? (values.at(-1) - values[0]) / values[0] * 100 : null;
   $("stat-high").textContent = formatRate(high);
-  const position = high === low ? 50 : ((values.at(-1) - low) / (high - low)) * 100;
-  $("stat-position").textContent = `${position.toFixed(0)}%`;
+  $("stat-low").textContent = formatRate(low);
+  $("stat-avg").textContent = formatRate(average);
+  // Over the selected range, not the last 24 hours, so it always matches the line.
+  $("stat-change").textContent = change === null ? "—" : changeText(change);
+  $("stat-change").className = change === null ? "" : change >= 0 ? "positive" : "negative";
 
   const svg = root.querySelector("svg");
   const guide = root.querySelector(".chart-guide");
@@ -280,16 +315,24 @@ function drawChart(points) {
   hit.addEventListener("mouseleave", hideTip);
 }
 
+function detailed() {
+  return settings.viewMode === "detail";
+}
+
+function applyViewMode() {
+  document.body.dataset.view = detailed() ? "detail" : "simple";
+  $("view-toggle").textContent = detailed() ? t("showSimple") : t("showDetails");
+}
+
 async function loadHistory() {
+  // Hiding the panels would still spend a request per pair selection on data
+  // nobody is looking at, so the simple view never asks for it.
+  if (!detailed()) return;
   void loadOfficial();
   const version = ++historyVersion;
   $("trend-title").textContent = t("trendTitleFor", selectedPair);
-  const rate = currentRate();
-  const change = Number(rate?.change_percent || 0);
-  $("trend-change").textContent = t("change24h", changeText(rate?.change_percent));
-  $("trend-change").className = `change ${rate?.change_percent === null || rate?.change_percent === undefined ? "" : change >= 0 ? "positive" : "negative"}`;
   $("chart").innerHTML = `<span>${t("loadingChart")}</span>`;
-  ["stat-low", "stat-high", "stat-position"].forEach(id => $(id).textContent = "—");
+  resetChartStats();
   try {
     let [base, quote] = selectedPair.split("/");
     const inverse = !supportedPairs.includes(selectedPair) && supportedPairs.includes(quote + "/" + base);
@@ -477,7 +520,7 @@ async function loadData(force = false) {
     updateConverter();
     loadTarget();
     $("official-rates").replaceChildren();
-    ["stat-low", "stat-high", "stat-position", "trend-change"].forEach(id => $(id).textContent = "—");
+    resetChartStats();
     $("error").textContent = error.message;
     $("chart").textContent = t("dataUnavailableCheck");
     $("official-status").textContent = t("dataUnavailableCheck");
@@ -490,6 +533,13 @@ async function loadData(force = false) {
 
 $("refresh-button").addEventListener("click", () => { void loadData(true); });
 $("settings-button").addEventListener("click", () => chrome.runtime.openOptionsPage());
+$("view-toggle").addEventListener("click", async () => {
+  settings.viewMode = detailed() ? "simple" : "detail";
+  applyViewMode();
+  await chrome.storage.local.set({viewMode: settings.viewMode});
+  // Simple mode skipped these requests, so the panels are empty until now.
+  if (detailed()) await loadHistory();
+});
 $("amount").addEventListener("input", updateConverter);
 async function saveConverterCurrencies() {
   await selectPair($("converter-from").value + "/" + $("converter-to").value);
@@ -610,6 +660,7 @@ async function init() {
   $("target-mode").textContent = t(settings.alertsEnabled ? "targetBackground" : "targetOnOpen");
   settings.watchlist = Array.isArray(settings.watchlist) ? settings.watchlist.filter(validPair) : [...DEFAULTS.watchlist];
   if (!settings.watchlist.length) settings.watchlist = [...DEFAULTS.watchlist];
+  applyViewMode();
   await loadData();
 }
 
