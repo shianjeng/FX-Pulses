@@ -532,5 +532,11 @@
   },
   "watchHint": {
     "message": "在上方任选两种货币后加入；点一行即可切换到该币对。"
+  },
+  "hoverAlso": {
+    "message": "也可能是："
+  },
+  "hoverMarket": {
+    "message": "市场中间价"
   }
 }
