@@ -139,17 +139,37 @@ User watchlists, targets, language selection, hover preferences, and per-site cu
 
 FX Pulse works out of the box. The extension reads a public backend that this repository refreshes every four hours on GitHub Pages, so you do not need Docker, a server, or an API key.
 
-### 1. Load the extension
+### 1. Install the extension
 
-You need Chrome or Microsoft Edge.
+FX Pulse is not in the Chrome Web Store yet, so it is added as an unpacked extension. It takes about a minute and works in Chrome and Microsoft Edge.
 
-1. Open `chrome://extensions` or `edge://extensions`.
-2. Enable **Developer mode**.
-3. Select **Load unpacked**.
-4. Choose this repository's `extension` directory.
-5. Pin FX Pulse to the browser toolbar and open it.
+**Download**
 
-Rates appear immediately. The extension reads `https://shianjeng.github.io/FX-Pulses/api/v1`; to use your own backend instead, enter its address on the settings page.
+1. [Download the ZIP](https://github.com/shianjeng/FX-Pulses/archive/refs/heads/main.zip), or click the green **Code** button on this page and choose **Download ZIP**.
+2. Unzip it. You get a folder named `FX-Pulses-main`; the extension is the `extension` folder inside it.
+3. Move `FX-Pulses-main` somewhere permanent, such as your Documents folder. The browser loads the extension from this folder every time, so deleting or moving it later removes the extension.
+
+**Add it to Chrome**
+
+1. Type `chrome://extensions` in the address bar and press Enter.
+2. Turn on **Developer mode** in the top-right corner.
+3. Click **Load unpacked** in the top-left corner.
+4. Select the `extension` folder — the one that contains `manifest.json`, not the outer `FX-Pulses-main` folder.
+5. Click the puzzle-piece icon in the toolbar and pin **FX Pulse**.
+6. Click the FX Pulse icon. Rates appear immediately.
+
+**Microsoft Edge**: go to `edge://extensions`, turn on **Developer mode** in the left sidebar, click **Load unpacked**, then follow steps 4–6.
+
+**Updating**: download the ZIP again and replace the old `FX-Pulses-main` folder **at the same location** (or run `git pull` if you cloned it), then click the reload button ↻ on the FX Pulse card in `chrome://extensions`. Your watchlist and settings are kept. The browser identifies an unpacked extension by its folder path, so loading the new copy from a different place installs a second, empty FX Pulse instead.
+
+**If something looks wrong**
+
+| What you see | What to do |
+| --- | --- |
+| "Manifest file is missing or unreadable" | You selected the outer folder. Select `FX-Pulses-main/extension` instead. |
+| A reminder to disable developer-mode extensions | Normal for extensions installed outside the Web Store. Keep FX Pulse enabled. |
+| The popup says it cannot connect | Check your internet connection, then click refresh in the popup. If you changed the backend address on the settings page, enter `https://shianjeng.github.io/FX-Pulses/api/v1` there to return to the default. |
+ The extension reads `https://shianjeng.github.io/FX-Pulses/api/v1`; to use your own backend instead, enter its address on the settings page.
 
 ### 2. Run your own backend (optional)
 
@@ -368,6 +388,27 @@ and keys are never exposed to a page.
 ## 中文简介
 
 FX Pulse 是一个免登录、重视隐私的汇率浏览器插件与 FastAPI 后端项目。插件通过两个货币选择框自由选择已覆盖的源币种和目标币种，统一查看当前汇率、官方参考价和可用走势，也能在网页中悬停识别金额并快速换算。
+
+### 安装到浏览器
+
+插件暂未上架 Chrome 网上应用店，需要以「已解压的扩展程序」方式添加，大约一分钟即可完成，Chrome 和 Microsoft Edge 都支持。
+
+1. [下载 ZIP 压缩包](https://github.com/shianjeng/FX-Pulses/archive/refs/heads/main.zip)，或在本页点击绿色的 **Code** 按钮，选择 **Download ZIP**。
+2. 解压后会得到 `FX-Pulses-main` 文件夹，插件就在其中的 `extension` 文件夹里。
+3. 把 `FX-Pulses-main` 放到一个固定位置（例如「文稿」）。浏览器每次都从这个文件夹加载插件，之后删除或移动它，插件就会失效。
+4. 在 Chrome 地址栏输入 `chrome://extensions` 并回车。
+5. 打开右上角的 **开发者模式**。
+6. 点击左上角的 **加载已解压的扩展程序**。
+7. 选择 `extension` 文件夹（里面有 `manifest.json` 的那一层），不要选外层的 `FX-Pulses-main`。
+8. 点击工具栏上的拼图图标，把 **FX Pulse** 固定到工具栏，点开即可看到汇率。
+
+Edge 用户：打开 `edge://extensions`，在左侧打开 **开发人员模式**，点击 **加载解压缩的扩展**，然后按第 7、8 步操作。
+
+更新：重新下载 ZIP，**在原来的位置**替换旧的 `FX-Pulses-main` 文件夹，再到 `chrome://extensions` 点击 FX Pulse 卡片上的刷新按钮 ↻，自选和设置会保留。浏览器是按文件夹路径识别这类插件的，如果换了位置重新加载，会变成另一个全新的 FX Pulse，之前的自选不会带过去。
+
+如果提示「清单文件缺失或不可读取」，说明选成了外层文件夹，请改选 `extension` 文件夹。Chrome 提醒停用开发者模式扩展程序属于正常现象，保留 FX Pulse 即可。如果弹窗提示无法连接，先检查网络再点刷新；若曾在设置页改过后端地址，填回 `https://shianjeng.github.io/FX-Pulses/api/v1` 即可恢复默认。
+
+### 项目说明
 
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
 
