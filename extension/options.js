@@ -15,13 +15,33 @@ async function checkJson(url) {
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
     const response = await fetch(url, {signal:controller.signal});
-    if (!response.ok) throw new Error(response.status === 429 ? t("tooManyRequests") : t("serverReturned", response.status));
+    if (!response.ok) {
+      const failure = new Error(response.status === 429 ? t("tooManyRequests") : t("serverReturned", response.status));
+      failure.status = response.status;
+      throw failure;
+    }
     try { return await response.json(); } catch { throw new Error(t("badFormat")); }
   } catch(error) {
     if (error.name === "AbortError") throw new Error(t("timeout"));
     if (error instanceof TypeError || error.message === "Failed to fetch") throw new Error(t("cannotConnect"));
     throw error;
   } finally { globalThis.clearTimeout(timeout); }
+}
+
+/* A running API answers /health. A static host has no such route and 404s it,
+   and only then is meta.json tried, so an API backend costs no extra request
+   and a real failure (503, timeout) is reported rather than mistaken for a
+   static host. */
+async function detectBackend(apiUrl) {
+  try {
+    const health = await checkJson(`${new URL(apiUrl).origin}/health`);
+    return {mode: "api", status: health?.status, provider: health?.provider};
+  } catch (error) {
+    if (error.status !== 404) throw error;
+  }
+  const meta = await checkJson(`${apiUrl}/meta.json`);
+  if (typeof meta?.stale_after_minutes !== "number" || !Array.isArray(meta?.collector)) throw new Error(t("badFormat"));
+  return {mode: "static", status: "ok", provider: meta.provider};
 }
 
 async function requestOriginPermission(url) {
@@ -37,12 +57,13 @@ document.getElementById("settings-form").addEventListener("submit", async (event
   try {
     const apiUrl = cleanUrl(apiInput.value);
     if (!await requestOriginPermission(apiUrl)) throw new Error(t("serverPermissionDenied"));
-    const health = await checkJson(`${new URL(apiUrl).origin}/health`);
+    const health = await detectBackend(apiUrl);
     if (health.status !== "ok" || !["mock","alpha_vantage"].includes(health.provider)) throw new Error(t("badFormat"));
-    const pairs = await checkJson(`${apiUrl}/pairs`);
-    const rates = await checkJson(`${apiUrl}/rates`);
+    const suffix = health.mode === "static" ? ".json" : "";
+    const pairs = await checkJson(`${apiUrl}/pairs${suffix}`);
+    const rates = await checkJson(`${apiUrl}/rates${suffix}`);
     if (!Array.isArray(pairs) || !pairs.length || !pairs.every(pair => typeof pair === "string" && /^[A-Z]{3}\/[A-Z]{3}$/.test(pair)) || !Array.isArray(rates) || !rates.every(rate => pairs.includes(`${rate.base_currency}/${rate.quote_currency}`) && Number(rate.midpoint) > 0)) throw new Error(t("badFormat"));
-    await chrome.storage.local.set({ apiUrl });
+    await chrome.storage.local.set({ apiUrl, backendMode: health.mode });
     apiInput.value = apiUrl;
     result.textContent = t(!rates.length ? "connectedWaiting" : health.provider === "mock" ? "connectedMock" : "connectedSaved");
   } catch (error) {

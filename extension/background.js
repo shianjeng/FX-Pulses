@@ -103,10 +103,19 @@ async function staticHealth(base) {
   };
 }
 
-const staticMode = () => globalThis.FXConfig.backendMode === "static";
+/* The mode belongs to the backend, not to the build. A user who pointed the
+   extension at their own server must keep talking to it as an API even when the
+   shipped default is a static host, and vice versa. The options page stores the
+   mode it detected next to the URL; a URL saved before modes existed was always
+   an API. Only the untouched default follows config.js. */
+async function backendMode() {
+  const {apiUrl, backendMode: stored} = await chrome.storage.local.get({apiUrl: null, backendMode: null});
+  if (!apiUrl) return globalThis.FXConfig.backendMode;
+  return stored === "static" ? "static" : "api";
+}
 
 async function fetchJson(base, path, {raw = false} = {}) {
-  if (!raw && staticMode()) return fetchStatic(base, path);
+  if (!raw && await backendMode() === "static") return fetchStatic(base, path);
   const controller = new globalThis.AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
@@ -205,7 +214,7 @@ async function health() {
   const saved = requests.get(key);
   if (saved && Date.now() - saved.at < FX_TTL) return saved.data;
   // A static backend has no /health; its verdict is derived from meta.json.
-  const data = staticMode() ? await staticHealth(base) : await fetchJson(new URL(base).origin, "/health");
+  const data = await backendMode() === "static" ? await staticHealth(base) : await fetchJson(new URL(base).origin, "/health");
   remember(requests, key, {at: Date.now(), data});
   return data;
 }
@@ -327,7 +336,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
 });
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
-  if (changes.apiUrl) {
+  if (changes.apiUrl || changes.backendMode) {
     generation++; snapshots.clear(); requests.clear(); pending.clear();
     if (chrome.storage.session) void chrome.storage.session.remove("fxSnapshot");
   }
