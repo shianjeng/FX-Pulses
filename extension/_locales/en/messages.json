@@ -532,5 +532,11 @@
   },
   "watchHint": {
     "message": "Pick any two currencies above, then add them. Select a row to switch to that pair."
+  },
+  "hoverAlso": {
+    "message": "Could also be:"
+  },
+  "hoverMarket": {
+    "message": "Market midpoint"
   }
 }
