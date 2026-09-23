@@ -178,7 +178,9 @@ globalThis.FXMessages = {
     "watchFull": "自选已满（最多 $1 个）",
     "watchPick": "请先选择两种不同的货币",
     "watchRemove": "从自选移除 $1",
-    "watchHint": "在上方任选两种货币后加入；点一行即可切换到该币对。"
+    "watchHint": "在上方任选两种货币后加入；点一行即可切换到该币对。",
+    "hoverAlso": "也可能是：",
+    "hoverMarket": "市场中间价"
   },
   "en": {
     "extensionName": "FX Pulse — exchange rates at hand",
@@ -358,7 +360,9 @@ globalThis.FXMessages = {
     "watchFull": "Watchlist is full (up to $1)",
     "watchPick": "Choose two different currencies first",
     "watchRemove": "Remove $1 from watchlist",
-    "watchHint": "Pick any two currencies above, then add them. Select a row to switch to that pair."
+    "watchHint": "Pick any two currencies above, then add them. Select a row to switch to that pair.",
+    "hoverAlso": "Could also be:",
+    "hoverMarket": "Market midpoint"
   },
   "ja": {
     "extensionName": "FX Pulse — 手元で為替レート",
@@ -538,6 +542,8 @@ globalThis.FXMessages = {
     "watchFull": "ウォッチリストは最大 $1 件です",
     "watchPick": "異なる2つの通貨を選んでください",
     "watchRemove": "$1 をウォッチリストから削除",
-    "watchHint": "上で任意の2通貨を選んで追加します。行を選ぶとその通貨ペアに切り替わります。"
+    "watchHint": "上で任意の2通貨を選んで追加します。行を選ぶとその通貨ペアに切り替わります。",
+    "hoverAlso": "他の候補：",
+    "hoverMarket": "市場仲値"
   }
 };

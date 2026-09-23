@@ -532,5 +532,11 @@
   },
   "watchHint": {
     "message": "上で任意の2通貨を選んで追加します。行を選ぶとその通貨ペアに切り替わります。"
+  },
+  "hoverAlso": {
+    "message": "他の候補："
+  },
+  "hoverMarket": {
+    "message": "市場仲値"
   }
 }
