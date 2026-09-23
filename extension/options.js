@@ -101,9 +101,31 @@ for (const [key, title, choices] of [
 }
 hoverInfo.append(hoverResult);
 document.querySelector("main").append(hoverInfo);
+/* Any currency the backend covers can be the hover target, not only the three
+   market ones. A saved target stays listed even before the list arrives, or
+   the select would silently show a different currency than the one in use. */
+function setTargetOptions(codes, selected) {
+  const select = hoverControls.hoverTarget;
+  const all = [...new Set([...codes, selected])].filter(code => /^[A-Z]{3}$/.test(code)).sort();
+  select.replaceChildren(...all.map(code => { const option = document.createElement("option"); option.value = code; option.textContent = code; return option; }));
+  select.value = selected;
+}
+async function loadTargetCurrencies() {
+  try {
+    const reply = await chrome.runtime?.sendMessage?.({type: "FX_API", path: "/currencies"});
+    const coverage = reply?.ok ? reply.data : null;
+    const codes = [
+      ...(Array.isArray(coverage?.market_pairs) ? coverage.market_pairs.flatMap(pair => String(pair).split("/")) : []),
+      ...(Array.isArray(coverage?.official_currencies) ? coverage.official_currencies : []),
+    ];
+    if (codes.length) setTargetOptions(codes, hoverControls.hoverTarget.value);
+  } catch { /* the three defaults remain */ }
+}
 chrome.storage.local.get(hoverDefaults).then(value => {
   hoverEnabled.checked = value.hoverEnabled;
   for (const [key, select] of Object.entries(hoverControls)) select.value = value[key];
+  setTargetOptions([...hoverControls.hoverTarget.options].map(option => option.value), value.hoverTarget);
+  void loadTargetCurrencies();
 });
 hoverEnabled.addEventListener("change", async () => {
   const enabled = hoverEnabled.checked;
