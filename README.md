@@ -5,13 +5,13 @@
 
   **Exchange rates at a glance — live market quotes, official references, and instant webpage conversion.**
 
-  A privacy-friendly Chrome extension powered by a self-hosted FastAPI service.
+  A privacy-friendly Chrome extension backed by a FastAPI service — self-hosted, or published as static files on GitHub Pages at no cost.
 
-  [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
+  [What's New](#whats-new-in-270) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
 
   <p>
     <a href="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml"><img src="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
-    <img src="https://img.shields.io/badge/version-2.6.1-36D9A0" alt="Version 2.6.1" />
+    <img src="https://img.shields.io/badge/version-2.7.0-36D9A0" alt="Version 2.7.0" />
     <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
     <img src="https://img.shields.io/badge/FastAPI-0.116-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.116" />
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Manifest V3" />
@@ -30,7 +30,15 @@ The extension and hover converter share the same backend, one-minute cache, watc
 
 > **Market midpoint** = `(bid + ask) / 2`. It is not a bank settlement rate, card-network rate, or central-bank fixing.
 
-## Rate display in 2.6.1
+## What's new in 2.7.0
+
+- **Simple view by default.** The popup opens on the midpoint and the converter. Bid/ask, official references, the trend chart and target alerts are one click away under **Show details**, and your choice is remembered. The simple view does not request history or official comparisons at all, so opening the popup costs fewer calls.
+- **Clearer trend chart.** One line over a soft fill, with markers only on the period high and low. The statistics below it — High, Low, Average and Change — all describe the selected range (24h, 7d, 1m or 3m). Collection outages stay visible as gaps rather than being bridged.
+- **Optional static backend.** The read-only API can be exported as JSON and published on GitHub Pages by a scheduled workflow, so the extension can run without anyone operating a server. See [Static backend on GitHub Pages](#static-backend-on-github-pages).
+
+The shipped default is still a self-hosted backend at `http://localhost:8000`; nothing changes for existing installs until you switch it.
+
+### Rate display
 
 Rates below 1 show at least six decimal places, with more precision for smaller values. Extremely small rates use scientific notation to avoid displaying zero. Quotes, bid/ask prices, chart values, and official references share this formatting rule. Conversion uses the unrounded stored rate; the result is rounded only for display. The converter shows the unit rate and a rounding explanation.
 
@@ -39,8 +47,9 @@ Rates below 1 show at least six decimal places, with more precision for smaller 
 | | Capability | Details |
 | --- | --- | --- |
 | 📊 | Currency explorer | Select any two available currencies and view their rate, source and date |
-| ↕️ | Market quote detail | Bid, ask, midpoint, spread, freshness, and 24-hour movement |
-| 📈 | Interactive history | Switch between 1, 7, 30, and 90-day SVG charts |
+| 👁️ | Simple view | Opens on the midpoint and converter; full detail is one click away |
+| ↕️ | Market quote detail | Bid, ask, midpoint, spread, freshness, and 24-hour movement (detailed view) |
+| 📈 | Trend chart | 24-hour, 7-day, 1-month and 3-month lines with the period high, low, average and change |
 | 🏛️ | Official references | Compare market midpoints with central-bank reference observations |
 | ⚡ | Hover conversion | Point at an amount on a webpage to convert it without leaving the page |
 | 🧮 | Quick converter | Choose source and target currencies, swap direction, and see the rate source and date |
@@ -110,6 +119,8 @@ The optional userscript sends read-only snapshot or official-pair requests throu
 
 The browser never contacts upstream rate providers directly. A standalone collector validates and stores observations before the API serves them from the database. Browser requests therefore do not consume Alpha Vantage quota.
 
+In static mode the FastAPI process is replaced by files. A scheduled GitHub Actions job runs the collector once, exports every endpoint with `python -m app.export_static`, and publishes the result to GitHub Pages. The background worker maps each API path onto its file, so the popup and hover behave identically in both modes.
+
 User watchlists, targets, language selection, hover preferences, and per-site currency choices stay in `chrome.storage.local`.
 
 ## Quick start
@@ -156,9 +167,18 @@ Alpha Vantage is the default provider. A missing key prevents startup with a con
 
 The default backend address is `http://localhost:8000/api/v1`. You can change it from the extension settings page.
 
-### 3. Upgrade from 2.5.0
+### 3. Upgrading
 
-The 2.6.0 compatibility patch is based on commit `5816065` (including PR #14). It preserves the opt-in userscript bridge, per-source health checks, triangulated official rates, stale-source labels, and saved unavailable currencies.
+**From 2.6.x to 2.7.0** no database migration is needed. Pull, rebuild, and reload the extension:
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+Reload the extension in `chrome://extensions` and verify version **2.7.0**. The popup now opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
+
+**From 2.5.0**, the notes below also apply. The 2.6.0 compatibility patch is based on commit `5816065` (including PR #14). It preserves the opt-in userscript bridge, per-source health checks, triangulated official rates, stale-source labels, and saved unavailable currencies.
 
 Keep your existing database and edit your existing `.env`; do not overwrite it with an example file. Set `FX_PROVIDER=alpha_vantage` and your own `ALPHA_VANTAGE_API_KEY`, then rebuild:
 
@@ -167,13 +187,52 @@ docker compose up -d --build --force-recreate
 docker compose logs --tail=100 collector
 ```
 
-Reload the extension in `chrome://extensions`, verify version **2.6.0**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
+Reload the extension in `chrome://extensions`, verify version **2.7.0**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
 
 Confirm that `/health` reports `"provider": "alpha_vantage"`. Its `collector` array carries one heartbeat per configured official source, so a source that quietly stopped publishing surfaces instead of hiding behind the ones that still work. Initial collection may take time; existing demo observations remain marked as mock until replaced. The userscript keeps separate appearance, target-currency and calibration preferences; only the data service is shared.
 
 The included profile collects three pairs every four hours (18 scheduled calls/day), spaces requests by 15 seconds, and caps attempts at 25 per rolling 24-hour window. [Alpha Vantage documents a standard free limit of 25 requests/day](https://www.alphavantage.co/support/). Restarts and retries also consume attempts. Adding pairs requires adjusting the interval or using a higher-quota key. Browser refreshes do not trigger upstream collection.
 
 Official references remain clearly labelled daily fallbacks for broader currency coverage. Unified sources does not mean all supported currencies have streaming Alpha Vantage quotes.
+
+## Static backend on GitHub Pages
+
+The API is read-only and only ever returns what the collector stored, so it can be served as plain files. [`publish.yml`](.github/workflows/publish.yml) does this every four hours: it collects one round, exports the API to JSON, and deploys it to GitHub Pages. No server runs between collections, and extension users never need an Alpha Vantage key.
+
+One-time setup in the repository:
+
+1. **Settings → Secrets and variables → Actions**: add `ALPHA_VANTAGE_API_KEY`.
+2. **Settings → Pages**: set **Source** to **GitHub Actions**.
+3. Make sure no branch named `data` exists. The workflow keeps the collected history there as a single force-pushed commit, so the repository does not grow with every run.
+
+Then run **Actions → Publish static backend → Run workflow** once. The API appears at `https://<user>.github.io/<repo>/api/v1/`.
+
+To ship an extension that uses it, edit `extension/config.js`:
+
+```js
+globalThis.FXConfig = {
+  defaultApiUrl: "https://<user>.github.io/<repo>/api/v1",
+  backendMode: "static",
+};
+```
+
+Add `https://<user>.github.io/*` to `host_permissions` in `extension/manifest.json`, then verify the pair:
+
+```bash
+npm run check:config
+```
+
+The check fails if the manifest does not cover the default backend, or if a non-local default uses plain HTTP. CI runs it on every push.
+
+Time-dependent fields are never frozen into the files. `meta.json` carries collection timestamps and thresholds, and the extension decides whether a quote is stale or a collector has stalled, so a CDN serving an old file cannot make a dead collector look healthy. History is published as one 90-day file per pair and sliced in the browser.
+
+To produce the files locally:
+
+```bash
+cd backend
+python -m app.collector --once
+python -m app.export_static --out ../public/api/v1
+```
 
 ## API
 
@@ -211,6 +270,13 @@ Responses include `ETag` and `Cache-Control`. Conditional requests for unchanged
 | `COLLECTOR_STALL_FACTOR` | `3` | Silent intervals before a job is stalled |
 | `DATABASE_URL` | SQLite locally | SQLAlchemy database URL |
 
+Extension build settings live in `extension/config.js`:
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `defaultApiUrl` | `http://localhost:8000/api/v1` | Backend the extension ships with; must be covered by `host_permissions` |
+| `backendMode` | `"api"` | `"api"` for a running FastAPI service, `"static"` for exported JSON files |
+
 ## Local development
 
 Backend:
@@ -234,11 +300,14 @@ source .venv/bin/activate
 python -m app.collector
 ```
 
+Add `--once` to collect a single round and exit instead of scheduling.
+
 Extension checks:
 
 ```bash
 npm ci
 npm run check:i18n
+npm run check:config
 npm run lint
 npm test
 ```
@@ -251,16 +320,15 @@ pytest
 ruff check .
 ```
 
-GitHub Actions runs migrations, backend and extension tests, linting, localization consistency checks, version consistency checks, and a Docker build on every push and pull request.
+GitHub Actions runs migrations, backend and extension tests, linting, localization consistency checks, version consistency checks, and a Docker build on every push and pull request. A separate scheduled workflow publishes the [static backend](#static-backend-on-github-pages).
 
-## Privacy
+## Privacy and security
 
 The page-facing userscript bridge is **off by default**. While it is enabled, any
 site you allowed hover on can read cached public quote data, detect that the
 extension is installed, and make the hover card stand down once per page. Enable
 it only if you still run the legacy userscript. The backend address, preferences
 and keys are never exposed to a page.
- and security
 
 - API keys remain server-side and `.env` is ignored by Git.
 - The extension contains no account system or analytics SDK.
@@ -278,6 +346,7 @@ and keys are never exposed to a page.
 - Cross-rates may combine observations from one institution or bridge two institutions; derived rates retain source and date labels.
 - Target alerts are suppressed when quotes are stale or the backend is offline.
 - The free Alpha Vantage profile is periodic rather than streaming.
+- A static deployment is only as fresh as its last scheduled run; the popup reports a stalled collector when runs stop.
 - Actual card, bank, brokerage, and remittance rates may include spreads and fees.
 
 ## 中文简介
@@ -286,7 +355,9 @@ FX Pulse 是一个免登录、重视隐私的汇率浏览器插件与 FastAPI �
 
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
 
-2.6.0 默认使用 Alpha Vantage 市场数据，需在后端配置自己的 API Key。油猴 2.5.0 起移除了 ER-API/Frankfurter 请求，通过已授权的插件读取同一快照及官方参考价。油猴需要插件与网页悬停权限，外观、目标币种和校准设置仍独立保存。
+2.7.0 起插件默认以简洁视图打开，只显示中间价与换算；买卖价、官方参考价、走势图和目标价提醒点击「显示详细数据」即可展开，选择会被记住。走势图改为单线加渐变填充，只标注区间最高点和最低点，下方显示所选区间的最高、最低、平均和涨跌幅。后端除了自行部署，也可以由 GitHub Actions 定时采集并导出为静态 JSON，发布到 GitHub Pages，无需常驻服务器，插件用户也不用申请 API Key。
+
+后端默认使用 Alpha Vantage 市场数据，需在后端配置自己的 API Key。油猴 2.5.0 起移除了 ER-API/Frankfurter 请求，通过已授权的插件读取同一快照及官方参考价。油猴需要插件与网页悬停权限，外观、目标币种和校准设置仍独立保存。
 
 插件界面支持中文、English 和日本語；油猴保留原有中文界面。详细迁移和统一服务设计请参阅 [UNIFIED-SERVICE.md](docs/archive/UNIFIED-SERVICE.md)。
 
