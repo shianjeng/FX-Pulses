@@ -5,6 +5,8 @@
     "build:i18n": "node tools/build-i18n.mjs",
     "check:i18n": "node tools/build-i18n.mjs --check",
     "check:config": "node tools/check-config.mjs",
+    "check:parser": "node userscript/build-extension-parser.mjs --check",
+    "test:userscript": "node userscript/dom-smoke.cjs",
     "test": "node --test tests/*.test.cjs"
   },
   "devDependencies": {"eslint": "^9.0.0", "jsdom": "^26.0.0"}
