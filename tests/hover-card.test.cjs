@@ -150,3 +150,15 @@ test('without the list the pickers still offer what is known', async t => {
   const [source] = app.all('select');
   assert.deepEqual([...source.options].map(option => option.value), ['CNY', 'JPY', 'USD']);
 });
+
+test('an official reference is not described as a market midpoint', async t => {
+  const official = await page(t, {text: '$10', settings: {hoverTarget: 'SGD'},
+    official: {'/official-rates/USD/SGD': [{rate: '1.3421', institution: 'European Central Bank', reference_date: '2026-09-23'}]}});
+  await tick(60);
+  const foot = official.q('.foot').textContent;
+  assert.match(foot, /官方日参考价/);
+  assert.doesNotMatch(foot, /市场中间价/);
+
+  const market = await page(t, {text: '4,590円'});
+  assert.match(market.q('.foot').textContent, /市场中间价/);
+});
