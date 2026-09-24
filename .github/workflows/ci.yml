@@ -41,8 +41,11 @@ jobs:
       - run: npm ci
       - run: npm run check:i18n
       - run: npm run check:config
+      # The extension ships a parser generated from the userscript; fail on drift.
+      - run: npm run check:parser
       - run: npm run lint
       - run: npm test
+      - run: npm run test:userscript
 
   versions:
     runs-on: ubuntu-latest

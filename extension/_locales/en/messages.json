@@ -529,5 +529,8 @@
   },
   "hoverMarket": {
     "message": "Market midpoint"
+  },
+  "hoverOfficialDisclaimer": {
+    "message": "Official daily reference; fees excluded."
   }
 }

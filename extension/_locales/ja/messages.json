@@ -529,5 +529,8 @@
   },
   "hoverMarket": {
     "message": "市場仲値"
+  },
+  "hoverOfficialDisclaimer": {
+    "message": "公式の日次参考レートによる概算です。手数料は含みません。"
   }
 }
