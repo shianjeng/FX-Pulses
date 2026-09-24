@@ -7,11 +7,11 @@
 
   A privacy-friendly Chrome extension that works out of the box: rates come from a free static backend on GitHub Pages, or from your own FastAPI server.
 
-  [What's New](#whats-new-in-281) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
+  [What's New](#whats-new-in-282) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
 
   <p>
     <a href="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml"><img src="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
-    <img src="https://img.shields.io/badge/version-2.8.1-36D9A0" alt="Version 2.8.1" />
+    <img src="https://img.shields.io/badge/version-2.8.2-36D9A0" alt="Version 2.8.2" />
     <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
     <img src="https://img.shields.io/badge/FastAPI-0.116-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.116" />
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Manifest V3" />
@@ -29,6 +29,12 @@ FX Pulse brings a compact exchange-rate dashboard and webpage hover converter in
 The extension and hover converter share the same backend, one-minute cache, watchlist, target currency, and language preference. No Tampermonkey script is required. The optional 2.5.0 userscript also reads quotes through the extension; it no longer requests ER-API or Frankfurter or keeps a separate persistent quote cache.
 
 > **Market midpoint** = `(bid + ask) / 2`. It is not a bank settlement rate, card-network rate, or central-bank fixing.
+
+## What's new in 2.8.2
+
+- **Hover card.** A tighter card with amounts in each currency's own decimals (195.22 CNY, 2,351 JPY). It opens above a price near the bottom of the window instead of covering it, offers alternatives only when a currency sign is ambiguous (¥, $), lists every covered currency in both pickers, and labels official references as such.
+- **Popup.** The simple view fits without scrolling; the detailed view has a slim scrollbar.
+- **Fresher data.** The publishing job now tries every hour and collects once the data is about four hours old, so a skipped GitHub schedule no longer leaves quotes stale.
 
 ## What's new in 2.8.1
 
@@ -202,7 +208,7 @@ Then open the extension's settings page and enter `http://localhost:8000/api/v1`
 
 ### 3. Upgrading
 
-**To 2.8.x**: reload the extension in `chrome://extensions` and verify version **2.8.1**. If you never changed the backend address, the extension now reads the public backend and you can stop a local stack you ran only for it. If you saved your own address, nothing changes.
+**To 2.8.x**: reload the extension in `chrome://extensions` and verify version **2.8.2**. If you never changed the backend address, the extension now reads the public backend and you can stop a local stack you ran only for it. If you saved your own address, nothing changes.
 
 **Self-hosted, from 2.6.x** no database migration is needed. Pull, rebuild, and reload the extension:
 
@@ -211,7 +217,7 @@ git pull
 docker compose up -d --build
 ```
 
-Reload the extension in `chrome://extensions` and verify version **2.8.1**. Since 2.7.0 the popup opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
+Reload the extension in `chrome://extensions` and verify version **2.8.2**. Since 2.7.0 the popup opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
 
 **From 2.5.0**, the notes below also apply. The 2.6.0 compatibility patch is based on commit `5816065` (including PR #14). It preserves the opt-in userscript bridge, per-source health checks, triangulated official rates, stale-source labels, and saved unavailable currencies.
 
@@ -222,7 +228,7 @@ docker compose up -d --build --force-recreate
 docker compose logs --tail=100 collector
 ```
 
-Reload the extension in `chrome://extensions`, verify version **2.8.1**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
+Reload the extension in `chrome://extensions`, verify version **2.8.2**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
 
 Confirm that `/health` reports `"provider": "alpha_vantage"`. Its `collector` array carries one heartbeat per configured official source, so a source that quietly stopped publishing surfaces instead of hiding behind the ones that still work. Initial collection may take time; existing demo observations remain marked as mock until replaced. The userscript keeps separate appearance, target-currency and calibration preferences; only the data service is shared.
 
@@ -343,8 +349,10 @@ Extension checks:
 npm ci
 npm run check:i18n
 npm run check:config
+npm run check:parser
 npm run lint
 npm test
+npm run test:userscript
 ```
 
 Backend checks:
@@ -354,6 +362,8 @@ cd backend
 pytest
 ruff check .
 ```
+
+`make check && make test && make lint` runs all of the above for both stacks.
 
 GitHub Actions runs migrations, backend and extension tests, linting, localization consistency checks, version consistency checks, and a Docker build on every push and pull request. A separate scheduled workflow publishes the [static backend](#static-backend-on-github-pages).
 
@@ -411,6 +421,8 @@ Edge 用户：打开 `edge://extensions`，在左侧打开 **开发人员模式*
 ### 项目说明
 
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
+
+2.8.2 改进了网页划词卡片：金额按各货币惯例显示小数、靠近窗口底部时卡片显示在价格上方、只在币种有歧义时（如 ¥、$）提供候选、下拉框可选全部货币；简洁视图无需滚动；数据发布改为每小时检查一次，避免定时任务被跳过后数据过期。
 
 2.8.1 重新设计了弹窗界面：选币种、看汇率、换算合并在一张卡片里，并支持跟随系统的深色模式；自选可以收藏任意两种货币的组合，点一下即可切换。
 
