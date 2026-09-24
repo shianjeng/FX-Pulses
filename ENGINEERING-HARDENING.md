@@ -29,6 +29,8 @@
 - 后端 `pytest -q`：31 项通过；有一条测试依赖的弃用警告，不影响通过。
 - 后端 `ruff check .`：通过。
 
+> 后注：`userscript/node-check.mjs` 之后已移除，这些解析用例现在由 `npm test` 覆盖；DOM 契约检查用 `npm run test:userscript` 运行。全部检查可用 `make check && make test`。
+
 ## 仍需知晓的边界
 
 此次未运行真实 Chrome/Tampermonkey、Docker、GitHub Actions 或真实 Alpha Vantage 端到端测试；已更新视觉检查脚本，但当前环境未执行它。

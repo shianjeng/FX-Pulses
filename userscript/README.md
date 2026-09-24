@@ -23,7 +23,9 @@ HTTP/HTTPS 顶层网页受支持；不支持文件网址、iframe、浏览器内
 
 ```bash
 node userscript/build-extension-parser.mjs
+npm run check:parser   # CI 也会检查生成文件是否与脚本一致
 npm test
+npm run test:userscript
 npm run lint
 ```
 
