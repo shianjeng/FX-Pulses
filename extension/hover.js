@@ -18,6 +18,7 @@
     guessed: "hoverGuessed", disclaimer: "hoverDisclaimer", manual: "hoverManual",
     copied: "copied", cross: "crossRate", official: "hoverOfficial",
     officialLoading: "loadingOfficial", also: "hoverAlso", market: "hoverMarket",
+    officialDisclaimer: "hoverOfficialDisclaimer",
   };
   const tr = key => {
     const table = globalThis.FXMessages || {};
@@ -335,7 +336,8 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
       try { await navigator.clipboard.writeText(text); copy.textContent = tr("copied"); }
       catch { const input = el("input"); input.readOnly = true; input.value = text; input.setAttribute("aria-label", tr("manual")); card.append(el("p", tr("manual"), "note"), input); input.focus(); input.select(); }
     };
-    foot.append(el("p", tr("disclaimer"), "note"), copy);
+    // The market disclaimer called an official reference a "market midpoint".
+    foot.append(el("p", tr(isOfficial ? "officialDisclaimer" : "disclaimer"), "note"), copy);
     card.append(foot);
     place();
   }
