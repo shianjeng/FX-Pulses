@@ -529,5 +529,8 @@
   },
   "hoverMarket": {
     "message": "市场中间价"
+  },
+  "hoverOfficialDisclaimer": {
+    "message": "官方日参考价，仅供参考，不含手续费。"
   }
 }

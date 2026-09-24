@@ -10,8 +10,13 @@ name: Publish static backend
 
 on:
   schedule:
-    # Market data refreshes every 4 hours; official sources publish daily.
-    - cron: "5 */4 * * *"
+    # GitHub starts scheduled runs late and sometimes drops them, most of all
+    # near the top of the hour: on the first day a "5 */4" schedule ran 4 times
+    # in 28 hours, up to 3.5 hours late, and the data went stale. Ask every hour
+    # at an off-peak minute; the `due` job lets a run through only once the
+    # published data is about four hours old, so the cadence and the Alpha
+    # Vantage budget stay the same while a dropped run costs an hour, not four.
+    - cron: "41 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -25,7 +30,32 @@ permissions:
   id-token: write
 
 jobs:
+  due:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Decide whether a collection is due
+        id: check
+        env:
+          EVENT: ${{ github.event_name }}
+          META: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/api/v1/meta.json
+        run: |
+          # A manual run always collects.
+          if [ "$EVENT" != "schedule" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          # Minutes since the market job last succeeded. Unreadable, missing or
+          # never-succeeded data counts as due: a spare run beats a missed one.
+          age=$(curl -fsS "$META" | jq -r --argjson now "$(date +%s)" '
+            [.collector[]? | select(.job == "market") | .last_success_at // empty
+             | sub("\\.[0-9]+"; "") | fromdateiso8601][0] // empty
+            | ($now - .) / 60 | floor') || age=""
+          echo "published market data is ${age:-of unknown} age (minutes)"
+          # 230, not 240: an hourly run landing a few minutes early still counts.
+          if [ -n "$age" ] && [ "$age" -lt 230 ]; then echo "run=false"; else echo "run=true"; fi >> "$GITHUB_OUTPUT"
+
   publish:
+    needs: due
+    if: needs.due.outputs.run == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -177,7 +177,8 @@ globalThis.FXMessages = {
     "watchRemove": "从自选移除 $1",
     "watchHint": "在上方任选两种货币后加入；点一行即可切换到该币对。",
     "hoverAlso": "也可能是：",
-    "hoverMarket": "市场中间价"
+    "hoverMarket": "市场中间价",
+    "hoverOfficialDisclaimer": "官方日参考价，仅供参考，不含手续费。"
   },
   "en": {
     "extensionName": "FX Pulse — exchange rates at hand",
@@ -356,7 +357,8 @@ globalThis.FXMessages = {
     "watchRemove": "Remove $1 from watchlist",
     "watchHint": "Pick any two currencies above, then add them. Select a row to switch to that pair.",
     "hoverAlso": "Could also be:",
-    "hoverMarket": "Market midpoint"
+    "hoverMarket": "Market midpoint",
+    "hoverOfficialDisclaimer": "Official daily reference; fees excluded."
   },
   "ja": {
     "extensionName": "FX Pulse — 手元で為替レート",
@@ -535,6 +537,7 @@ globalThis.FXMessages = {
     "watchRemove": "$1 をウォッチリストから削除",
     "watchHint": "上で任意の2通貨を選んで追加します。行を選ぶとその通貨ペアに切り替わります。",
     "hoverAlso": "他の候補：",
-    "hoverMarket": "市場仲値"
+    "hoverMarket": "市場仲値",
+    "hoverOfficialDisclaimer": "公式の日次参考レートによる概算です。手数料は含みません。"
   }
 };
