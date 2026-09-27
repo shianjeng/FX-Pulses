@@ -7,11 +7,11 @@
 
   A privacy-friendly Chrome extension that works out of the box: rates come from a free static backend on GitHub Pages, or from your own FastAPI server.
 
-  [What's New](#whats-new-in-282) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
+  [What's New](#whats-new-in-283) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
 
   <p>
     <a href="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml"><img src="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
-    <img src="https://img.shields.io/badge/version-2.8.2-36D9A0" alt="Version 2.8.2" />
+    <img src="https://img.shields.io/badge/version-2.8.3-36D9A0" alt="Version 2.8.3" />
     <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
     <img src="https://img.shields.io/badge/FastAPI-0.116-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.116" />
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Manifest V3" />
@@ -29,6 +29,14 @@ FX Pulse brings a compact exchange-rate dashboard and webpage hover converter in
 The extension and hover converter share the same backend, one-minute cache, watchlist, target currency, and language preference. No Tampermonkey script is required. The optional 2.5.0 userscript also reads quotes through the extension; it no longer requests ER-API or Frankfurter or keeps a separate persistent quote cache.
 
 > **Market midpoint** = `(bid + ask) / 2`. It is not a bank settlement rate, card-network rate, or central-bank fixing.
+
+## What's new in 2.8.3
+
+Maintenance release; the extension behaves as in 2.8.2.
+
+- **Security updates.** The backend moves to FastAPI 0.141 with Starlette 1.7, which fixes published Starlette advisories (Host-header path poisoning, ignored form limits, Range-header DoS). Uvicorn, SQLAlchemy 2.1, psycopg, pydantic-settings and APScheduler are current, and so are the dev tools: pytest 9 (fixes a tmpdir advisory), Ruff 0.16, ESLint 10 and jsdom 30.
+- **Fresher data.** GitHub ran the hourly publishing schedule only about five times a day, so quotes were sometimes more than six hours old and shown as outdated. The job now collects once data is three hours old, still within the Alpha Vantage budget, and accepts an external pinger that fills GitHub's gaps without spending extra calls. See [Keeping the data fresh](#keeping-the-data-fresh).
+- **CI.** Workflows use the current major versions of the GitHub actions, which run on Node 24.
 
 ## What's new in 2.8.2
 
@@ -143,7 +151,7 @@ User watchlists, targets, language selection, hover preferences, and per-site cu
 
 ## Quick start
 
-FX Pulse works out of the box. The extension reads a public backend that this repository refreshes every four hours on GitHub Pages, so you do not need Docker, a server, or an API key.
+FX Pulse works out of the box. The extension reads a public backend that this repository refreshes every few hours on GitHub Pages, so you do not need Docker, a server, or an API key.
 
 ### 1. Install the extension
 
@@ -208,7 +216,7 @@ Then open the extension's settings page and enter `http://localhost:8000/api/v1`
 
 ### 3. Upgrading
 
-**To 2.8.x**: reload the extension in `chrome://extensions` and verify version **2.8.2**. If you never changed the backend address, the extension now reads the public backend and you can stop a local stack you ran only for it. If you saved your own address, nothing changes.
+**To 2.8.x**: reload the extension in `chrome://extensions` and verify version **2.8.3**. If you never changed the backend address, the extension now reads the public backend and you can stop a local stack you ran only for it. If you saved your own address, nothing changes.
 
 **Self-hosted, from 2.6.x** no database migration is needed. Pull, rebuild, and reload the extension:
 
@@ -217,7 +225,7 @@ git pull
 docker compose up -d --build
 ```
 
-Reload the extension in `chrome://extensions` and verify version **2.8.2**. Since 2.7.0 the popup opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
+Reload the extension in `chrome://extensions` and verify version **2.8.3**. Since 2.7.0 the popup opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
 
 **From 2.5.0**, the notes below also apply. The 2.6.0 compatibility patch is based on commit `5816065` (including PR #14). It preserves the opt-in userscript bridge, per-source health checks, triangulated official rates, stale-source labels, and saved unavailable currencies.
 
@@ -228,7 +236,7 @@ docker compose up -d --build --force-recreate
 docker compose logs --tail=100 collector
 ```
 
-Reload the extension in `chrome://extensions`, verify version **2.8.2**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
+Reload the extension in `chrome://extensions`, verify version **2.8.3**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
 
 Confirm that `/health` reports `"provider": "alpha_vantage"`. Its `collector` array carries one heartbeat per configured official source, so a source that quietly stopped publishing surfaces instead of hiding behind the ones that still work. Initial collection may take time; existing demo observations remain marked as mock until replaced. The userscript keeps separate appearance, target-currency and calibration preferences; only the data service is shared.
 
@@ -238,7 +246,7 @@ Official references remain clearly labelled daily fallbacks for broader currency
 
 ## Static backend on GitHub Pages
 
-The API is read-only and only ever returns what the collector stored, so it can be served as plain files. [`publish.yml`](.github/workflows/publish.yml) does this every four hours: it collects one round, exports the API to JSON, and deploys it to GitHub Pages. No server runs between collections, and extension users never need an Alpha Vantage key.
+The API is read-only and only ever returns what the collector stored, so it can be served as plain files. [`publish.yml`](.github/workflows/publish.yml) does this every few hours: it collects one round, exports the API to JSON, and deploys it to GitHub Pages. No server runs between collections, and extension users never need an Alpha Vantage key.
 
 One-time setup in the repository:
 
@@ -264,6 +272,30 @@ npm run check:config
 ```
 
 The check fails if the manifest does not cover the default backend, or if a non-local default uses plain HTTP. CI runs it on every push.
+
+### Keeping the data fresh
+
+The workflow asks every hour and collects once the published data is three hours old: at most eight rounds of three pairs a day, inside the 25-call Alpha Vantage budget that the collector also enforces. GitHub does not run schedules on time, though. In late September 2026 it fired this one about five times a day, 2.7 to 8.1 hours apart, so data sometimes passed the six-hour mark at which the extension shows it as outdated.
+
+Any scheduler you trust can fill the gaps by dispatching the workflow with `force=false` every 30 minutes. Such a run goes through the same three-hour check, so it costs a few seconds of Actions time and no Alpha Vantage calls when the data is fresh.
+
+- **From a machine that is usually on**, with the GitHub CLI signed in:
+
+  ```bash
+  gh workflow run publish.yml -R <user>/<repo> -f force=false
+  ```
+
+- **From a hosted cron service**, send this request. Use a fine-grained token scoped to this repository with only **Actions: Read and write**; it can start workflows but cannot change code.
+
+  ```http
+  POST https://api.github.com/repos/<user>/<repo>/actions/workflows/publish.yml/dispatches
+  Authorization: Bearer <token>
+  Accept: application/vnd.github+json
+
+  {"ref": "main", "inputs": {"force": "false"}}
+  ```
+
+**Run workflow** in the Actions tab still collects immediately, because `force` defaults to true.
 
 Time-dependent fields are never frozen into the files. `meta.json` carries collection timestamps and thresholds, and the extension decides whether a quote is stale or a collector has stalled, so a CDN serving an old file cannot make a dead collector look healthy. History is published as one 90-day file per pair and sliced in the browser.
 
@@ -421,6 +453,8 @@ Edge 用户：打开 `edge://extensions`，在左侧打开 **开发人员模式*
 ### 项目说明
 
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
+
+2.8.3 为维护版本，插件功能与 2.8.2 相同：后端升级到 FastAPI 0.141 / Starlette 1.7，修复了 Starlette 已公开的安全问题（Host 头导致路径判断被绕过、表单大小限制失效、Range 头拒绝服务），其余依赖与开发工具一并更新；GitHub 实际每天只执行约 5 次定时任务，数据有时超过 6 小时被标为过期，因此改为数据满 3 小时即采集（仍在 Alpha Vantage 每日额度内），并支持用外部定时器补足 GitHub 漏掉的触发，详见上文 Keeping the data fresh。
 
 2.8.2 改进了网页划词卡片：金额按各货币惯例显示小数、靠近窗口底部时卡片显示在价格上方、只在币种有歧义时（如 ¥、$）提供候选、下拉框可选全部货币；简洁视图无需滚动；数据发布改为每小时检查一次，避免定时任务被跳过后数据过期。
 
