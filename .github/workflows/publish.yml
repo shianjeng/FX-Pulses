@@ -14,10 +14,20 @@ on:
     # near the top of the hour: on the first day a "5 */4" schedule ran 4 times
     # in 28 hours, up to 3.5 hours late, and the data went stale. Ask every hour
     # at an off-peak minute; the `due` job lets a run through only once the
-    # published data is about four hours old, so the cadence and the Alpha
-    # Vantage budget stay the same while a dropped run costs an hour, not four.
+    # published data is about three hours old, so the Alpha Vantage budget holds
+    # while a dropped run costs an hour, not four.
+    #
+    # Hourly was not enough either: from 23 to 27 September 2026 GitHub fired
+    # this schedule about five times a day, 2.7 to 8.1 hours apart. An external
+    # pinger can fill the gaps through workflow_dispatch with force=false (see
+    # "Keeping the data fresh" in the README); it passes the same gate.
     - cron: "41 * * * *"
   workflow_dispatch:
+    inputs:
+      force:
+        description: Collect even if the published data is still fresh
+        type: boolean
+        default: true
 
 concurrency:
   # Two overlapping runs would race on the data branch and lose a collection.
@@ -39,10 +49,12 @@ jobs:
         id: check
         env:
           EVENT: ${{ github.event_name }}
+          FORCE: ${{ inputs.force }}
           META: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/api/v1/meta.json
         run: |
-          # A manual run always collects.
-          if [ "$EVENT" != "schedule" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          # A manual run always collects; a pinger dispatching with force=false
+          # goes through the same gate as the schedule.
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$FORCE" != "false" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           # Minutes since the market job last succeeded. Unreadable, missing or
           # never-succeeded data counts as due: a spare run beats a missed one.
           age=$(curl -fsS "$META" | jq -r --argjson now "$(date +%s)" '
@@ -50,8 +62,9 @@ jobs:
              | sub("\\.[0-9]+"; "") | fromdateiso8601][0] // empty
             | ($now - .) / 60 | floor') || age=""
           echo "published market data is ${age:-of unknown} age (minutes)"
-          # 230, not 240: an hourly run landing a few minutes early still counts.
-          if [ -n "$age" ] && [ "$age" -lt 230 ]; then echo "run=false"; else echo "run=true"; fi >> "$GITHUB_OUTPUT"
+          # 180 minutes: at most eight collections of three pairs in any 24 hours,
+          # 24 calls against the 25-call budget the collector enforces.
+          if [ -n "$age" ] && [ "$age" -lt 180 ]; then echo "run=false"; else echo "run=true"; fi >> "$GITHUB_OUTPUT"
 
   publish:
     needs: due
@@ -66,9 +79,9 @@ jobs:
       OFFICIAL_SOURCES: ecb,bank_of_canada,federal_reserve,bank_of_japan,pboc
       DATABASE_URL: sqlite:///./fx_pulse.db
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -118,9 +131,9 @@ jobs:
         env:
           GIT_TERMINAL_PROMPT: "0"
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: public
-      - uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v5
         id: deploy
