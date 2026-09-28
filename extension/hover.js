@@ -101,6 +101,22 @@
   }
   const storedCode = value => validCode(value) ? value : validCode(value?.code) ? value.code : null;
 
+  /* The popup's preferredOfficial(), rule for rule: rank institutions by
+     measured accuracy (BoC and ECB ahead of the PBOC's administered CNY fixing,
+     the BoJ and the week-late Federal Reserve), and let freshness decide only
+     among references within four days of the newest. See popup.js for the
+     numbers behind the ranking. */
+  const OFFICIAL_RANK = {"Bank of Canada": 0, "European Central Bank": 0, "People's Bank of China": 1, "Bank of Japan": 1, "Federal Reserve Board": 2};
+  function preferredOfficial(rows) {
+    const day = row => Date.parse(`${row?.reference_date}T00:00:00Z`);
+    const valid = rows.filter(row => Number(row?.rate) > 0 && Number.isFinite(day(row)));
+    if (!valid.length) return null;
+    const newest = Math.max(...valid.map(day));
+    const rank = row => row.via_currency ? 9 : OFFICIAL_RANK[row.institution] ?? 5;
+    return valid.filter(row => newest - day(row) <= 4 * 86400000)
+      .sort((a, b) => rank(a) - rank(b) || day(b) - day(a))[0];
+  }
+
   function officialFor(from, to) {
     const key = `${from}/${to}`;
     const cached = officialCache.get(key);
@@ -114,11 +130,7 @@
     chrome.runtime.sendMessage({type: "FX_OFFICIAL", path: `/official-rates/${from}/${to}`})
       .then(reply => {
         const rows = reply?.ok && Array.isArray(reply.data) ? reply.data : [];
-        // Providers update on different calendars. Prefer the newest observation
-        // instead of whichever institution happens to be returned first.
-        const best = rows
-          .filter(row => Number(row?.rate) > 0 && Number.isFinite(Date.parse(row.reference_date)))
-          .sort((a, b) => Date.parse(b.reference_date) - Date.parse(a.reference_date))[0];
+        const best = preferredOfficial(rows);
         officialCache.set(key, best ? {
           value: Number(best.rate), institution: best.institution,
           date: best.reference_date, derived: best.is_derived, cachedAt: Date.now(),
