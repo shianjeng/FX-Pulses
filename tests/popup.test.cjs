@@ -93,7 +93,7 @@ test("converter reverses and target persists locally", async () => {
   app.close();
 });
 
-test("official-only conversion selects the newest reference and preserves preferences", async () => {
+test("official-only conversion selects the preferred reference and preserves preferences", async () => {
   const app = await setup();
   try {
     const el = id => app.w.document.getElementById(id);

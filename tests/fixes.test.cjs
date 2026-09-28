@@ -250,7 +250,7 @@ test('a currency the market feed lacks falls back to a labelled official rate', 
   assert.doesNotMatch(card, /not configured/);
 });
 
-test('hover selects the newest official observation and retries a negative cache', async t => {
+test('hover selects the preferred official observation and retries a negative cache', async t => {
   const official = [
     {rate: '7.5', institution: 'Bank of Canada', reference_date: '2026-08-01'},
     {rate: '8', institution: 'European Central Bank', reference_date: '2026-09-18'},
