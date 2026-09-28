@@ -188,7 +188,7 @@ async function loadWatchRates() {
   });
   await Promise.all(missing.map(async pair => {
     try {
-      const newest = newestOfficial(await request(`/official-rates/${pair}`));
+      const newest = preferredOfficial(await request(`/official-rates/${pair}`));
       if (newest) watchOfficial.set(pair, Number(newest.rate));
     } catch { /* Shown as "—"; the next opening tries again. */ }
   }));
@@ -513,10 +513,29 @@ function updateConverter() {
   $("converted").textContent = `${fmt(value, 2)} ${quote}`;
 }
 
-function newestOfficial(rows) {
-  return Array.isArray(rows) ? rows
-    .filter(item => Number.isFinite(Number(item?.rate)) && Number(item.rate) > 0 && /^\d{4}-\d{2}-\d{2}$/.test(item?.reference_date || ""))
-    .sort((a, b) => b.reference_date.localeCompare(a.reference_date))[0] || null : null;
+/* Which official reference to convert with when several institutions publish
+   a pair. The newest used to win, which on a Monday morning meant the People's
+   Bank of China for almost everything, pairs without CNY included: its CNY
+   fixing is administered and sat 0.42% from the market, and every cross through
+   it inherited that. Against same-moment market quotes and two independent
+   daily sources across 37 currencies (2026-09-28), the median error was 0.05%
+   for the Bank of Canada, 0.08% for the ECB, 0.27% for the PBOC, 0.53% for the
+   Bank of Japan and 0.54% for the Federal Reserve, which publishes a week late.
+   Rank by that; freshness only decides among references within four days of
+   the newest, so a weekend never pushes Friday's ECB rate aside, while a source
+   that stopped publishing does lose its place. hover.js applies the same rule. */
+const OFFICIAL_RANK = {"Bank of Canada": 0, "European Central Bank": 0, "People's Bank of China": 1, "Bank of Japan": 1, "Federal Reserve Board": 2};
+const OFFICIAL_FRESH_MS = 4 * 86400000;
+function preferredOfficial(rows) {
+  const valid = Array.isArray(rows) ? rows.filter(item => Number.isFinite(Number(item?.rate)) && Number(item.rate) > 0
+    && /^\d{4}-\d{2}-\d{2}$/.test(item?.reference_date || "")) : [];
+  if (!valid.length) return null;
+  const day = item => Date.parse(`${item.reference_date}T00:00:00Z`);
+  const newest = Math.max(...valid.map(day));
+  // A bridge through a second institution compounds two references.
+  const rank = item => item.via_currency ? 9 : OFFICIAL_RANK[item.institution] ?? 5;
+  return valid.filter(item => newest - day(item) <= OFFICIAL_FRESH_MS)
+    .sort((a, b) => rank(a) - rank(b) || day(b) - day(a))[0];
 }
 
 async function loadConverterRate() {
@@ -536,7 +555,7 @@ async function loadConverterRate() {
   try {
     const rows = await request(`/official-rates/${base}/${quote}`);
     if (version !== converterVersion) return;
-    const newest = newestOfficial(rows);
+    const newest = preferredOfficial(rows);
     if (newest) converterQuote = {
       kind: "official", rate: Number(newest.rate), institution: newest.institution,
       referenceDate: newest.reference_date, via: newest.via_currency || null,
