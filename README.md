@@ -30,6 +30,11 @@ The extension and hover converter share the same backend, one-minute cache, watc
 
 > **Market midpoint** = `(bid + ask) / 2`. It is not a bank settlement rate, card-network rate, or central-bank fixing.
 
+## What's new in 2.8.4
+
+- **More accurate official references.** When several central banks publish a pair, the extension used to take whichever reference was newest. On Monday mornings that was almost always the People's Bank of China, whose administered CNY fixing ran 0.3-0.4% away from the market, and every cross rate through it inherited the gap (USD/KRW +0.37%, EUR/USD −0.28%). The popup and the hover card now prefer the most accurate source: measured against market quotes across 37 currencies, the median error was 0.05% for the Bank of Canada, 0.08% for the ECB, 0.27% for the PBOC, 0.53% for the Bank of Japan and 0.54% for the Federal Reserve. The reference date still matters, but only between sources within four days of the newest.
+- Market quotes from Alpha Vantage were checked against same-moment quotes and were accurate (within 0.05%); they are unchanged.
+
 ## What's new in 2.8.3
 
 Maintenance release; the extension behaves as in 2.8.2.
@@ -101,7 +106,7 @@ FX Pulse labels each data layer instead of presenting unrelated rates as if they
 
 The main dashboard and converter share two currency selectors and one selected-pair card. Selecting a pair updates conversion, official comparisons, and the history panel together. Direct market quotes are preferred; reverse quotes use reciprocal prices, with bid/ask sides swapped. Market history is inverted when only the reverse pair is tracked. Pairs without market history show an explicit notice. Your last selection is saved.
 
-The popup discovers available currencies from `/api/v1/currencies` instead of limiting selection to the three default market pairs. It prefers direct or inverse market quotes, then selects the newest available official reference for the chosen pair. Official coverage depends on successfully collected tables. A pair may use one institution or triangulate across two institutions through a shared currency; the latter retains both sources, the bridging currency, and the older reference date. Missing rates are shown explicitly. History and target alerts continue to use configured market pairs.
+The popup discovers available currencies from `/api/v1/currencies` instead of limiting selection to the three default market pairs. It prefers direct or inverse market quotes, then the most accurate official reference for the chosen pair: the Bank of Canada and the ECB first, then the People's Bank of China and the Bank of Japan, then the Federal Reserve, whose H.10 release arrives about a week late. A reference more than four days older than the newest one available drops out, so a source that stopped publishing does not win on reputation. Official coverage depends on successfully collected tables. A pair may use one institution or triangulate across two institutions through a shared currency; the latter retains both sources, the bridging currency, and the older reference date. Missing rates are shown explicitly. History and target alerts continue to use configured market pairs.
 
 Official cross-rates retain their institution, reference date, fetch time, source URL, and an `is_derived` marker. They are never described as live or tradable quotes.
 
@@ -453,6 +458,8 @@ Edge 用户：打开 `edge://extensions`，在左侧打开 **开发人员模式*
 ### 项目说明
 
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
+
+同一币对有多家央行报价时，2.8.4 起按实测准确度挑选（加拿大央行、欧洲央行优先，其次人民银行、日本银行，最后是晚一周发布的美联储），日期只在最新报价前后四天内的来源之间起作用。此前按“日期最新”挑选，周一早上几乎总会选中人民银行的中间价，与市场偏差 0.3%～0.4%。
 
 2.8.3 为维护版本，插件功能与 2.8.2 相同：后端升级到 FastAPI 0.141 / Starlette 1.7，修复了 Starlette 已公开的安全问题（Host 头导致路径判断被绕过、表单大小限制失效、Range 头拒绝服务），其余依赖与开发工具一并更新；GitHub 实际每天只执行约 5 次定时任务，数据有时超过 6 小时被标为过期，因此改为数据满 3 小时即采集（仍在 Alpha Vantage 每日额度内），并支持用外部定时器补足 GitHub 漏掉的触发，详见上文 Keeping the data fresh。
 
