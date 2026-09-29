@@ -171,6 +171,7 @@ async function snapshot(force = false) {
       snapshots.set(key, value);
       snapshots.delete(key + "|error");
       if (chrome.storage.session) await chrome.storage.session.set({fxSnapshot: value});
+      void paintBadge(value);
       return value;
     } catch (error) {
       if (version !== generation) throw error;
@@ -179,6 +180,7 @@ async function snapshot(force = false) {
       const value = {...saved, fetchedAt: Date.now(), offline: true, error: error.message};
       snapshots.set(key, value);
       if (chrome.storage.session) await chrome.storage.session.set({fxSnapshot: value});
+      void paintBadge(value);
       return value;
     }
   })();
@@ -301,7 +303,76 @@ async function checkTargets() {
   await chrome.storage.local.set({alertState: state});
 }
 
-chrome.alarms?.onAlarm.addListener(alarm => { if (alarm.name === FX_ALARM) void checkTargets(); });
+/* ---- Opt-in toolbar badge -------------------------------------------------
+   One pair's rate on the extension icon, readable without opening anything.
+   It is painted from every snapshot the worker fetches anyway, and an alarm
+   asks for one every 30 minutes while it is on: the shared one-minute cache,
+   no extra upstream calls. Grey means the quote is old or the source offline. */
+const FX_BADGE_ALARM = "fx-badge";
+const FX_BADGE_MINUTES = 30;
+const FX_LOCALES = {zh: "zh-CN", en: "en-US", ja: "ja-JP"};
+
+// Chrome shows about four characters: 6.70, 23.4, 157, 1.4k, .043, 6e-5.
+function badgeText(value) {
+  if (!Number.isFinite(value) || value <= 0) return "";
+  if (value >= 999500) return value.toExponential(0).replace("e+", "e");
+  if (value >= 9950) return `${Math.round(value / 1000)}k`;
+  if (value >= 999.5) return `${(value / 1000).toFixed(1)}k`;
+  if (value >= 99.95) return String(Math.round(value));
+  if (value >= 9.995) return value.toFixed(1);
+  if (value >= 0.9995) return value.toFixed(2);
+  if (value >= 0.0005) return value.toFixed(3).slice(1);
+  return value.toExponential(0);
+}
+
+async function paintBadge(data) {
+  if (!chrome.action) return;
+  try {
+    const {badgePair} = await chrome.storage.local.get({badgePair: ""});
+    if (!/^[A-Z]{3}\/[A-Z]{3}$/.test(badgePair || "")) {
+      await chrome.action.setBadgeText({text: ""});
+      await chrome.action.setTitle({title: "FX Pulse"});
+      return;
+    }
+    const [base, quote] = badgePair.split("/");
+    const rates = Array.isArray(data?.rates) ? data.rates : [];
+    const direct = rates.find(rate => rate.base_currency === base && rate.quote_currency === quote);
+    const reverse = rates.find(rate => rate.base_currency === quote && rate.quote_currency === base);
+    const source = direct || reverse;
+    const grey = {color: "#8c98a6"};
+    // Nothing to show this time: keep the last number, but say it is not current.
+    if (!source) { await chrome.action.setBadgeBackgroundColor(grey); return; }
+    const value = direct ? Number(direct.midpoint) : 1 / Number(reverse.midpoint);
+    const old = data.offline || source.is_stale;
+    const locale = FX_LOCALES[workerLanguage] || "zh-CN";
+    const time = new Date(source.captured_at).toLocaleString(locale, {month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit"});
+    const shown = new Intl.NumberFormat(locale, {maximumSignificantDigits: 6}).format(value);
+    await chrome.action.setBadgeText({text: badgeText(value)});
+    await chrome.action.setBadgeBackgroundColor(old ? grey : {color: "#0b8a6f"});
+    await chrome.action.setBadgeTextColor?.({color: "#ffffff"});
+    await chrome.action.setTitle({title: t("badgeTooltip", badgePair, shown, time) + (old ? ` · ${t("outdated")}` : "")});
+  } catch (error) { console.warn("Badge update failed", error.message); }
+}
+
+async function syncBadge() {
+  const {badgePair} = await chrome.storage.local.get({badgePair: ""});
+  if (!badgePair) {
+    await chrome.alarms?.clear(FX_BADGE_ALARM);
+    await paintBadge(null);
+    return;
+  }
+  if (chrome.alarms && !await chrome.alarms.get(FX_BADGE_ALARM)) {
+    await chrome.alarms.create(FX_BADGE_ALARM, {periodInMinutes: FX_BADGE_MINUTES});
+  }
+  let data = null;
+  try { data = await snapshot(); } catch { /* painted grey below */ }
+  await paintBadge(data);
+}
+
+chrome.alarms?.onAlarm.addListener(alarm => {
+  if (alarm.name === FX_ALARM) void checkTargets();
+  if (alarm.name === FX_BADGE_ALARM) void syncBadge();
+});
 
 /* Our own content script is trusted because hover is on; anything a web page
    relays through the bridge additionally requires the bridge opt-in. */
@@ -345,10 +416,11 @@ chrome.storage.onChanged.addListener((changes, area) => {
     generation++; snapshots.clear(); requests.clear(); pending.clear();
     if (chrome.storage.session) void chrome.storage.session.remove("fxSnapshot");
   }
+  if (changes.badgePair || changes.apiUrl || changes.backendMode || changes.language) void syncBadge();
   if (changes.hoverEnabled || changes.bridgeEnabled) void queueRegistration();
   if (changes.alertsEnabled || changes.alertIntervalMinutes) void syncAlarms();
   if (changes.language && FX_LANGUAGES.includes(changes.language.newValue)) workerLanguage = changes.language.newValue;
 });
 chrome.permissions.onRemoved.addListener(() => { void queueRegistration(); void syncAlarms(); });
-chrome.runtime.onInstalled.addListener(() => { void queueRegistration(); void syncAlarms(); });
-chrome.runtime.onStartup.addListener(() => { void queueRegistration(); void syncAlarms(); });
+chrome.runtime.onInstalled.addListener(() => { void queueRegistration(); void syncAlarms(); void syncBadge(); });
+chrome.runtime.onStartup.addListener(() => { void queueRegistration(); void syncAlarms(); void syncBadge(); });

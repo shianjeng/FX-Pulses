@@ -147,6 +147,49 @@ hoverEnabled.addEventListener("change", async () => {
   } finally { hoverEnabled.disabled = false; }
 });
 
+/* ---- Toolbar badge (opt-in) ------------------------------------------------
+   Market pairs only, either way round: an official-only rate changes once a
+   day and would need its own request, which the badge is meant never to cost. */
+const badgeInfo = document.createElement("section");
+const badgeHeading = document.createElement("h2");
+badgeHeading.textContent = t("badgeSectionTitle");
+const badgeDescription = document.createElement("p");
+badgeDescription.textContent = t("badgeDescription");
+const badgeLabel = document.createElement("label");
+badgeLabel.textContent = t("badgeLabel");
+const badgeSelect = document.createElement("select");
+badgeSelect.id = "badge-pair";
+badgeLabel.append(badgeSelect);
+const badgeResult = document.createElement("p");
+badgeResult.id = "badge-result"; badgeResult.setAttribute("role", "status");
+badgeInfo.append(badgeHeading, badgeDescription, badgeLabel, badgeResult);
+document.querySelector("main").append(badgeInfo);
+
+function setBadgeOptions(pairs, selected) {
+  const valid = pair => typeof pair === "string" && /^[A-Z]{3}\/[A-Z]{3}$/.test(pair);
+  const both = pairs.filter(valid).flatMap(pair => [pair, pair.split("/").reverse().join("/")]);
+  const all = [...new Set([...both, selected].filter(valid))];
+  const off = document.createElement("option");
+  off.value = ""; off.textContent = t("badgeOff");
+  badgeSelect.replaceChildren(off, ...all.map(pair => {
+    const option = document.createElement("option"); option.value = pair; option.textContent = pair; return option;
+  }));
+  badgeSelect.value = selected || "";
+}
+chrome.storage.local.get({badgePair: ""}).then(async ({badgePair}) => {
+  setBadgeOptions(["USD/CNY", "USD/JPY", "CNY/JPY"], badgePair);
+  try {
+    const reply = await chrome.runtime?.sendMessage?.({type: "FX_API", path: "/currencies"});
+    const pairs = reply?.ok && Array.isArray(reply.data?.market_pairs) ? reply.data.market_pairs : [];
+    if (pairs.length) setBadgeOptions(pairs, badgeSelect.value);
+  } catch { /* the defaults remain */ }
+});
+badgeSelect.addEventListener("change", async () => {
+  // The worker repaints the icon when it sees the change.
+  await chrome.storage.local.set({badgePair: badgeSelect.value});
+  badgeResult.textContent = t("settingsSaved");
+});
+
 /* ---- Target alerts (opt-in, background checks) ---------------------------- */
 const alertInfo = document.createElement("section");
 const alertHeading = document.createElement("h2");

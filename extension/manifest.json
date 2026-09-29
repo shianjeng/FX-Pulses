@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "2.8.4",
+  "version": "2.8.5",
   "default_locale": "zh_CN",
   "description": "__MSG_extensionDescription__",
   "minimum_chrome_version": "116",
@@ -17,5 +17,8 @@
     "default_title": "FX Pulse",
     "default_popup": "popup.html"
   },
-  "options_page": "options.html"
+  "options_page": "options.html",
+  "commands": {
+    "_execute_action": {"suggested_key": {"default": "Alt+Shift+F"}}
+  }
 }

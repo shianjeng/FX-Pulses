@@ -175,3 +175,101 @@ def test_default_live_provider_requires_key(monkeypatch):
         Settings(_env_file=None)
     assert Settings(alpha_vantage_api_key="test", _env_file=None).fx_provider == "alpha_vantage"
     assert Settings(fx_provider="mock", _env_file=None).fx_provider == "mock"
+
+
+def av_quote(base="USD", quote="CNY", captured_at=None):
+    return Quote(base, quote, Decimal("7"), Decimal("7.2"), Decimal("7.1"), "alpha_vantage",
+                 captured_at or datetime.now(timezone.utc))
+
+
+def metered(monkeypatch, provider):
+    sleep = AsyncMock()
+    monkeypatch.setattr(get_settings(), "fx_provider", "alpha_vantage")
+    monkeypatch.setattr(get_settings(), "provider_request_spacing_seconds", 15)
+    monkeypatch.setattr("app.services.get_provider", lambda: provider)
+    monkeypatch.setattr("app.services.asyncio.sleep", sleep)
+    return sleep
+
+
+@pytest.mark.asyncio
+async def test_a_transient_failure_is_retried_once_and_counted(monkeypatch):
+    from app.models import ProviderRequest
+    from app.providers import TransientProviderError
+    provider = AsyncMock()
+    provider.get_quote.side_effect = [TransientProviderError("timeout")] + [av_quote()] * 3
+    sleep = metered(monkeypatch, provider)
+
+    assert await refresh_all_rates() == {"refreshed": 3, "errors": 0}
+    assert provider.get_quote.await_count == 4
+    assert sleep.await_args_list[0] == call(15)
+    with SessionLocal() as db:
+        # The retry is a real upstream call, so it spends budget like one.
+        assert len(db.scalars(select(ProviderRequest)).all()) == 4
+
+
+@pytest.mark.asyncio
+async def test_a_second_transient_failure_gives_up_on_that_pair_only(monkeypatch, caplog):
+    from app.providers import TransientProviderError
+    provider = AsyncMock()
+    failure = TransientProviderError("timeout")
+    provider.get_quote.side_effect = [failure, failure, av_quote(), av_quote()]
+    metered(monkeypatch, provider)
+
+    assert await refresh_all_rates() == {"refreshed": 2, "errors": 1}
+    assert "Retrying USD/CNY" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_a_rejected_request_is_not_retried(monkeypatch):
+    provider = AsyncMock()
+    provider.get_quote.side_effect = ProviderError("Alpha Vantage rejected the pair or API key")
+    metered(monkeypatch, provider)
+    assert await refresh_all_rates() == {"refreshed": 0, "errors": 3}
+    assert provider.get_quote.await_count == 3
+
+
+@pytest.mark.asyncio
+async def test_skip_fresh_fetches_only_the_pairs_that_fell_behind(monkeypatch):
+    from app.models import CollectorRun
+    now = datetime.now(timezone.utc)
+    with SessionLocal() as db:
+        store_quote(db, av_quote("USD", "CNY", now - timedelta(minutes=20)))
+        store_quote(db, av_quote("USD", "JPY", now - timedelta(minutes=200)))
+    provider = AsyncMock()
+    provider.get_quote.return_value = av_quote()
+    metered(monkeypatch, provider)
+
+    result = await refresh_all_rates(skip_fresh_minutes=120)
+    assert result == {"refreshed": 2, "errors": 0, "skipped": 1}
+    assert [c.args for c in provider.get_quote.await_args_list] == [("USD", "JPY"), ("CNY", "JPY")]
+
+    provider.get_quote.reset_mock()
+    with SessionLocal() as db:
+        for pair in ["USD/JPY", "CNY/JPY"]:
+            store_quote(db, av_quote(*pair.split("/")))
+    result = await refresh_all_rates(skip_fresh_minutes=120)
+    assert result == {"refreshed": 0, "errors": 0, "skipped": 3}
+    provider.get_quote.assert_not_called()
+    with SessionLocal() as db:
+        run = db.scalar(select(CollectorRun).where(CollectorRun.job == "market"))
+        # Nothing was due, which is not a failure.
+        assert run.consecutive_failures == 0 and run.last_success_at is not None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["timeout", "503"])
+async def test_provider_marks_network_and_server_failures_transient(monkeypatch, failure):
+    import httpx
+
+    from app.providers import TransientProviderError
+    mock = AsyncMock()
+    mock.__aenter__.return_value = mock
+    if failure == "timeout":
+        mock.get.side_effect = httpx.ReadTimeout("https://www.alphavantage.co/query?apikey=secret-key")
+    else:
+        mock.get.return_value = httpx.Response(503)
+    monkeypatch.setattr("app.providers.httpx.AsyncClient", lambda **kwargs: mock)
+    with pytest.raises(TransientProviderError) as raised:
+        await AlphaVantageProvider("secret-key").get_quote("USD", "CNY")
+    assert "secret-key" not in str(raised.value)
+    assert raised.value.__cause__ is None

@@ -17,11 +17,13 @@ on:
     # published data is about three hours old, so the Alpha Vantage budget holds
     # while a dropped run costs an hour, not four.
     #
-    # Hourly was not enough either: from 23 to 27 September 2026 GitHub fired
-    # this schedule about five times a day, 2.7 to 8.1 hours apart. An external
-    # pinger can fill the gaps through workflow_dispatch with force=false (see
+    # Hourly was not enough either: from 23 to 29 September 2026 GitHub started
+    # only about one in five of these hourly runs, 3 to 8.5 hours apart. Each
+    # entry below is another chance to be started; a run that finds nothing due
+    # stops after the few seconds the `due` job takes. An external pinger can
+    # still fill the gaps through workflow_dispatch with force=false (see
     # "Keeping the data fresh" in the README); it passes the same gate.
-    - cron: "41 * * * *"
+    - cron: "11,26,41,56 * * * *"
   workflow_dispatch:
     inputs:
       force:
@@ -50,18 +52,19 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           FORCE: ${{ inputs.force }}
-          META: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/api/v1/meta.json
+          RATES: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/api/v1/rates.json
         run: |
           # A manual run always collects; a pinger dispatching with force=false
           # goes through the same gate as the schedule.
           if [ "$EVENT" = "workflow_dispatch" ] && [ "$FORCE" != "false" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-          # Minutes since the market job last succeeded. Unreadable, missing or
-          # never-succeeded data counts as due: a spare run beats a missed one.
-          age=$(curl -fsS "$META" | jq -r --argjson now "$(date +%s)" '
-            [.collector[]? | select(.job == "market") | .last_success_at // empty
-             | sub("\\.[0-9]+"; "") | fromdateiso8601][0] // empty
+          # Minutes since the OLDEST published quote. The market job used to be
+          # read instead, but it counts as successful when one pair of three
+          # arrives, and on 29 September that left two pairs 13 hours behind.
+          # Unreadable or empty data counts as due: a spare run beats a missed one.
+          age=$(curl -fsS "$RATES" | jq -r --argjson now "$(date +%s)" '
+            [.[]?.captured_at | sub("\\.[0-9]+"; "") | fromdateiso8601] | min // empty
             | ($now - .) / 60 | floor') || age=""
-          echo "published market data is ${age:-of unknown} age (minutes)"
+          echo "oldest published quote is ${age:-of unknown} age (minutes)"
           # 180 minutes: at most eight collections of three pairs in any 24 hours,
           # 24 calls against the 25-call budget the collector enforces.
           if [ -n "$age" ] && [ "$age" -lt 180 ]; then echo "run=false"; else echo "run=true"; fi >> "$GITHUB_OUTPUT"
@@ -104,7 +107,9 @@ jobs:
         working-directory: backend
 
       - name: Collect one round
-        run: python -m app.collector --once
+        # Pairs quoted in the last two hours are left out, so a round that runs
+        # because one pair fell behind does not spend budget on the others.
+        run: python -m app.collector --once --skip-fresh 120
         working-directory: backend
 
       - name: Export the API as static files

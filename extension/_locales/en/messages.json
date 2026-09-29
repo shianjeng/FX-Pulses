@@ -477,7 +477,7 @@
     "message": "No market history is collected for this pair. Conversion may use dated official reference rates."
   },
   "displayRoundingHint": {
-    "message": "Displayed rates are rounded. Conversion uses full precision; amounts are rounded to two decimal places."
+    "message": "Displayed rates are rounded. Conversion uses full precision; amounts are shown in the target currency's own units (no decimals for yen or won)."
   },
   "viewModeLabel": {
     "message": "View mode"
@@ -532,5 +532,23 @@
   },
   "hoverOfficialDisclaimer": {
     "message": "Official daily reference; fees excluded."
+  },
+  "timeAgo": {
+    "message": " ($1)"
+  },
+  "badgeSectionTitle": {
+    "message": "Toolbar icon"
+  },
+  "badgeDescription": {
+    "message": "Show one pair's rate on the extension icon, so you can read it without opening anything. It updates every 30 minutes and whenever the popup opens, and turns grey when the data is old."
+  },
+  "badgeLabel": {
+    "message": "Show on icon"
+  },
+  "badgeOff": {
+    "message": "Nothing"
+  },
+  "badgeTooltip": {
+    "message": "FX Pulse · $1 = $2 · as of $3"
   }
 }

@@ -13,6 +13,11 @@ class ProviderError(RuntimeError):
     pass
 
 
+class TransientProviderError(ProviderError):
+    """The request failed on the way, not on its merits: a timeout, a dropped
+    connection or a 5xx says nothing about the pair and is worth one retry."""
+
+
 @dataclass(frozen=True, slots=True)
 class Quote:
     base_currency: str
@@ -40,7 +45,15 @@ class AlphaVantageProvider:
             "apikey": self.api_key,
         }
         async with httpx.AsyncClient(timeout=15) as client:
-            response = await client.get(self.url, params=params)
+            try:
+                response = await client.get(self.url, params=params)
+            except httpx.TransportError as exc:
+                # The exception text can carry the request URL, and with it the key.
+                raise TransientProviderError(
+                    f"Alpha Vantage did not answer ({type(exc).__name__})"
+                ) from None
+            if response.status_code >= 500:
+                raise TransientProviderError(f"Provider HTTP status {response.status_code}")
             if response.is_error:
                 raise ProviderError(f"Provider HTTP status {response.status_code}")
             try:

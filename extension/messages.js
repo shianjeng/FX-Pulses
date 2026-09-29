@@ -160,7 +160,7 @@ globalThis.FXMessages = {
     "explorerTitle": "汇率查询",
     "explorerEyebrow": "选择两种货币",
     "noMarketHistory": "该货币对暂无市场历史数据。当前换算可使用下方标明日期的官方参考价。",
-    "displayRoundingHint": "汇率显示值经过四舍五入；换算使用完整精度，结果保留两位小数。",
+    "displayRoundingHint": "汇率显示值经过四舍五入；换算使用完整精度，结果按目标货币的最小单位显示（日元、韩元没有小数）。",
     "viewModeLabel": "视图模式",
     "showDetails": "显示详细数据",
     "showSimple": "精简显示",
@@ -178,7 +178,13 @@ globalThis.FXMessages = {
     "watchHint": "在上方任选两种货币后加入；点一行即可切换到该币对。",
     "hoverAlso": "也可能是：",
     "hoverMarket": "市场中间价",
-    "hoverOfficialDisclaimer": "官方日参考价，仅供参考，不含手续费。"
+    "hoverOfficialDisclaimer": "官方日参考价，仅供参考，不含手续费。",
+    "timeAgo": "（$1）",
+    "badgeSectionTitle": "工具栏图标",
+    "badgeDescription": "在插件图标上直接显示一个币对的汇率，不用打开插件就能看到。每 30 分钟和每次打开插件时更新；数据较旧时变成灰色。",
+    "badgeLabel": "图标显示",
+    "badgeOff": "不显示",
+    "badgeTooltip": "FX Pulse · $1 = $2 · 数据时间 $3"
   },
   "en": {
     "extensionName": "FX Pulse — exchange rates at hand",
@@ -340,7 +346,7 @@ globalThis.FXMessages = {
     "explorerTitle": "Currency explorer",
     "explorerEyebrow": "CHOOSE TWO CURRENCIES",
     "noMarketHistory": "No market history is collected for this pair. Conversion may use dated official reference rates.",
-    "displayRoundingHint": "Displayed rates are rounded. Conversion uses full precision; amounts are rounded to two decimal places.",
+    "displayRoundingHint": "Displayed rates are rounded. Conversion uses full precision; amounts are shown in the target currency's own units (no decimals for yen or won).",
     "viewModeLabel": "View mode",
     "showDetails": "Show details",
     "showSimple": "Simplify",
@@ -358,7 +364,13 @@ globalThis.FXMessages = {
     "watchHint": "Pick any two currencies above, then add them. Select a row to switch to that pair.",
     "hoverAlso": "Could also be:",
     "hoverMarket": "Market midpoint",
-    "hoverOfficialDisclaimer": "Official daily reference; fees excluded."
+    "hoverOfficialDisclaimer": "Official daily reference; fees excluded.",
+    "timeAgo": " ($1)",
+    "badgeSectionTitle": "Toolbar icon",
+    "badgeDescription": "Show one pair's rate on the extension icon, so you can read it without opening anything. It updates every 30 minutes and whenever the popup opens, and turns grey when the data is old.",
+    "badgeLabel": "Show on icon",
+    "badgeOff": "Nothing",
+    "badgeTooltip": "FX Pulse · $1 = $2 · as of $3"
   },
   "ja": {
     "extensionName": "FX Pulse — 手元で為替レート",
@@ -520,7 +532,7 @@ globalThis.FXMessages = {
     "explorerTitle": "為替レート検索",
     "explorerEyebrow": "2つの通貨を選択",
     "noMarketHistory": "この通貨ペアの市場履歴は収集されていません。換算には日付付きの公式参考レートを使用できます。",
-    "displayRoundingHint": "表示レートは丸められています。換算は元の精度で計算し、結果を小数点以下2桁に丸めます。",
+    "displayRoundingHint": "表示レートは丸められています。換算は元の精度で計算し、結果は通貨ごとの最小単位で表示します（円・ウォンは小数なし）。",
     "viewModeLabel": "表示モード",
     "showDetails": "詳細を表示",
     "showSimple": "簡易表示",
@@ -538,6 +550,12 @@ globalThis.FXMessages = {
     "watchHint": "上で任意の2通貨を選んで追加します。行を選ぶとその通貨ペアに切り替わります。",
     "hoverAlso": "他の候補：",
     "hoverMarket": "市場仲値",
-    "hoverOfficialDisclaimer": "公式の日次参考レートによる概算です。手数料は含みません。"
+    "hoverOfficialDisclaimer": "公式の日次参考レートによる概算です。手数料は含みません。",
+    "timeAgo": "（$1）",
+    "badgeSectionTitle": "ツールバーアイコン",
+    "badgeDescription": "拡張機能のアイコンに通貨ペアのレートを表示し、何も開かずに確認できます。30 分ごとと、ポップアップを開いたときに更新され、データが古いと灰色になります。",
+    "badgeLabel": "アイコンに表示",
+    "badgeOff": "表示しない",
+    "badgeTooltip": "FX Pulse · $1 = $2 · 更新日時 $3"
   }
 };
