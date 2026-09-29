@@ -42,6 +42,7 @@ from app.services import (
     latest_official_for_pair,
     official_currencies,
     official_job,
+    reference_history,
 )
 
 
@@ -136,6 +137,10 @@ def main() -> None:
                 serialize_official(o) for o in latest_official_for_pair(db, base, quote)
             )
         total += write(root, "official-rates.json", [dump(o) for o in official_all])
+        written += 1
+
+        # --- long-range reference history: one small file for every ECB pair ---
+        total += write(root, "reference-history.json", reference_history(db))
         written += 1
 
         # --- history: one 90-day file per pair, client slices to 1/7/30/90 ---

@@ -364,6 +364,8 @@ main { display: flex; flex-direction: column; gap: 12px; padding: 14px 14px 18px
 .chart-tip em { margin-left: 6px; font-style: normal; font-size: 10.5px; font-weight: 600; }
 .chart-tip em.positive { color: var(--up); }
 .chart-tip em.negative { color: var(--down); }
+.chart-source { margin: -2px 0 8px; color: var(--text-3); font-size: 10.5px; }
+.chart-source:empty { display: none; }
 .single-point-note { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: var(--text-3); font-size: 10.5px; }
 @media (prefers-reduced-motion: no-preference) {
   /* The line draws itself in when a range opens, then the fill settles under it. */

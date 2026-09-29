@@ -94,36 +94,65 @@ class EcbReferenceProvider:
     rate_type = "Euro foreign exchange reference rate"
     anchor_currency = "EUR"
     source_url = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
+    # The same table for each of the last 90 days, in one file.
+    history_url = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist-90d.xml"
 
     async def get_table(self) -> OfficialTable:
-        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
-            response = await client.get(self.source_url)
+        return self.parse(await self._fetch(self.source_url))
+
+    async def get_history(self) -> list[OfficialTable]:
+        """Months of daily references at once, for charts that would otherwise
+        begin on the day collection did."""
+        return self.parse_history(await self._fetch(self.history_url))
+
+    async def _fetch(self, url: str) -> bytes:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+            response = await client.get(url)
             if response.is_error:
                 raise ProviderError(f"ECB HTTP status {response.status_code}")
-        return self.parse(response.content)
+        return response.content
+
+    def _table(self, dated_cube, source_url: str) -> OfficialTable:
+        reference_date = date.fromisoformat(dated_cube.attrib["time"])
+        values = {self.anchor_currency: Decimal("1")}
+        for node in dated_cube:
+            currency, rate = node.attrib.get("currency"), node.attrib.get("rate")
+            if not currency or not rate or not re.fullmatch(r"[A-Z]{3}", currency):
+                continue
+            value = Decimal(rate)
+            if _usable(value):
+                values[currency] = value
+        return OfficialTable(
+            self.institution, self.rate_type, self.anchor_currency, reference_date,
+            datetime.now(timezone.utc), source_url, values,
+        )
+
+    def _dated_cubes(self, payload: bytes, what: str) -> list:
+        try:
+            root = ElementTree.fromstring(payload)
+        except ElementTree.ParseError as exc:
+            raise ProviderError(f"ECB {what} is malformed") from exc
+        return [node for node in root.iter() if node.attrib.get("time")]
 
     def parse(self, payload: bytes) -> OfficialTable:
         try:
-            root = ElementTree.fromstring(payload)
-            dated_cube = next(node for node in root.iter() if node.attrib.get("time"))
-            reference_date = date.fromisoformat(dated_cube.attrib["time"])
-            values = {self.anchor_currency: Decimal("1")}
-            for node in dated_cube:
-                currency, rate = node.attrib.get("currency"), node.attrib.get("rate")
-                if not currency or not rate or not re.fullmatch(r"[A-Z]{3}", currency):
-                    continue
-                value = Decimal(rate)
-                if _usable(value):
-                    values[currency] = value
-        except (ElementTree.ParseError, StopIteration, KeyError, ValueError,
-                InvalidOperation) as exc:
+            table = self._table(self._dated_cubes(payload, "response")[0], self.source_url)
+        except (IndexError, KeyError, ValueError, InvalidOperation) as exc:
             raise ProviderError("ECB response is malformed") from exc
-        if len(values) < 2:
+        if len(table.values_per_anchor) < 2:
             raise ProviderError("ECB response contains no usable rates")
-        return OfficialTable(
-            self.institution, self.rate_type, self.anchor_currency, reference_date,
-            datetime.now(timezone.utc), self.source_url, values,
-        )
+        return table
+
+    def parse_history(self, payload: bytes) -> list[OfficialTable]:
+        try:
+            cubes = self._dated_cubes(payload, "history")
+            tables = [self._table(cube, self.history_url) for cube in cubes]
+        except (KeyError, ValueError, InvalidOperation) as exc:
+            raise ProviderError("ECB history is malformed") from exc
+        tables = [table for table in tables if len(table.values_per_anchor) >= 2]
+        if not tables:
+            raise ProviderError("ECB history contains no usable rates")
+        return sorted(tables, key=lambda table: table.reference_date)
 
 
 class BankOfCanadaProvider:

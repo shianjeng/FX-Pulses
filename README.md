@@ -32,6 +32,7 @@ The extension and hover converter share the same backend, one-minute cache, watc
 
 ## What's new in 2.8.5
 
+- **Real one-month and three-month charts.** Collection began on 23 September 2026, so 7 days, 1 month and 3 months all showed that one week. Until the collector's own quotes span a range, the chart now draws the ECB's daily reference rates for the last 90 days. They are read once from the ECB's official 90-day file and kept current by the daily fetch. That gives every pair the ECB covers a real long-range line (about 30 currencies, EUR/KRW included), and a caption under the chart names the source.
 - **Live rates.** The popup, hover cards, the toolbar icon and target alerts now use live mid-market rates from Coinbase's public API, refreshed about once a minute while in use, for about 160 currencies. Against Wise's live mid-market rate the median difference was 0.006% across 14 currencies. Before, quotes could be up to three hours old. The trend chart still uses collected history. On by default, and one switch in Settings turns it off. Coinbase sees your IP address; nothing from the page and no settings are sent. See [Live rates](#live-rates).
 - **A smoother trend chart.** The line is now a smooth curve that still never invents a high or low between samples. It has a round-numbered price scale on the right, dates or hours underneath, and headroom above and below. The tooltip also shows the move since the range began. Outages show as a faint dashed span, and the line draws itself in, with no animation when the system asks for reduced motion.
 - **Hover works on more shops.** Amazon writes prices in pieces ("¥" and "26,990" in separate elements, "$29.99" in four), and Mercari lays them over thumbnails where the pointer passes straight through. Hover now reads both, looks inside open shadow roots, and is no longer switched off by pages that stop mouse events or by carousels that scroll on their own.
@@ -91,7 +92,7 @@ Rates below 1 show at least six decimal places, with more precision for smaller 
 | ⭐ | Watchlist | Save up to eight pairs of any currencies and switch between them in one click |
 | 👁️ | Simple view | Opens on the midpoint and converter; full detail is one click away |
 | ↕️ | Market quote detail | Bid, ask, midpoint, spread, freshness, and 24-hour movement (detailed view) |
-| 📈 | Trend chart | Smooth 24-hour to 3-month lines with a price scale, time axis, high and low markers, and range statistics |
+| 📈 | Trend chart | Smooth 24-hour to 3-month lines with a price scale, time axis, high and low markers, and range statistics; ECB daily history fills ranges the collector has not reached |
 | 🏛️ | Official references | Compare market midpoints with central-bank reference observations |
 | ⚡ | Hover conversion | Point at an amount on a webpage to convert it without leaving the page, including prices shops split into pieces (Amazon, Mercari) |
 | 🧮 | Quick converter | Choose source and target currencies, swap direction, and see the rate source and date |
@@ -107,6 +108,14 @@ Hover conversion is **off by default**. Enable it from Settings, grant access on
 ## Data sources
 
 FX Pulse labels each data layer instead of presenting unrelated rates as if they were interchangeable.
+
+### Chart history
+
+The chart draws the collector's own market quotes when they span the selected range: always for 24 hours, and for longer ranges once enough has been collected. Otherwise it draws the European Central Bank's daily reference rates. That covers pairs the market feed does not track, and 1 month or 3 months before the collector reaches that far back.
+
+- **Where the history comes from.** The first collection reads the ECB's official 90-day file (`eurofxref-hist-90d.xml`) once. The daily reference fetch keeps it current, and retention keeps 90 days.
+- **What is published.** The export publishes it as `reference-history.json`: one column per currency against EUR, about 15 KB. A cross is one column divided by another, the same arithmetic the API uses for official quotes. The API serves the same data at `/api/v1/reference-history`.
+- **How it is drawn.** One point per business day; weekends and holidays are not treated as outages, and the tooltip shows a date. The caption under the chart says which source is drawn.
 
 ### Live rates
 
@@ -488,7 +497,9 @@ Edge 用户：打开 `edge://extensions`，在左侧打开 **开发人员模式*
 
 同一币对有多家央行报价时，2.8.4 起按实测准确度挑选（加拿大央行、欧洲央行优先，其次人民银行、日本银行，最后是晚一周发布的美联储），日期只在最新报价前后四天内的来源之间起作用。此前按“日期最新”挑选，周一早上几乎总会选中人民银行的中间价，与市场偏差 0.3%～0.4%。
 
-2.8.5 起默认使用实时汇率：弹窗、网页悬停、图标和目标价提醒会从 Coinbase 的公开接口获取最新中间价，使用时约每分钟更新一次，覆盖约 160 种货币。我在 14 种货币上对比过 Wise 的实时中间价，中位差 0.006%；此前的数据最多会晚 3 小时。走势图仍使用采集的历史数据。设置页可以一键关闭。Coinbase 会看到你的 IP 地址，但不会收到网页内容或任何设置。
+2.8.5 起 1 个月和 3 个月的走势图显示真实历史：此前采集从 9 月 23 日才开始，7 天、1 个月、3 个月看到的都是同一周的数据。现在在采集的数据还不够覆盖所选区间时，图表改用欧洲央行最近 90 天的每日参考价。这份数据从欧洲央行官方的 90 天文件一次性读入，之后随每日采集更新。欧洲央行覆盖的约 30 种货币（包括欧元/韩元等）都有真实的长期走势，图表下方会注明数据来源。
+
+同样在 2.8.5，默认使用实时汇率：弹窗、网页悬停、图标和目标价提醒会从 Coinbase 的公开接口获取最新中间价，使用时约每分钟更新一次，覆盖约 160 种货币。我在 14 种货币上对比过 Wise 的实时中间价，中位差 0.006%；此前的数据最多会晚 3 小时。走势图仍使用采集的历史数据。设置页可以一键关闭。Coinbase 会看到你的 IP 地址，但不会收到网页内容或任何设置。
 
 同样在 2.8.5，走势图改为平滑曲线（仍不会在两个数据点之间凭空画出高点或低点）：右侧有整数刻度，下方有日期或时间，悬停时显示相对区间起点的涨跌幅。网页悬停现在支持亚马逊这类把价格拆成多段显示的网站（「¥」和「26,990」分开写），也支持煤炉（Mercari）盖在商品图上的价格标签，页面拦截鼠标事件或轮播图自动滚动时也不会失效。
 

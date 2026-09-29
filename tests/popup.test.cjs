@@ -151,7 +151,7 @@ test("currency selectors drive the main card, official panel, history and saved 
     assert.match(el('rates').textContent, /8\.0000/);
     assert.match(el('rates').textContent, /官方日参考价.*欧洲央行/);
     assert.match(el('official-title').textContent, /EUR\/CNY/);
-    assert.match(el('chart').textContent, /暂无市场历史数据/);
+    assert.match(el('chart').textContent, /暂无历史数据/);
     await app.w.eval('loadData()');
     await tick();
     assert.equal(el('converter-from').value, 'EUR');

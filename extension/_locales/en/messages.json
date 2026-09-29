@@ -474,7 +474,7 @@
     "message": "CHOOSE TWO CURRENCIES"
   },
   "noMarketHistory": {
-    "message": "No market history is collected for this pair. Conversion may use dated official reference rates."
+    "message": "No history is available for this pair. Conversion may use dated official reference rates."
   },
   "displayRoundingHint": {
     "message": "Displayed rates are rounded. Conversion uses full precision; amounts are shown in the target currency's own units (no decimals for yen or won)."
@@ -580,5 +580,11 @@
   },
   "interval5": {
     "message": "5 minutes"
+  },
+  "chartSourceMarket": {
+    "message": "Market midpoint · collected about every three hours"
+  },
+  "chartSourceReference": {
+    "message": "ECB daily reference rate · one point per business day"
   }
 }

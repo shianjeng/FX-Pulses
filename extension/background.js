@@ -38,7 +38,7 @@ async function apiBase() {
    holding that data and derives the time-dependent fields itself. Everything
    above this layer sees identical results in both modes. */
 
-const FX_STATIC_ROUTES = new Set(["/pairs", "/rates", "/currencies", "/official-rates"]);
+const FX_STATIC_ROUTES = new Set(["/pairs", "/rates", "/currencies", "/official-rates", "/reference-history"]);
 
 function staticPathFor(path) {
   const [route, query] = path.split("?");
@@ -268,7 +268,7 @@ async function liveRates(force = false) {
   return livePending;
 }
 
-const UI_PATHS = /^\/(?:comparisons\/[A-Z]{3}\/[A-Z]{3}|currencies|official-rates\/[A-Z]{3}\/[A-Z]{3}|rates\/[A-Z]{3}\/[A-Z]{3}\/history\?days=(?:1|7|30|90))$/;
+const UI_PATHS = /^\/(?:comparisons\/[A-Z]{3}\/[A-Z]{3}|currencies|reference-history|official-rates\/[A-Z]{3}\/[A-Z]{3}|rates\/[A-Z]{3}\/[A-Z]{3}\/history\?days=(?:1|7|30|90))$/;
 /* Content scripts may read a single official cross rate or the list of covered
    currencies (public, and it carries nothing from the page), never other paths. */
 const PAGE_PATHS = /^\/(?:official-rates\/[A-Z]{3}\/[A-Z]{3}|currencies)$/;

@@ -327,12 +327,13 @@ function chartTimeLabel(value) {
 /* Split the samples wherever collection paused. The threshold follows the
    observed sampling interval instead of a fixed six hours, which turned the
    whole line into loose dots on slower collectors. */
-function chartSegments(points) {
+function chartSegments(points, daily = false) {
   const gaps = points.slice(1)
     .map((point, index) => parseUtc(point.time) - parseUtc(points[index].time))
     .sort((a, b) => a - b);
   const typical = gaps.length ? gaps[(gaps.length - 1) >> 1] : 0;
-  const limit = Math.max(typical * 2.5, 60000);
+  // A daily series skips weekends and holidays by design; only a longer silence is a gap.
+  const limit = Math.max(typical * 2.5, daily ? 6 * 86400000 : 60000);
   const segments = [];
   points.forEach((point, index) => {
     if (!index || parseUtc(point.time) - parseUtc(points[index - 1].time) > limit) segments.push([]);
@@ -399,7 +400,7 @@ function resetChartStats() {
 const CHART_HEIGHT = 132;   // plot height in px; the time axis sits below it
 const CHART_GUTTER = 44;    // right-hand price scale
 
-function drawChart(points) {
+function drawChart(points, {daily = false} = {}) {
   const root = $("chart");
   points = points.filter(point => Number.isFinite(Number(point.midpoint)) && Number(point.midpoint) > 0 && Number.isFinite(parseUtc(point.captured_at))).sort((a,b) => parseUtc(a.captured_at) - parseUtc(b.captured_at));
   if (!points.length) {
@@ -428,7 +429,7 @@ function drawChart(points) {
     time: points[index].captured_at,
   }));
 
-  const segments = chartSegments(plotted);
+  const segments = chartSegments(plotted, daily);
   const f = value => value.toFixed(2);
   // Only the period's high and low get a marker; a dot on every sample turned
   // a 90-day line into a string of beads that hid its own shape.
@@ -508,7 +509,8 @@ function drawChart(points) {
     dot.setAttribute("cx", point.x);
     dot.setAttribute("cy", point.y);
     dot.setAttribute("visibility", "visible");
-    tipTime.textContent = chartTimeLabel(point.time);
+    // A daily reference has a date, not a time of day.
+    tipTime.textContent = daily ? point.time.slice(5, 10).split("-").map(Number).join("/") : chartTimeLabel(point.time);
     tipValue.textContent = `${selectedPair}  ${formatRate(point.value)}`;
     // How far this sample is from the start of the range.
     const moved = (point.value - values[0]) / values[0] * 100;
@@ -549,6 +551,24 @@ function applyViewMode() {
   $("view-toggle").textContent = detailed() ? t("showSimple") : t("showDetails");
 }
 
+/* The ECB's daily reference rates for one pair, from a file holding one column
+   per currency against EUR: a cross is one column divided by another, the same
+   arithmetic as the backend's OfficialTable.quote. */
+function referenceSeries(data, base, quote, days) {
+  const dates = Array.isArray(data?.dates) ? data.dates : [];
+  const column = code => code === data?.anchor_currency ? dates.map(() => 1) : data?.rates?.[code];
+  const from = column(base), to = column(quote);
+  if (!Array.isArray(from) || !Array.isArray(to)) return [];
+  const since = Date.now() - days * 86400000;
+  return dates.map((date, index) => ({midpoint: Number(to[index]) / Number(from[index]), captured_at: `${date}T12:00:00Z`}))
+    .filter(point => Number.isFinite(point.midpoint) && point.midpoint > 0 && Date.parse(point.captured_at) >= since);
+}
+
+function showHistory(points, source, daily = false) {
+  drawChart(points, {daily});
+  $("chart-source").textContent = source;
+}
+
 async function loadHistory() {
   // Hiding the panels would still spend a request per pair selection on data
   // nobody is looking at, so the simple view never asks for it.
@@ -557,19 +577,35 @@ async function loadHistory() {
   const version = ++historyVersion;
   $("trend-title").textContent = t("trendTitleFor", selectedPair);
   $("chart").innerHTML = `<span>${t("loadingChart")}</span>`;
+  $("chart-source").textContent = "";
   resetChartStats();
   try {
-    let [base, quote] = selectedPair.split("/");
-    const inverse = !supportedPairs.includes(selectedPair) && supportedPairs.includes(quote + "/" + base);
-    if (!supportedPairs.includes(selectedPair) && !inverse) {
-      drawChart([]);
-      $("chart").textContent = t("noMarketHistory");
+    const [base, quote] = selectedPair.split("/");
+    const inverse = !supportedPairs.includes(selectedPair) && supportedPairs.includes(`${quote}/${base}`);
+    let market = [];
+    if (supportedPairs.includes(selectedPair) || inverse) {
+      const [from, to] = inverse ? [quote, base] : [base, quote];
+      market = await request(`/rates/${from}/${to}/history?days=${historyDays}`);
+      if (inverse) market = market.map(point => ({...point, midpoint: 1 / Number(point.midpoint)}));
+    }
+    if (version !== historyVersion) return;
+    // Collected quotes while they span the range. Collection began on 23
+    // September 2026, so one month or three used to show that one week
+    // stretched out; before the collector catches up, and for every pair it
+    // does not track, the ECB's daily reference rates give the real line.
+    const first = market.length ? parseUtc(market[0].captured_at) : Infinity;
+    if (market.length && (historyDays === 1 || first <= Date.now() - historyDays * 86400000 * 0.85)) {
+      showHistory(market, t("chartSourceMarket"));
       return;
     }
-    if (inverse) [base, quote] = [quote, base];
-    let points = await request(`/rates/${base}/${quote}/history?days=${historyDays}`);
-    if (inverse) points = points.map(point => ({...point, midpoint: 1 / Number(point.midpoint)}));
-    if (version === historyVersion) drawChart(points);
+    const reference = referenceSeries(await request("/reference-history").catch(() => null), base, quote, historyDays);
+    if (version !== historyVersion) return;
+    if (reference.length > 1) showHistory(reference, t("chartSourceReference"), true);
+    else if (market.length) showHistory(market, t("chartSourceMarket"));
+    else {
+      drawChart([]);
+      $("chart").textContent = t("noMarketHistory");
+    }
   } catch (error) {
     if (version === historyVersion) {
       drawChart([]);
@@ -765,6 +801,7 @@ async function loadData(force = false) {
     resetChartStats();
     $("error").textContent = error.message;
     $("chart").textContent = t("dataUnavailableCheck");
+    $("chart-source").textContent = "";
     $("official-status").textContent = t("dataUnavailableCheck");
     $("error").classList.remove("hidden");
     $("status").textContent = t("connectionFailed");
