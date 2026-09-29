@@ -378,26 +378,122 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
     render();
   }
 
+  // Never read amounts out of form fields, editors or code.
+  const SKIP = 'input,textarea,select,button,script,style,pre,code,[contenteditable]:not([contenteditable="false"])';
+  const inside = (box, x, y) => x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
+  // One level out, stopping at a shadow root rather than stepping outside the component.
+  const up = node => node.parentElement ?? (node.parentNode?.nodeType === 11 ? node.parentNode : null);
+  // A copy kept for screen readers (Amazon's .a-offscreen, opacity 0) is not what the reader sees.
+  const shown = node => {
+    const parent = node.parentElement;
+    return Boolean(parent) && !parent.closest(SKIP) &&
+      (!parent.checkVisibility || parent.checkVisibility({opacityProperty: true, visibilityProperty: true}));
+  };
+
+  /* The element under the pointer, looking into open shadow roots instead of
+     stopping at a web component's host. */
+  function pointed(x, y) {
+    let element = document.elementFromPoint(x, y);
+    const roots = [];
+    while (element?.shadowRoot && element !== host) {
+      const inner = element.shadowRoot.elementFromPoint(x, y);
+      roots.push(element.shadowRoot);
+      if (!inner || inner === element) break;
+      element = inner;
+    }
+    return {element, roots};
+  }
+
+  /* Hit testing skips elements with pointer-events: none, which is how shops
+     lay a price tag over a thumbnail (Mercari), so the pointer "lands" on the
+     image underneath. Look for text drawn at the point near it instead. */
+  function textUnder(x, y, from) {
+    for (let element = from, depth = 0; element && depth < 4; element = up(element), depth++) {
+      if (element.textContent.length > 600) return null;
+      const walker = document.createTreeWalker(element, globalThis.NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (!node.data.trim() || node.data.length > 200 || !shown(node)) continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        if (![...range.getClientRects()].some(box => inside(box, x, y))) continue;
+        for (let offset = 0; offset < node.data.length; offset++) {
+          range.setStart(node, offset); range.setEnd(node, offset + 1);
+          if ([...range.getClientRects()].some(box => inside(box, x, y))) return {node, offset};
+        }
+        return {node, offset: 0};
+      }
+    }
+    return null;
+  }
+
+  function boundsOf(parts) {
+    let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+    for (const {node, from, to} of parts) {
+      const range = document.createRange(); range.setStart(node, from); range.setEnd(node, to);
+      const box = range.getBoundingClientRect();
+      if (!(box.right - box.left) && !(box.bottom - box.top)) continue;
+      left = Math.min(left, box.left); top = Math.min(top, box.top);
+      right = Math.max(right, box.right); bottom = Math.max(bottom, box.bottom);
+    }
+    return Number.isFinite(left) ? {left, top, right, bottom} : null;
+  }
+
+  /* The amount at a caret position. Most are written in one text node; many
+     shops split them across elements instead, "¥" and "2,000" on Amazon and
+     Mercari, "$" "29" "." "99" on amazon.com, next to a hidden copy for screen
+     readers. Those are read from the visible text of the smallest short
+     container around the caret, so a stray number is never joined to a
+     currency from further away. */
+  function amountAt(node, offset) {
+    const parse = (text, sample) => parser.parseAll(text, {
+      host: globalThis.location.hostname, lang: document.documentElement.lang,
+      profile: parser.buildProfile(document, globalThis, sample.slice(0, 4000)),
+    }).accepted;
+    const start = Math.max(0, offset - 64), text = node.data.slice(start, offset + 64);
+    const alone = parse(text, node.parentElement.textContent).find(item => offset - start >= item.start && offset - start <= item.end);
+    if (alone) return {match: alone, rect: boundsOf([{node, from: start + alone.start, to: start + alone.end}])};
+    let container = up(node);
+    for (let depth = 0; container && depth < 4; depth++, container = up(container)) {
+      if (container.textContent.length > 160) return null;
+      let joined = "";
+      const pieces = [];
+      const walker = document.createTreeWalker(container, globalThis.NodeFilter.SHOW_TEXT);
+      for (let item = walker.nextNode(); item; item = walker.nextNode()) {
+        if (!item.data || !shown(item)) continue;
+        pieces.push({node: item, at: joined.length});
+        joined += item.data;
+      }
+      const own = pieces.find(piece => piece.node === node);
+      if (!own) continue;
+      const caret = own.at + offset;
+      const match = parse(joined, container.textContent).find(item => caret >= item.start && caret <= item.end);
+      if (!match) continue;
+      const parts = pieces.filter(piece => piece.at < match.end && piece.at + piece.node.data.length > match.start)
+        .map(piece => ({node: piece.node, from: Math.max(0, match.start - piece.at), to: Math.min(piece.node.data.length, match.end - piece.at)}));
+      return {match, rect: boundsOf(parts)};
+    }
+    return null;
+  }
+
   async function detect(x, y) {
     if (!settings.hoverEnabled) return;
-    const target = document.elementFromPoint(x, y);
-    if (!target || target === host || target.closest("input,textarea,select,button,script,style,pre,code,[contenteditable]")) return;
-    const position = document.caretPositionFromPoint?.(x, y), range = position ? null : document.caretRangeFromPoint?.(x, y);
-    const node = position?.offsetNode || range?.startContainer, offset = position?.offset ?? range?.startOffset;
-    if (!node || node.nodeType !== 3 || !node.parentElement || node.parentElement.closest("input,textarea,select,button,script,style,pre,code,[contenteditable]")) return;
-    const start = Math.max(0, offset - 64), text = node.data.slice(start, offset + 64);
-    const profile = parser.buildProfile(document, globalThis, node.parentElement.textContent.slice(0, 4000));
-    const match = parser.parseAll(text, {host: globalThis.location.hostname, lang: document.documentElement.lang, profile}).accepted.find(item => offset - start >= item.start && offset - start <= item.end);
-    if (!match) return;
-    const bounds = document.createRange(); bounds.setStart(node, start + match.start); bounds.setEnd(node, start + match.end);
-    const rect = bounds.getBoundingClientRect();
+    const {element: target, roots} = pointed(x, y);
+    if (!target || target === host || target.closest(SKIP)) return;
+    const position = document.caretPositionFromPoint?.(x, y, {shadowRoots: roots});
+    const range = position ? null : document.caretRangeFromPoint?.(x, y);
+    let node = position?.offsetNode || range?.startContainer, offset = position?.offset ?? range?.startOffset;
+    if (node?.nodeType !== 3) ({node, offset} = textUnder(x, y, target) || {});
+    if (!node || node.nodeType !== 3 || !node.parentElement || node.parentElement.closest(SKIP)) return;
+    const found = amountAt(node, offset);
+    if (!found?.rect) return;
+    const {match, rect} = found;
     if (x < rect.left - 6 || x > rect.right + 6 || y < rect.top - 6 || y > rect.bottom + 6) return;
     const own = ++version, pointer = pointerVersion;
     const saved = await chrome.storage.local.get(memoryKey(match));
     if (own !== version || pointer !== pointerVersion || !settings.hoverEnabled) return;
     const remembered = storedCode(saved[memoryKey(match)]);
     if (remembered) match.code = remembered;
-    active = {match, rect, confirmed: Boolean(remembered)}; error = ""; globalThis.clearTimeout(hiding); render(); void refresh();
+    active = {match, rect, node, confirmed: Boolean(remembered)}; error = ""; globalThis.clearTimeout(hiding); render(); void refresh();
   }
 
   document.addEventListener("mousemove", event => {
@@ -409,8 +505,15 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
     globalThis.clearTimeout(hiding);
     if (active) hiding = setTimeout(hide, 550);
     timer = setTimeout(() => { void detect(event.clientX, event.clientY); }, 200);
-  }, {passive: true});
-  document.addEventListener("scroll", event => { if (!event.composedPath().includes(host)) hide(); }, {passive: true, capture: true});
+    // Capture phase: a page that stops mousemove from bubbling must not switch hover off.
+  }, {passive: true, capture: true});
+  // Only a scroll that moves the amount hides the card; an auto-scrolling
+  // carousel elsewhere on the page used to close it the moment it opened.
+  document.addEventListener("scroll", event => {
+    if (!active || event.composedPath().includes(host)) return;
+    const scrolled = event.target;
+    if (scrolled === document || scrolled === document.documentElement || !active.node || scrolled.contains?.(active.node)) hide();
+  }, {passive: true, capture: true});
   document.addEventListener("keydown", event => { if (event.key === "Escape") hide(); });
   document.addEventListener("mouseleave", hide);
   globalThis.addEventListener("blur", hide);

@@ -309,32 +309,68 @@ main { display: flex; flex-direction: column; gap: 12px; padding: 14px 14px 18px
 
 .chart {
   position: relative; display: grid; place-items: center;
-  height: 128px; margin: 4px 0 6px;
+  height: 154px; margin: 2px 0 6px;
   color: var(--text-3); font-size: 11px;
 }
-.chart svg { width: 100%; height: 100%; overflow: visible; }
-/* The chart's inline colours are for the markup alone; the palette lives here. */
-.chart svg path.chart-line { stroke: var(--accent); }
+/* Drawn: the plot and its time axis stack instead of centring a message. */
+.chart:has(.chart-plot) { display: block; place-items: normal; }
+.chart-plot { position: relative; height: 132px; }
+.chart-plot svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+/* The palette lives here; the markup carries shapes only. */
 .chart svg stop { stop-color: var(--accent); }
-.chart-extreme { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
+.chart-grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 4; }
+.chart-line {
+  stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 3px 6px color-mix(in srgb, var(--accent) 38%, transparent));
+}
+.chart-gap { stroke: var(--text-3); stroke-width: 1.2; stroke-dasharray: 2 4; opacity: .55; }
+.chart-extreme { fill: var(--surface); stroke: var(--accent); stroke-width: 1.8; }
 .chart-lone { fill: var(--accent); }
-.chart-guide { stroke: var(--line-strong); stroke-opacity: 1; }
-.chart-dot { fill: var(--surface); stroke: var(--accent); }
+.chart-now { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
+.chart-now-halo { fill: var(--accent); opacity: 0; transform-box: fill-box; transform-origin: center; }
+.chart-guide { stroke: var(--line-strong); stroke-width: 1; }
+.chart-dot { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
 /* A finger dragging along the line reads it; a vertical swipe still scrolls. */
 .chart-hit { touch-action: pan-y; cursor: crosshair; }
+.chart-y {
+  position: absolute; transform: translateY(-50%);
+  color: var(--text-3); font-size: 10px; line-height: 1; font-variant-numeric: tabular-nums;
+  white-space: nowrap; pointer-events: none;
+}
+.chart-x { position: relative; height: 14px; margin-top: 6px; }
+.chart-x span {
+  position: absolute; top: 0; color: var(--text-3); font-size: 10px; line-height: 14px;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
 .chart-tip {
   position: absolute; z-index: 2; min-width: 118px; padding: 7px 10px 6px;
   border: 1px solid var(--line); border-radius: var(--radius-sm);
   background: var(--surface); box-shadow: var(--shadow-pop);
   font-size: 11.5px; font-variant-numeric: tabular-nums;
   pointer-events: none; opacity: 0;
-  transform: translate(-50%, calc(-100% - 10px));
+  transform: translate(-50%, calc(-100% - 12px));
   transition: opacity .12s ease;
 }
 .chart-tip.is-on { opacity: 1; }
+.chart-tip.below { transform: translate(-50%, 14px); }
 .chart-tip small { display: block; margin-bottom: 2px; color: var(--text-3); font-size: 10px; font-weight: 600; }
-.chart-tip b { color: var(--accent); font-weight: 650; }
-.single-point-note { position: absolute; bottom: 0; color: var(--text-3); font-size: 10.5px; }
+.chart-tip b { color: var(--text); font-weight: 650; }
+.chart-tip em { margin-left: 6px; font-style: normal; font-size: 10.5px; font-weight: 600; }
+.chart-tip em.positive { color: var(--up); }
+.chart-tip em.negative { color: var(--down); }
+.single-point-note { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: var(--text-3); font-size: 10.5px; }
+@media (prefers-reduced-motion: no-preference) {
+  /* The line draws itself in when a range opens, then the fill settles under it. */
+  .chart-line { stroke-dasharray: 1; animation: chart-draw .9s cubic-bezier(.3, .7, .2, 1) both; }
+  .chart-area, .chart-extreme, .chart-now, .chart-gap { animation: chart-fade .5s .45s ease-out both; }
+  .chart-now-halo { animation: chart-pulse 2.8s 1.1s ease-out infinite; }
+}
+@keyframes chart-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes chart-fade { from { opacity: 0; } }
+@keyframes chart-pulse {
+  0% { opacity: .5; transform: scale(.8); }
+  70%, 100% { opacity: 0; transform: scale(2.6); }
+}
 
 .stats {
   display: grid; grid-template-columns: 1fr 1fr; gap: 8px 22px;

@@ -65,14 +65,14 @@ test('the trend line follows the sampling interval instead of a fixed six hours'
   }));
   // A six-hour collector used to break the path at every single point.
   w.eval(`drawChart(${JSON.stringify(every(6))})`);
-  const path = el('chart').querySelector('path').getAttribute('d');
+  const path = el('chart').querySelector('path.chart-line').getAttribute('d');
   assert.equal(path.match(/M /g).length, 1);
-  assert.ok(path.includes('L '));
+  assert.match(path, /[LC] /);
   // A genuine outage still breaks the line.
   const withGap = every(6);
   withGap[3].captured_at = new Date(Date.UTC(2026, 8, 25)).toISOString();
   w.eval(`drawChart(${JSON.stringify(withGap)})`);
-  assert.ok(el('chart').querySelector('path').getAttribute('d').match(/M /g).length > 1);
+  assert.ok(el('chart').querySelector('path.chart-line').getAttribute('d').match(/M /g).length > 1);
 });
 
 test('history range buttons request the selected window', async t => {

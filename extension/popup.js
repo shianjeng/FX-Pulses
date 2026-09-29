@@ -301,26 +301,63 @@ function chartSegments(points) {
   return segments;
 }
 
-// Straight segments cannot invent extrema between observations.
-function linePath(segments) {
-  return segments.map(segment => segment.map((point, index) =>
-    `${index ? "L" : "M"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" ")).join(" ");
+/* A smooth line that still cannot invent a high or low between two samples:
+   monotone cubic interpolation (Steffen's method, as d3's curveMonotoneX).
+   Every Bezier keeps its control points within its two samples' values, so
+   the curve does too, and a flat run stays flat. Two samples stay a straight
+   line. The straight polyline this replaces read as jagged and stiff. */
+function smoothPath(segment) {
+  const f = value => value.toFixed(2);
+  const [first] = segment, n = segment.length;
+  if (n < 3) return segment.map((point, index) => `${index ? "L" : "M"} ${f(point.x)} ${f(point.y)}`).join(" ");
+  const slope = segment.slice(1).map((point, index) => {
+    const dx = point.x - segment[index].x;
+    return dx ? (point.y - segment[index].y) / dx : 0;
+  });
+  const tangent = segment.map((point, i) => {
+    if (!i || i === n - 1) return 0;
+    const h0 = point.x - segment[i - 1].x, h1 = segment[i + 1].x - point.x;
+    const s0 = slope[i - 1], s1 = slope[i], mean = (s0 * h1 + s1 * h0) / ((h0 + h1) || 1);
+    return (Math.sign(s0) + Math.sign(s1)) * Math.min(Math.abs(s0), Math.abs(s1), 0.5 * Math.abs(mean)) || 0;
+  });
+  tangent[0] = (3 * slope[0] - tangent[1]) / 2;
+  tangent[n - 1] = (3 * slope[n - 2] - tangent[n - 2]) / 2;
+  let path = `M ${f(first.x)} ${f(first.y)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const a = segment[i], b = segment[i + 1], third = (b.x - a.x) / 3;
+    path += ` C ${f(a.x + third)} ${f(a.y + third * tangent[i])} ${f(b.x - third)} ${f(b.y - third * tangent[i + 1])} ${f(b.x)} ${f(b.y)}`;
+  }
+  return path;
 }
 
 /* Filled per segment and closed straight down to the baseline, so an outage
    stays a visible gap instead of a slope, and a lone sample never becomes a
-   filled triangle. Polygons rather than paths keep the line the first path. */
-function areaPolygons(segments, height) {
-  return segments.filter(segment => segment.length > 1).map(segment => {
-    const top = segment.map(point => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
-    return `<polygon class="chart-area" points="${top} ${segment.at(-1).x.toFixed(2)},${height} ${segment[0].x.toFixed(2)},${height}" fill="url(#chart-fill)"></polygon>`;
-  }).join("");
+   filled triangle. */
+function areaPaths(segments, height) {
+  return segments.filter(segment => segment.length > 1).map(segment =>
+    `<path class="chart-area" d="${smoothPath(segment)} L ${segment.at(-1).x.toFixed(2)} ${height} L ${segment[0].x.toFixed(2)} ${height} Z" fill="url(#chart-fill)"></path>`).join("");
+}
+
+// Round steps for the price scale: 157.0 / 157.5 / 158.0, not 157.182 / 157.713.
+function axisTicks(low, high) {
+  const raw = (high - low) / 5;
+  if (!(raw > 0)) return {ticks: [], digits: 0};
+  const power = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map(factor => factor * power).find(candidate => candidate >= raw * 0.999);
+  let digits = 0;
+  while (digits < 8 && Math.abs(Math.round(step * 10 ** digits) - step * 10 ** digits) > 1e-6) digits++;
+  const ticks = [];
+  for (let value = Math.ceil(low / step) * step; value <= high; value += step) ticks.push(value);
+  return {ticks, digits};
 }
 
 function resetChartStats() {
   ["stat-high", "stat-low", "stat-avg", "stat-change"].forEach(id => { $(id).textContent = "—"; });
   $("stat-change").className = "";
 }
+
+const CHART_HEIGHT = 132;   // plot height in px; the time axis sits below it
+const CHART_GUTTER = 44;    // right-hand price scale
 
 function drawChart(points) {
   const root = $("chart");
@@ -334,50 +371,73 @@ function drawChart(points) {
   const values = points.map((point) => Number(point.midpoint));
   const low = Math.min(...values);
   const high = Math.max(...values);
-  const width = 340;
-  const height = 120;
-  const range = high - low || 1;
+  // Measured, so one SVG unit is one pixel and the labels line up with the line.
+  const width = root.clientWidth || 340 + CHART_GUTTER;
+  const plotWidth = width - CHART_GUTTER;
+  const height = CHART_HEIGHT;
+  // Headroom above the high and below the low; a flat period sits mid-height.
+  const pad = (high - low) * 0.18 || Math.abs(high) * 0.001 || 1;
+  const top = high + pad, bottom = low - pad;
+  const yOf = value => (top - value) / (top - bottom) * height;
   const start = parseUtc(points[0].captured_at);
   const duration = parseUtc(points.at(-1).captured_at) - start;
-  const plotted = values.map((value, index) => {
-    const x = duration ? (parseUtc(points[index].captured_at) - start) / duration * width : width / 2;
-    const y = high === low ? height / 2 : 7 + ((high - value) / range) * (height - 14);
-    return {
-      x,
-      y,
-      value,
-      time: points[index].captured_at,
-    };
-  });
+  const plotted = values.map((value, index) => ({
+    x: duration ? (parseUtc(points[index].captured_at) - start) / duration * plotWidth : plotWidth / 2,
+    y: yOf(value),
+    value,
+    time: points[index].captured_at,
+  }));
 
   const segments = chartSegments(plotted);
+  const f = value => value.toFixed(2);
   // Only the period's high and low get a marker; a dot on every sample turned
   // a 90-day line into a string of beads that hid its own shape.
-  const marker = (point, name) =>
-    `<circle class="${name}" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="3"></circle>`;
+  const marker = (point, name, r = 3) => `<circle class="${name}" cx="${f(point.x)}" cy="${f(point.y)}" r="${r}"></circle>`;
   const extremes = high === low ? "" :
     marker(plotted[values.indexOf(high)], "chart-extreme") + marker(plotted[values.indexOf(low)], "chart-extreme");
   // A segment of one sample has no length to stroke, so it would vanish.
   const lone = segments.filter(segment => segment.length === 1).map(([point]) => marker(point, "chart-lone")).join("");
+  // An outage is a faint dashed span with no fill under it: visibly missing,
+  // without breaking the line into unrelated pieces.
+  const gaps = segments.slice(1).map((segment, index) => {
+    const from = segments[index].at(-1), to = segment[0];
+    return `<path class="chart-gap" d="M ${f(from.x)} ${f(from.y)} L ${f(to.x)} ${f(to.y)}" fill="none"></path>`;
+  }).join("");
+  const latest = plotted.at(-1);
+  const now = marker(latest, "chart-now-halo", 4) + marker(latest, "chart-now", 3.5);
+  const {ticks, digits} = axisTicks(bottom, top);
+  const scale = ticks.filter(value => yOf(value) > 8 && yOf(value) < height - 8);
+  const grid = scale.map(value => `<line class="chart-grid" x1="0" x2="${f(plotWidth)}" y1="${f(yOf(value))}" y2="${f(yOf(value))}"></line>`).join("");
+  const priceLabels = scale.map(value => `<span class="chart-y" style="left:${f(plotWidth + 8)}px;top:${f(yOf(value))}px">${fmt(value, digits)}</span>`).join("");
+  const stamp = time => new Date(time).toLocaleString(docLocale(), historyDays === 1
+    ? {hour: "2-digit", minute: "2-digit", hourCycle: "h23"} : {month: "numeric", day: "numeric"});
+  const timeLabels = (duration ? [[0, start], [0.5, start + duration / 2], [1, start + duration]] : [[0.5, start]])
+    .map(([share, time]) => `<span style="left:${f(share * plotWidth)}px;transform:translateX(-${share * 100}%)">${stamp(time)}</span>`).join("");
+  const line = segments.map(smoothPath).join(" ");
 
   root.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${t("chartAria", selectedPair, t(`range${historyDays}`))}">
-      <defs>
-        <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#56e39f" stop-opacity=".3"/>
-          <stop offset="1" stop-color="#56e39f" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      ${areaPolygons(segments, height)}
-      <path class="chart-line" d="${linePath(segments)}" fill="none" stroke="#56e39f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
-      ${lone}${extremes}
-      <line class="chart-guide" x1="0" y1="4" x2="0" y2="${height - 2}" stroke="#edf8f2" stroke-opacity=".18" stroke-dasharray="3 4" visibility="hidden"></line>
-      <circle class="chart-dot" cx="0" cy="0" r="3.6" fill="#07120e" stroke="#56e39f" stroke-width="2" visibility="hidden"></circle>
-      <rect class="chart-hit" x="0" y="0" width="${width}" height="${height}" fill="transparent"></rect>
-    </svg>
+    <div class="chart-plot">
+      <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${t("chartAria", selectedPair, t(`range${historyDays}`))}">
+        <defs>
+          <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-opacity=".26"/>
+            <stop offset="1" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        ${grid}${areaPaths(segments, height)}${gaps}
+        <path class="chart-line" d="${line}" fill="none" pathLength="1"></path>
+        ${lone}${extremes}${now}
+        <line class="chart-guide" x1="0" y1="0" x2="0" y2="${height}" visibility="hidden"></line>
+        <circle class="chart-dot" cx="0" cy="0" r="4" visibility="hidden"></circle>
+        <rect class="chart-hit" x="0" y="0" width="${f(plotWidth)}" height="${height}" fill="transparent"></rect>
+      </svg>
+      ${priceLabels}
+    </div>
+    <div class="chart-x">${timeLabels}</div>
     <div class="chart-tip" aria-hidden="true">
       <small>—</small>
       <b>—</b>
+      <em></em>
     </div>
   ${points.length === 1 ? `<span class="single-point-note">${t("singlePoint")}</span>` : ""}`;
 
@@ -397,6 +457,7 @@ function drawChart(points) {
   const tip = root.querySelector(".chart-tip");
   const tipTime = tip.querySelector("small");
   const tipValue = tip.querySelector("b");
+  const tipChange = tip.querySelector("em");
 
   const showAt = (index) => {
     const point = plotted[index];
@@ -409,9 +470,14 @@ function drawChart(points) {
     dot.setAttribute("visibility", "visible");
     tipTime.textContent = chartTimeLabel(point.time);
     tipValue.textContent = `${selectedPair}  ${formatRate(point.value)}`;
-    const percent = width ? (point.x / width) * 100 : 50;
-    tip.style.left = `${Math.min(92, Math.max(8, percent))}%`;
-    tip.style.top = `${(point.y / height) * 100}%`;
+    // How far this sample is from the start of the range.
+    const moved = (point.value - values[0]) / values[0] * 100;
+    tipChange.textContent = index ? changeText(moved) : "";
+    tipChange.className = moved >= 0 ? "positive" : "negative";
+    tip.style.left = `${Math.min(width - 64, Math.max(64, point.x))}px`;
+    tip.style.top = `${point.y}px`;
+    // Near the top the tip would cover the range tabs, so it opens below the point.
+    tip.classList.toggle("below", point.y < 64);
     tip.classList.add("is-on");
   };
 
@@ -424,8 +490,8 @@ function drawChart(points) {
   const pickIndex = (event) => {
     const box = svg.getBoundingClientRect();
     if (!box.width) return 0;
-    const ratio = (event.clientX - box.left) / box.width;
-    return plotted.reduce((best, point, index) => Math.abs(point.x - ratio * width) < Math.abs(plotted[best].x - ratio * width) ? index : best, 0);
+    const x = (event.clientX - box.left) / box.width * width;
+    return plotted.reduce((best, point, index) => Math.abs(point.x - x) < Math.abs(plotted[best].x - x) ? index : best, 0);
   };
 
   // Pointer events, so a pen or a finger on a touch screen reads the line too.
