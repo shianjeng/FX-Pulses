@@ -30,6 +30,15 @@ The extension and hover converter share the same backend, one-minute cache, watc
 
 > **Market midpoint** = `(bid + ask) / 2`. It is not a bank settlement rate, card-network rate, or central-bank fixing.
 
+## What's new in 2.8.5
+
+- **Rate on the toolbar icon (optional).** In Settings, choose a pair under **Toolbar icon** and its rate appears on the extension icon: 6.70, 157, .043. It updates every 30 minutes and whenever the popup opens, turns grey when the quote is old, and costs no extra requests. Off by default.
+- **Keyboard shortcut.** Alt+Shift+F opens the popup. Change it at `chrome://extensions/shortcuts`.
+- **Amounts read the way the currency is written.** The converter shows yen and won without decimals (157,431 JPY) and three decimals for currencies that have them, like the hover card already did. Small results keep two significant digits instead of rounding to 0.00.
+- **Clearer sources.** The status line says how old the quote is ("9/29 23:21 (5 hours ago)"). The hover card names central banks in your language, and a bridged reference is translated in both parts.
+- **Fixes.** Hovering an amount already in the target currency shows 1:1 instead of "not collected". The trend chart works with a pen or touch screen. The detailed view no longer shows a horizontal scrollbar.
+- **Fewer gaps in the data.** A timed-out Alpha Vantage request is retried once, and a pair that still misses its round is picked up within minutes instead of hours. On 29 September two timeouts had left USD/CNY and USD/JPY 13 hours behind. The publishing schedule also asks four times an hour, because GitHub starts only a fraction of scheduled runs.
+
 ## What's new in 2.8.4
 
 - **More accurate official references.** When several central banks publish a pair, the extension used to take whichever reference was newest. On Monday mornings that was almost always the People's Bank of China, whose administered CNY fixing ran 0.3-0.4% away from the market, and every cross rate through it inherited the gap (USD/KRW +0.37%, EUR/USD −0.28%). The popup and the hover card now prefer the most accurate source: measured against market quotes across 37 currencies, the median error was 0.05% for the Bank of Canada, 0.08% for the ECB, 0.27% for the PBOC, 0.53% for the Bank of Japan and 0.54% for the Federal Reserve. The reference date still matters, but only between sources within four days of the newest.
@@ -69,7 +78,7 @@ Maintenance release; the extension behaves as in 2.8.2.
 
 ### Rate display
 
-Rates below 1 show at least six decimal places, with more precision for smaller values. Extremely small rates use scientific notation to avoid displaying zero. Quotes, bid/ask prices, chart values, and official references share this formatting rule. Conversion uses the unrounded stored rate; the result is rounded only for display. The converter shows the unit rate and a rounding explanation.
+Rates below 1 show at least six decimal places, with more precision for smaller values. Extremely small rates use scientific notation to avoid displaying zero. Quotes, bid/ask prices, chart values, and official references share this formatting rule. Conversion uses the unrounded stored rate; the result is rounded only for display, to the target currency's own minor unit (none for JPY and KRW, two for most, three for KWD), and an amount below one keeps two significant digits. The popup and the hover card share this rule. The converter shows the unit rate and a rounding explanation.
 
 ## Features
 
@@ -84,6 +93,8 @@ Rates below 1 show at least six decimal places, with more precision for smaller 
 | ⚡ | Hover conversion | Point at an amount on a webpage to convert it without leaving the page |
 | 🧮 | Quick converter | Choose source and target currencies, swap direction, and see the rate source and date |
 | 🔔 | Optional alerts | Local target-price alerts powered by `chrome.alarms` |
+| 🏷️ | Rate on the icon | Optionally show one pair's rate on the toolbar icon, grey when the quote is old |
+| ⌨️ | Shortcut | Alt+Shift+F opens the popup; change it at `chrome://extensions/shortcuts` |
 | 🌐 | Three languages | Complete Chinese, English, and Japanese interfaces |
 | 🌙 | Dark mode | The popup follows the system's light or dark appearance |
 | 🔒 | Privacy first | No account, analytics SDK, or server-side storage of personal preferences |
@@ -447,7 +458,7 @@ FX Pulse 是一个免登录、重视隐私的汇率浏览器插件与 FastAPI �
 5. 打开右上角的 **开发者模式**。
 6. 点击左上角的 **加载已解压的扩展程序**。
 7. 选择 `extension` 文件夹（里面有 `manifest.json` 的那一层），不要选外层的 `FX-Pulses-main`。
-8. 点击工具栏上的拼图图标，把 **FX Pulse** 固定到工具栏，点开即可看到汇率。
+8. 点击工具栏上的拼图图标，把 **FX Pulse** 固定到工具栏，点开即可看到汇率。也可以按 Alt+Shift+F 打开。
 
 Edge 用户：打开 `edge://extensions`，在左侧打开 **开发人员模式**，点击 **加载解压缩的扩展**，然后按第 7、8 步操作。
 
@@ -460,6 +471,17 @@ Edge 用户：打开 `edge://extensions`，在左侧打开 **开发人员模式*
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
 
 同一币对有多家央行报价时，2.8.4 起按实测准确度挑选（加拿大央行、欧洲央行优先，其次人民银行、日本银行，最后是晚一周发布的美联储），日期只在最新报价前后四天内的来源之间起作用。此前按“日期最新”挑选，周一早上几乎总会选中人民银行的中间价，与市场偏差 0.3%～0.4%。
+
+2.8.5 新增可选的「工具栏图标」显示：在设置页选一个币对，它的汇率会直接显示在插件图标上（如 6.70、157），每 30 分钟和每次打开插件时更新，数据较旧时变灰，不额外消耗请求，默认关闭。其他改动：
+- 快捷键 Alt+Shift+F 可打开插件。
+- 换算结果按币种惯例显示小数：日元、韩元不带小数，很小的金额不再显示成 0.00。
+- 状态栏会注明数据是多久以前的，例如「9/29 23:21（5小时前）」。
+- 网页悬停卡片用中文显示央行名称。
+- 同币种悬停显示 1:1。
+- 走势图支持触屏。
+- 详细视图不再出现横向滚动条。
+
+数据采集方面，Alpha Vantage 请求超时会自动重试一次；某个币对没采到，几分钟内就会补采，不再等好几个小时（9 月 29 日曾因两次超时，USD/CNY 和 USD/JPY 断档 13 小时）。发布任务改为每小时尝试四次。
 
 2.8.3 为维护版本，插件功能与 2.8.2 相同：后端升级到 FastAPI 0.141 / Starlette 1.7，修复了 Starlette 已公开的安全问题（Host 头导致路径判断被绕过、表单大小限制失效、Range 头拒绝服务），其余依赖与开发工具一并更新；GitHub 实际每天只执行约 5 次定时任务，数据有时超过 6 小时被标为过期，因此改为数据满 3 小时即采集（仍在 Alpha Vantage 每日额度内），并支持用外部定时器补足 GitHub 漏掉的触发，详见上文 Keeping the data fresh。
 
