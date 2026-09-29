@@ -159,7 +159,7 @@ globalThis.FXMessages = {
     "converterViaCurrency": "经 $1 推算",
     "explorerTitle": "汇率查询",
     "explorerEyebrow": "选择两种货币",
-    "noMarketHistory": "该货币对暂无市场历史数据。当前换算可使用下方标明日期的官方参考价。",
+    "noMarketHistory": "该货币对暂无历史数据。当前换算可使用下方标明日期的官方参考价。",
     "displayRoundingHint": "汇率显示值经过四舍五入；换算使用完整精度，结果按目标货币的最小单位显示（日元、韩元没有小数）。",
     "viewModeLabel": "视图模式",
     "showDetails": "显示详细数据",
@@ -194,7 +194,9 @@ globalThis.FXMessages = {
     "converterLiveSource": "实时中间价 · Coinbase",
     "liveBadge": "实时",
     "liveRate": "Coinbase 实时中间价",
-    "interval5": "5分钟"
+    "interval5": "5分钟",
+    "chartSourceMarket": "市场中间价 · 约每 3 小时采集一次",
+    "chartSourceReference": "欧洲央行每日参考价 · 每个工作日一个数据点"
   },
   "en": {
     "extensionName": "FX Pulse — exchange rates at hand",
@@ -355,7 +357,7 @@ globalThis.FXMessages = {
     "converterViaCurrency": "via $1",
     "explorerTitle": "Currency explorer",
     "explorerEyebrow": "CHOOSE TWO CURRENCIES",
-    "noMarketHistory": "No market history is collected for this pair. Conversion may use dated official reference rates.",
+    "noMarketHistory": "No history is available for this pair. Conversion may use dated official reference rates.",
     "displayRoundingHint": "Displayed rates are rounded. Conversion uses full precision; amounts are shown in the target currency's own units (no decimals for yen or won).",
     "viewModeLabel": "View mode",
     "showDetails": "Show details",
@@ -390,7 +392,9 @@ globalThis.FXMessages = {
     "converterLiveSource": "Live mid-market rate · Coinbase",
     "liveBadge": "Live",
     "liveRate": "Coinbase live mid-market rate",
-    "interval5": "5 minutes"
+    "interval5": "5 minutes",
+    "chartSourceMarket": "Market midpoint · collected about every three hours",
+    "chartSourceReference": "ECB daily reference rate · one point per business day"
   },
   "ja": {
     "extensionName": "FX Pulse — 手元で為替レート",
@@ -551,7 +555,7 @@ globalThis.FXMessages = {
     "converterViaCurrency": "$1 経由",
     "explorerTitle": "為替レート検索",
     "explorerEyebrow": "2つの通貨を選択",
-    "noMarketHistory": "この通貨ペアの市場履歴は収集されていません。換算には日付付きの公式参考レートを使用できます。",
+    "noMarketHistory": "この通貨ペアの履歴はありません。換算には日付付きの公式参考レートを使用できます。",
     "displayRoundingHint": "表示レートは丸められています。換算は元の精度で計算し、結果は通貨ごとの最小単位で表示します（円・ウォンは小数なし）。",
     "viewModeLabel": "表示モード",
     "showDetails": "詳細を表示",
@@ -586,6 +590,8 @@ globalThis.FXMessages = {
     "converterLiveSource": "リアルタイム仲値 · Coinbase",
     "liveBadge": "リアルタイム",
     "liveRate": "Coinbase リアルタイム仲値",
-    "interval5": "5分"
+    "interval5": "5分",
+    "chartSourceMarket": "市場仲値 · 約 3 時間ごとに収集",
+    "chartSourceReference": "欧州中央銀行の日次参考レート · 営業日ごとに 1 点"
   }
 };
