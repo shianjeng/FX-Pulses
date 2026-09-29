@@ -70,7 +70,9 @@
 /* ---- base ---------------------------------------------------------------- */
 
 * { box-sizing: border-box; }
-html { background: var(--bg); }
+/* The detailed view scrolls, and a vertical scrollbar beside a 380px body must
+   not add a horizontal one. */
+html { background: var(--bg); overflow-x: hidden; }
 body {
   width: 380px;
   min-height: 520px;
@@ -318,6 +320,8 @@ main { display: flex; flex-direction: column; gap: 12px; padding: 14px 14px 18px
 .chart-lone { fill: var(--accent); }
 .chart-guide { stroke: var(--line-strong); stroke-opacity: 1; }
 .chart-dot { fill: var(--surface); stroke: var(--accent); }
+/* A finger dragging along the line reads it; a vertical swipe still scrolls. */
+.chart-hit { touch-action: pan-y; cursor: crosshair; }
 .chart-tip {
   position: absolute; z-index: 2; min-width: 118px; padding: 7px 10px 6px;
   border: 1px solid var(--line); border-radius: var(--radius-sm);

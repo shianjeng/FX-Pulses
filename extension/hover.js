@@ -18,38 +18,48 @@
     guessed: "hoverGuessed", disclaimer: "hoverDisclaimer", manual: "hoverManual",
     copied: "copied", cross: "crossRate", official: "hoverOfficial",
     officialLoading: "loadingOfficial", also: "hoverAlso", market: "hoverMarket",
-    officialDisclaimer: "hoverOfficialDisclaimer",
+    officialDisclaimer: "hoverOfficialDisclaimer", same: "converterSameCurrency",
   };
-  const tr = key => {
+  const message = name => {
     const table = globalThis.FXMessages || {};
-    const name = KEYS[key];
     return table[settings.language]?.[name] ?? table.zh?.[name] ?? name;
   };
+  const tr = key => message(KEYS[key]);
+  // Named in the reader's language, as the popup does; a bridge is "A + B".
+  const INSTITUTIONS = {
+    "European Central Bank": "institutionEcb", "Bank of Canada": "institutionBoc",
+    "People's Bank of China": "institutionPboc", "Federal Reserve Board": "institutionFed",
+    "Bank of Japan": "institutionBoj",
+  };
+  const institution = name => String(name).split(" + ")
+    .map(part => INSTITUTIONS[part] ? message(INSTITUTIONS[part]) : part).join(" + ");
   const locale = () => ({zh: "zh-CN", en: "en-US", ja: "ja-JP"}[settings.language] || "zh-CN");
   const el = (tag, text, className) => { const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node; };
   const validCode = code => typeof code === "string" && /^[A-Z]{3}$/.test(code);
   const hide = () => { version++; pointerVersion++; globalThis.clearTimeout(timer); globalThis.clearTimeout(hiding); active = null; if (host) host.style.display = "none"; };
 
   function quote(from, to) {
+    // Converting a currency into itself needs no data, and "S$10 → SGD" used to
+    // read "not collected" whenever SGD had no market quote.
+    if (from === to) return {value: 1, identity: true};
     if (!snapshot) return null;
     const direct = snapshot.rates.find(rate => rate.base_currency === from && rate.quote_currency === to);
     if (direct) return {...direct, value: Number(direct.midpoint)};
     const reverse = snapshot.rates.find(rate => rate.base_currency === to && rate.quote_currency === from);
     if (reverse) return {...reverse, value: 1 / Number(reverse.midpoint)};
-    if (from === to) {
-      const known = snapshot.rates.find(rate => [rate.base_currency, rate.quote_currency].includes(from));
-      if (known) return {...known, value: 1};
-    }
     return null;
   }
   /* Money follows the currency's own minor unit (2 for CNY, 0 for JPY and KRW,
-     3 for KWD). A fixed "0 for JPY, else up to 4" showed 195.2248 CNY. */
+     3 for KWD). A fixed "0 for JPY, else up to 4" showed 195.2248 CNY. Below
+     one unit two significant digits survive, so $0.0048 is not "0.00". The
+     popup's formatMoney() is the same rule. */
   const minorUnits = code => {
     try { return new Intl.NumberFormat("en", {style: "currency", currency: code}).resolvedOptions().maximumFractionDigits; }
     catch { return 2; }
   };
   const format = (amount, code) => {
-    const digits = minorUnits(code);
+    const small = amount > 0 && amount < 1 ? Math.min(8, Math.ceil(-Math.log10(amount)) + 1) : 0;
+    const digits = Math.max(minorUnits(code), small);
     return new Intl.NumberFormat(locale(), {minimumFractionDigits: digits, maximumFractionDigits: digits}).format(amount);
   };
   // Same display rule as the popup's formatRate(), so a rate reads identically in both.
@@ -310,8 +320,10 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
       meta.append(el("div", `1 ${from} = ${formatRate(rate.value)} ${to}`, "rate"));
       if (isOfficial) {
         const line = el("p", "", "note");
-        line.append(el("span", tr("official"), "badge"), `${rate.institution} · ${rate.date}${rate.derived ? ` · ${tr("cross")}` : ""}`);
+        line.append(el("span", tr("official"), "badge"), `${institution(rate.institution)} · ${rate.date}${rate.derived ? ` · ${tr("cross")}` : ""}`);
         meta.append(line);
+      } else if (current.identity) {
+        meta.append(el("p", tr("same"), "note"));
       } else {
         const line = el("p", "", "note");
         if (current.provider === "mock") line.append(el("span", tr("mock"), "badge warning"));
@@ -342,8 +354,8 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
     copy.type = "button";
     copy.disabled = !available;
     copy.onclick = async () => {
-      const origin = isOfficial ? `${tr("official")} · ${rate.institution}`
-        : `${current.provider === "mock" ? tr("mock") : tr("live")}${snapshot.offline ? ` · ${tr("offline")}` : current.is_stale ? ` · ${tr("stale")}` : ""}`;
+      const origin = isOfficial ? `${tr("official")} · ${institution(rate.institution)}`
+        : current.identity ? tr("same") : `${current.provider === "mock" ? tr("mock") : tr("live")}${snapshot.offline ? ` · ${tr("offline")}` : current.is_stale ? ` · ${tr("stale")}` : ""}`;
       const text = `${active.match.raw.trim()} → ≈ ${format(value, to)} ${to} · ${origin}`;
       try { await navigator.clipboard.writeText(text); copy.textContent = tr("copied"); }
       catch { const input = el("input"); input.readOnly = true; input.value = text; input.setAttribute("aria-label", tr("manual")); card.append(el("p", tr("manual"), "note"), input); input.focus(); input.select(); }

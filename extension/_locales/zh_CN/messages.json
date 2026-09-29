@@ -477,7 +477,7 @@
     "message": "该货币对暂无市场历史数据。当前换算可使用下方标明日期的官方参考价。"
   },
   "displayRoundingHint": {
-    "message": "汇率显示值经过四舍五入；换算使用完整精度，结果保留两位小数。"
+    "message": "汇率显示值经过四舍五入；换算使用完整精度，结果按目标货币的最小单位显示（日元、韩元没有小数）。"
   },
   "viewModeLabel": {
     "message": "视图模式"
@@ -532,5 +532,8 @@
   },
   "hoverOfficialDisclaimer": {
     "message": "官方日参考价，仅供参考，不含手续费。"
+  },
+  "timeAgo": {
+    "message": "（$1）"
   }
 }

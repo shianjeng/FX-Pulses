@@ -37,10 +37,34 @@ const INSTITUTIONS = {
   "Federal Reserve Board": "institutionFed",
   "Bank of Japan": "institutionBoj",
 };
+const institutionName = name => String(name).split(" + ")
+  .map(part => INSTITUTIONS[part] ? t(INSTITUTIONS[part]) : part).join(" + ");
 const fmt = (value, digits = 4) => Number(value).toLocaleString(docLocale(), {
   minimumFractionDigits: digits,
   maximumFractionDigits: digits,
 });
+/* Money in the target currency's own minor unit (0 for JPY and KRW, 3 for KWD),
+   as the hover card shows it; "147,912.00 JPY" had decimals yen do not have.
+   Below one unit, two significant digits survive instead of rounding a real
+   amount to 0.00. hover.js applies the same rule. */
+function minorUnits(code) {
+  try { return new Intl.NumberFormat("en", {style: "currency", currency: code}).resolvedOptions().maximumFractionDigits; }
+  catch { return 2; }
+}
+function formatMoney(amount, code) {
+  const small = amount > 0 && amount < 1 ? Math.min(8, Math.ceil(-Math.log10(amount)) + 1) : 0;
+  return fmt(amount, Math.max(minorUnits(code), small));
+}
+// "3 hours ago" next to the clock time: a time alone did not say whether it was old.
+function timeAgo(value) {
+  const minutes = Math.max(1, Math.round((Date.now() - parseUtc(value)) / 60000));
+  if (!Number.isFinite(minutes)) return "";
+  const relative = new Intl.RelativeTimeFormat(docLocale(), {numeric: "auto"});
+  const text = minutes < 60 ? relative.format(-minutes, "minute")
+    : minutes < 2880 ? relative.format(-Math.round(minutes / 60), "hour")
+      : relative.format(-Math.round(minutes / 1440), "day");
+  return t("timeAgo", text);
+}
 // Display rounding never changes the numeric quote used for conversion.
 function formatRate(value) {
   const number = Number(value);
@@ -188,8 +212,8 @@ async function loadWatchRates() {
   });
   await Promise.all(missing.map(async pair => {
     try {
-      const newest = preferredOfficial(await request(`/official-rates/${pair}`));
-      if (newest) watchOfficial.set(pair, Number(newest.rate));
+      const chosen = preferredOfficial(await request(`/official-rates/${pair}`));
+      if (chosen) watchOfficial.set(pair, Number(chosen.rate));
     } catch { /* Shown as "—"; the next opening tries again. */ }
   }));
   if (version === watchVersion) renderWatchlist();
@@ -404,8 +428,10 @@ function drawChart(points) {
     return plotted.reduce((best, point, index) => Math.abs(point.x - ratio * width) < Math.abs(plotted[best].x - ratio * width) ? index : best, 0);
   };
 
-  hit.addEventListener("mousemove", (event) => showAt(pickIndex(event)));
-  hit.addEventListener("mouseleave", hideTip);
+  // Pointer events, so a pen or a finger on a touch screen reads the line too.
+  hit.addEventListener("pointerdown", (event) => showAt(pickIndex(event)));
+  hit.addEventListener("pointermove", (event) => showAt(pickIndex(event)));
+  hit.addEventListener("pointerleave", hideTip);
 }
 
 function detailed() {
@@ -472,8 +498,7 @@ function converterStatus() {
   if (!converterQuote) return t("converterNoRate");
   if (converterQuote.kind === "identity") return t("converterSameCurrency");
   if (converterQuote.kind === "official") {
-    const key = INSTITUTIONS[converterQuote.institution];
-    const source = t("converterOfficialSource", key ? t(key) : converterQuote.institution, converterQuote.referenceDate);
+    const source = t("converterOfficialSource", institutionName(converterQuote.institution), converterQuote.referenceDate);
     return converterQuote.via ? `${source} · ${t("converterViaCurrency", converterQuote.via)}` : source;
   }
   const provider = converterQuote.market.provider === "mock" ? t("mockData") : t("providerLive");
@@ -494,7 +519,7 @@ function updateConverter() {
     ? `1 ${base} = ${converterQuote.rate} ${quote}` : "";
   renderRates();
   const market = currentRate();
-  $("status").textContent = market ? t("statusLine", chartTimeLabel(market.captured_at),
+  $("status").textContent = market ? t("statusLine", chartTimeLabel(market.captured_at) + timeAgo(market.captured_at),
     market.provider === "mock" ? t("mockData") : t("providerLive")) : converterStatus();
   // Same reason: for an official-only pair the subtitle states the source, so a
   // third copy under the converter was noise. A market pair's line differs.
@@ -510,7 +535,7 @@ function updateConverter() {
   }
   const value = amount * converterQuote.rate;
   if (!Number.isFinite(value) || converterQuote.rate <= 0) { $("converted").textContent = "—"; return; }
-  $("converted").textContent = `${fmt(value, 2)} ${quote}`;
+  $("converted").textContent = `${formatMoney(value, quote)} ${quote}`;
 }
 
 /* Which official reference to convert with when several institutions publish
@@ -555,10 +580,10 @@ async function loadConverterRate() {
   try {
     const rows = await request(`/official-rates/${base}/${quote}`);
     if (version !== converterVersion) return;
-    const newest = preferredOfficial(rows);
-    if (newest) converterQuote = {
-      kind: "official", rate: Number(newest.rate), institution: newest.institution,
-      referenceDate: newest.reference_date, via: newest.via_currency || null,
+    const chosen = preferredOfficial(rows);
+    if (chosen) converterQuote = {
+      kind: "official", rate: Number(chosen.rate), institution: chosen.institution,
+      referenceDate: chosen.reference_date, via: chosen.via_currency || null,
     };
   } catch { /* A valid currency can still lack one institution covering both sides. */ }
   if (version === converterVersion) updateConverter();
@@ -717,7 +742,7 @@ async function loadOfficial() {
       row.className = "official-row";
       const label = document.createElement("div");
       const name = document.createElement("b");
-      name.textContent = INSTITUTIONS[item.institution] ? t(INSTITUTIONS[item.institution]) : item.institution;
+      name.textContent = institutionName(item.institution);
       const date = document.createElement("small");
       const notes = [item.reference_date];
       if (item.via_currency) notes.push(t("converterViaCurrency", item.via_currency));
