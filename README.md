@@ -280,7 +280,7 @@ The check fails if the manifest does not cover the default backend, or if a non-
 
 ### Keeping the data fresh
 
-The workflow asks every hour and collects once the published data is three hours old: at most eight rounds of three pairs a day, inside the 25-call Alpha Vantage budget that the collector also enforces. GitHub does not run schedules on time, though. In late September 2026 it fired this one about five times a day, 2.7 to 8.1 hours apart, so data sometimes passed the six-hour mark at which the extension shows it as outdated.
+The workflow asks four times an hour and collects once the oldest published quote is three hours old: at most eight rounds of three pairs a day, inside the 25-call Alpha Vantage budget that the collector also enforces. A round retries a timed-out request once, and a pair that still fails is picked up by the next run that GitHub starts, without fetching the pairs that did arrive. GitHub does not run schedules on time, though. In late September 2026 it started an hourly schedule only about five times a day, 3 to 8.5 hours apart, so data sometimes passed the six-hour mark at which the extension shows it as outdated; asking more often gives it more chances.
 
 Any scheduler you trust can fill the gaps by dispatching the workflow with `force=false` every 30 minutes. Such a run goes through the same three-hour check, so it costs a few seconds of Actions time and no Alpha Vantage calls when the data is fresh.
 
@@ -300,7 +300,7 @@ Any scheduler you trust can fill the gaps by dispatching the workflow with `forc
   {"ref": "main", "inputs": {"force": "false"}}
   ```
 
-**Run workflow** in the Actions tab still collects immediately, because `force` defaults to true.
+**Run workflow** in the Actions tab still collects immediately, because `force` defaults to true. Pairs quoted within the last two hours are left out even then, so a second click does not spend budget.
 
 Time-dependent fields are never frozen into the files. `meta.json` carries collection timestamps and thresholds, and the extension decides whether a quote is stale or a collector has stalled, so a CDN serving an old file cannot make a dead collector look healthy. History is published as one 90-day file per pair and sliced in the browser.
 

@@ -17,8 +17,8 @@ from app.config import get_settings
 from app.services import refresh_all_rates, refresh_official_rates
 
 
-async def run_once():
-    market = await refresh_all_rates()
+async def run_once(skip_fresh_minutes: int = 0):
+    market = await refresh_all_rates(skip_fresh_minutes)
     official = await refresh_official_rates()
     logging.info("collected market=%s official=%s", market, official)
 
@@ -45,6 +45,10 @@ async def run():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="FX Pulse collector")
     parser.add_argument("--once", action="store_true", help="collect one round and exit")
+    parser.add_argument(
+        "--skip-fresh", type=int, default=0, metavar="MINUTES",
+        help="with --once, leave out pairs quoted within this many minutes",
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     # httpx logs complete query URLs at INFO, which would expose provider API keys.
@@ -52,6 +56,6 @@ if __name__ == "__main__":
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     try:
         with FileLock(get_settings().collector_lock_path, timeout=0):
-            asyncio.run(run_once() if args.once else run())
+            asyncio.run(run_once(args.skip_fresh) if args.once else run())
     except Timeout:
         raise SystemExit("A collector already holds the shared lock") from None

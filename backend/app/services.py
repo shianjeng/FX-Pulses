@@ -17,7 +17,7 @@ from app.official_providers import (
     provider_name,
     raw_cross,
 )
-from app.providers import ProviderError, Quote, get_provider
+from app.providers import ProviderError, Quote, TransientProviderError, get_provider
 
 logger = logging.getLogger(__name__)
 
@@ -62,16 +62,19 @@ def record_run(db: Session, job: str, *, ok: bool, error: str | None = None) -> 
 
 def prune_history(db: Session) -> None:
     now = datetime.now(timezone.utc)
+    # Plain SQL deletes. Syncing the session would compare the aware cutoff with
+    # the naive datetimes SQLite returns for rows already loaded, and raise.
+    bulk = {"synchronize_session": False}
     db.execute(delete(RateSnapshot).where(
         RateSnapshot.captured_at < now - timedelta(days=get_settings().retention_days)
-    ))
+    ).execution_options(**bulk))
     db.execute(delete(ProviderRequest).where(
         ProviderRequest.attempted_at < now - timedelta(days=2)
-    ))
+    ).execution_options(**bulk))
     db.execute(delete(OfficialAnchorRate).where(
         OfficialAnchorRate.reference_date
         < (now - timedelta(days=get_settings().retention_days)).date()
-    ))
+    ).execution_options(**bulk))
     db.commit()
 
 
@@ -229,36 +232,74 @@ def triangulate_official(
     return results[:3]
 
 
-async def refresh_all_rates() -> dict[str, int]:
+async def refresh_all_rates(skip_fresh_minutes: int = 0) -> dict[str, int]:
+    """Collect one quote per tracked pair.
+
+    A transient failure is retried once. On 29 September 2026 two read
+    timeouts in a single round cost USD/CNY and USD/JPY thirteen hours of
+    history, because the next round was hours away.
+
+    `skip_fresh_minutes` leaves out pairs already quoted within that many
+    minutes. A scheduler that re-runs as soon as any pair is behind uses it so
+    a round that failed for one pair does not spend budget on the others.
+    """
     provider = get_provider()
+    settings = get_settings()
+    metered = settings.fx_provider == "alpha_vantage"
+    spacing = settings.provider_request_spacing_seconds if metered else 0
     refreshed = 0
     errors = 0
+    skipped = 0
     last_error: str | None = None
+    fresh_since = datetime.now(timezone.utc) - timedelta(minutes=skip_fresh_minutes)
     with SessionLocal() as db:
-        pairs = get_settings().tracked_pairs
+        pairs = settings.tracked_pairs
+        exhausted = False
         for index, pair in enumerate(pairs):
-            try:
-                if get_settings().fx_provider == "alpha_vantage" and not reserve_request(db):
+            base, quote = pair.split("/", 1)
+            latest = latest_for_pair(db, base, quote) if skip_fresh_minutes else None
+            if latest and utc(latest.captured_at) >= fresh_since:
+                skipped += 1
+                continue
+            for attempt in (1, 2):
+                if metered and not reserve_request(db):
                     logger.warning("Provider rolling 24-hour budget exhausted")
                     last_error = "provider budget exhausted"
                     errors += 1
+                    exhausted = True
                     break
-                base, quote = pair.split("/", 1)
-                store_quote(db, await provider.get_quote(base, quote))
-                refreshed += 1
-            except Exception as exc:
-                db.rollback()
-                logger.exception("Quote refresh failed for %s", pair)
-                last_error = f"{pair}: {exc}"
-                errors += 1
-            if get_settings().fx_provider == "alpha_vantage" and index < len(pairs) - 1:
+                try:
+                    store_quote(db, await provider.get_quote(base, quote))
+                    refreshed += 1
+                except TransientProviderError as exc:
+                    db.rollback()
+                    if attempt == 1:
+                        logger.warning("Retrying %s after: %s", pair, exc)
+                        await asyncio.sleep(spacing)
+                        continue
+                    logger.error("Quote refresh failed for %s: %s", pair, exc)
+                    last_error = f"{pair}: {exc}"
+                    errors += 1
+                except Exception as exc:
+                    db.rollback()
+                    logger.exception("Quote refresh failed for %s", pair)
+                    last_error = f"{pair}: {exc}"
+                    errors += 1
+                break
+            if exhausted:
+                break
+            if metered and index < len(pairs) - 1:
                 # Free keys can be throttled when multiple pairs are requested back-to-back.
-                await asyncio.sleep(get_settings().provider_request_spacing_seconds)
+                await asyncio.sleep(spacing)
             else:
                 await asyncio.sleep(0)
         prune_history(db)
-        record_run(db, MARKET_JOB, ok=refreshed > 0, error=last_error)
-    return {"refreshed": refreshed, "errors": errors}
+        # A round with nothing left to fetch is a success, not a stall.
+        record_run(db, MARKET_JOB, ok=refreshed > 0 or errors == 0, error=last_error)
+    result = {"refreshed": refreshed, "errors": errors}
+    if skipped:
+        result["skipped"] = skipped
+    return result
 
 
 async def refresh_official_rates() -> dict[str, int]:
@@ -282,6 +323,11 @@ async def refresh_official_rates() -> dict[str, int]:
         prune_history(db)
         record_run(db, OFFICIAL_JOB, ok=refreshed > 0, error=last_error)
     return {"refreshed": refreshed, "errors": errors}
+
+
+def utc(value: datetime) -> datetime:
+    """SQLite hands back naive datetimes; every stored time is UTC."""
+    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
 
 
 def latest_for_pair(db: Session, base: str, quote: str) -> RateSnapshot | None:
