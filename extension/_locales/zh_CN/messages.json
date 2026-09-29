@@ -33,7 +33,7 @@
     "message": "正在读取行情…"
   },
   "refreshHint": {
-    "message": "刷新只重新读取后端数据，不会立即触发上游采集。"
+    "message": "刷新会重新获取实时汇率；走势图等历史行情约每 3 小时采集一次。"
   },
   "eyebrowOfficial": {
     "message": "官方参考价"
@@ -96,7 +96,7 @@
     "message": "换算结果"
   },
   "converterHint": {
-    "message": "优先使用市场中间价；无市场行情时使用标明来源和日期的官方日参考价。不包含手续费与点差。"
+    "message": "优先使用实时中间价（Coinbase），其次是约每 3 小时采集的市场中间价，再其次是标明来源和日期的官方日参考价。不包含手续费与点差。"
   },
   "targetTitle": {
     "message": "目标价状态"
@@ -540,7 +540,7 @@
     "message": "工具栏图标"
   },
   "badgeDescription": {
-    "message": "在插件图标上直接显示一个币对的汇率，不用打开插件就能看到。每 30 分钟和每次打开插件时更新；数据较旧时变成灰色。"
+    "message": "在插件图标上直接显示一个币对的汇率，不用打开插件就能看到。开启实时汇率时约每 5 分钟更新一次（关闭时每 30 分钟），打开插件时也会更新；数据较旧时变成灰色。"
   },
   "badgeLabel": {
     "message": "图标显示"
@@ -550,5 +550,35 @@
   },
   "badgeTooltip": {
     "message": "FX Pulse · $1 = $2 · 数据时间 $3"
+  },
+  "liveSectionTitle": {
+    "message": "实时汇率"
+  },
+  "liveDescription": {
+    "message": "打开插件、网页悬停换算或图标显示汇率时，最多每分钟从 Coinbase 的公开接口获取一次最新中间价（约 160 种货币，无需账号，不会发送网页内容或任何设置）。Coinbase 会看到你的 IP 地址。走势图仍使用采集的历史数据。关闭后改用约每 3 小时更新一次的行情。"
+  },
+  "liveEnable": {
+    "message": "使用实时汇率"
+  },
+  "liveOn": {
+    "message": "已开启实时汇率"
+  },
+  "liveOff": {
+    "message": "已关闭实时汇率，改用约每 3 小时更新的行情"
+  },
+  "liveSource": {
+    "message": "实时 · Coinbase"
+  },
+  "converterLiveSource": {
+    "message": "实时中间价 · Coinbase"
+  },
+  "liveBadge": {
+    "message": "实时"
+  },
+  "liveRate": {
+    "message": "Coinbase 实时中间价"
+  },
+  "interval5": {
+    "message": "5分钟"
   }
 }

@@ -95,7 +95,8 @@ test('choosing a pair paints its rate and keeps it fresh with an alarm', async (
   assert.equal(w.badge.text, '157');
   assert.equal(w.badge.color, '#0b8a6f');
   assert.match(w.badge.title, /USD\/JPY = 157\.431/);
-  assert.equal(w.alarms.get('fx-badge')?.periodInMinutes, 30);
+  // Live rates are on by default, so the icon follows them every five minutes.
+  assert.equal(w.alarms.get('fx-badge')?.periodInMinutes, 5);
 
   // Either way round: the inverse of a tracked pair is painted too.
   await w.change({badgePair: 'JPY/USD'});

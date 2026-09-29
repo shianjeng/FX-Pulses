@@ -249,6 +249,12 @@ main { display: flex; flex-direction: column; gap: 12px; padding: 14px 14px 18px
 .rate-bottom > span:last-child { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; }
 .rate-bottom > span:last-child::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--up); }
 .rate-bottom > span.stale::before { background: var(--warn); }
+/* Live: the dot breathes, so a rate that follows the market reads as one. */
+.rate-bottom > span.live { color: var(--up); font-weight: 600; }
+@media (prefers-reduced-motion: no-preference) {
+  .rate-bottom > span.live::before { animation: live-dot 2.4s ease-in-out infinite; }
+}
+@keyframes live-dot { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--up) 22%, transparent); } }
 .rate-card .quote-time { display: none; }
 .stale { color: var(--warn); }
 

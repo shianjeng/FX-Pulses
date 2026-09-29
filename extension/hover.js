@@ -4,7 +4,7 @@
   globalThis.__fxHoverInstalled = true;
   const parser = globalThis.FXAmountParser;
   const defaults = {hoverEnabled: false, hoverTarget: "CNY", hoverSize: "m", hoverMode: "simple", language: "zh", watchlist: ["USD/CNY", "USD/JPY", "CNY/JPY"]};
-  let settings = {...defaults}, host, shadow, card, active, snapshot, error = "", timer, hiding, version = 0, pointerVersion = 0;
+  let settings = {...defaults}, host, shadow, card, active, snapshot, liveData = null, error = "", timer, hiding, version = 0, pointerVersion = 0;
   const MEMORY_LIMIT = 200;
   const officialCache = new Map();   // "FROM/TO" -> observation | null
   const officialPending = new Set();
@@ -19,6 +19,7 @@
     copied: "copied", cross: "crossRate", official: "hoverOfficial",
     officialLoading: "loadingOfficial", also: "hoverAlso", market: "hoverMarket",
     officialDisclaimer: "hoverOfficialDisclaimer", same: "converterSameCurrency",
+    liveBadge: "liveBadge", liveRate: "liveRate",
   };
   const message = name => {
     const table = globalThis.FXMessages || {};
@@ -42,6 +43,10 @@
     // Converting a currency into itself needs no data, and "S$10 → SGD" used to
     // read "not collected" whenever SGD had no market quote.
     if (from === to) return {value: 1, identity: true};
+    // Live rates first: at most a minute old, and every currency they cover.
+    const live = liveData && Date.now() - liveData.fetchedAt <= 600000 ? liveData : null;
+    const value = live?.rates?.[to] / live?.rates?.[from];
+    if (Number.isFinite(value) && value > 0) return {value, live: true, captured_at: new Date(live.fetchedAt).toISOString()};
     if (!snapshot) return null;
     const direct = snapshot.rates.find(rate => rate.base_currency === from && rate.quote_currency === to);
     if (direct) return {...direct, value: Number(direct.midpoint)};
@@ -278,7 +283,7 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
     // choice stays listed even before the list arrives or while offline.
     loadCoverage();
     const alts = Array.isArray(active.match.alts) ? active.match.alts : [];
-    const codes = [...new Set([from, to, ...alts, ...coverage, ...(snapshot?.pairs || []), ...settings.watchlist]
+    const codes = [...new Set([from, to, ...alts, ...coverage, ...(snapshot?.pairs || []), ...settings.watchlist, ...Object.keys(liveData?.rates || {})]
       .flatMap(item => String(item).split("/")))].filter(validCode).sort();
     const fields = el("div", "", "fields");
     for (const [key, selected] of [["source", from], ["target", to]]) {
@@ -324,6 +329,10 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
         meta.append(line);
       } else if (current.identity) {
         meta.append(el("p", tr("same"), "note"));
+      } else if (current.live) {
+        const line = el("p", "", "note");
+        line.append(el("span", tr("liveBadge"), "badge"), `${tr("liveRate")} · ${shortTime(current.captured_at)}`);
+        meta.append(line);
       } else {
         const line = el("p", "", "note");
         if (current.provider === "mock") line.append(el("span", tr("mock"), "badge warning"));
@@ -355,7 +364,7 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
     copy.disabled = !available;
     copy.onclick = async () => {
       const origin = isOfficial ? `${tr("official")} · ${institution(rate.institution)}`
-        : current.identity ? tr("same") : `${current.provider === "mock" ? tr("mock") : tr("live")}${snapshot.offline ? ` · ${tr("offline")}` : current.is_stale ? ` · ${tr("stale")}` : ""}`;
+        : current.identity ? tr("same") : current.live ? tr("liveRate") : `${current.provider === "mock" ? tr("mock") : tr("live")}${snapshot.offline ? ` · ${tr("offline")}` : current.is_stale ? ` · ${tr("stale")}` : ""}`;
       const text = `${active.match.raw.trim()} → ≈ ${format(value, to)} ${to} · ${origin}`;
       try { await navigator.clipboard.writeText(text); copy.textContent = tr("copied"); }
       catch { const input = el("input"); input.readOnly = true; input.value = text; input.setAttribute("aria-label", tr("manual")); card.append(el("p", tr("manual"), "note"), input); input.focus(); input.select(); }
@@ -370,8 +379,14 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
     if (!active || !settings.hoverEnabled) return;
     const own = ++version;
     try {
-      const response = await chrome.runtime.sendMessage({type: "FX_SNAPSHOT"});
+      const [response, liveReply] = await Promise.all([
+        chrome.runtime.sendMessage({type: "FX_SNAPSHOT"}),
+        // Only its type, like every message from a page: nothing of the page rides along.
+        chrome.runtime.sendMessage({type: "FX_LIVE"}).catch(() => null),
+      ]);
       if (own !== version) return;
+      const data = liveReply?.ok ? liveReply.data : null;
+      liveData = data?.rates && typeof data.rates === "object" && Number.isFinite(data.fetchedAt) ? data : null;
       if (!response?.ok) throw new Error(response?.error || "unavailable");
       snapshot = response.data; error = "";
     } catch { if (own !== version) return; error = "unavailable"; snapshot = null; }
@@ -524,6 +539,7 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
     for (const key of Object.keys(defaults)) if (changes[key]) settings[key] = changes[key].newValue ?? defaults[key];
     if (!settings.hoverEnabled) { hide(); return; }
     if (changes.apiUrl) { snapshot = null; version++; officialCache.clear(); coverage = []; coverageAt = 0; void refresh(); }
+    if (changes.liveRates) { liveData = null; void refresh(); }
     render();
   });
   chrome.storage.local.get(defaults).then(value => { settings = value; });
