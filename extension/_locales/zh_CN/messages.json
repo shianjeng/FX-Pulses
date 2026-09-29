@@ -535,5 +535,20 @@
   },
   "timeAgo": {
     "message": "（$1）"
+  },
+  "badgeSectionTitle": {
+    "message": "工具栏图标"
+  },
+  "badgeDescription": {
+    "message": "在插件图标上直接显示一个币对的汇率，不用打开插件就能看到。每 30 分钟和每次打开插件时更新；数据较旧时变成灰色。"
+  },
+  "badgeLabel": {
+    "message": "图标显示"
+  },
+  "badgeOff": {
+    "message": "不显示"
+  },
+  "badgeTooltip": {
+    "message": "FX Pulse · $1 = $2 · 数据时间 $3"
   }
 }

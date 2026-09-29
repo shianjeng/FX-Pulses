@@ -179,7 +179,12 @@ globalThis.FXMessages = {
     "hoverAlso": "也可能是：",
     "hoverMarket": "市场中间价",
     "hoverOfficialDisclaimer": "官方日参考价，仅供参考，不含手续费。",
-    "timeAgo": "（$1）"
+    "timeAgo": "（$1）",
+    "badgeSectionTitle": "工具栏图标",
+    "badgeDescription": "在插件图标上直接显示一个币对的汇率，不用打开插件就能看到。每 30 分钟和每次打开插件时更新；数据较旧时变成灰色。",
+    "badgeLabel": "图标显示",
+    "badgeOff": "不显示",
+    "badgeTooltip": "FX Pulse · $1 = $2 · 数据时间 $3"
   },
   "en": {
     "extensionName": "FX Pulse — exchange rates at hand",
@@ -360,7 +365,12 @@ globalThis.FXMessages = {
     "hoverAlso": "Could also be:",
     "hoverMarket": "Market midpoint",
     "hoverOfficialDisclaimer": "Official daily reference; fees excluded.",
-    "timeAgo": " ($1)"
+    "timeAgo": " ($1)",
+    "badgeSectionTitle": "Toolbar icon",
+    "badgeDescription": "Show one pair's rate on the extension icon, so you can read it without opening anything. It updates every 30 minutes and whenever the popup opens, and turns grey when the data is old.",
+    "badgeLabel": "Show on icon",
+    "badgeOff": "Nothing",
+    "badgeTooltip": "FX Pulse · $1 = $2 · as of $3"
   },
   "ja": {
     "extensionName": "FX Pulse — 手元で為替レート",
@@ -541,6 +551,11 @@ globalThis.FXMessages = {
     "hoverAlso": "他の候補：",
     "hoverMarket": "市場仲値",
     "hoverOfficialDisclaimer": "公式の日次参考レートによる概算です。手数料は含みません。",
-    "timeAgo": "（$1）"
+    "timeAgo": "（$1）",
+    "badgeSectionTitle": "ツールバーアイコン",
+    "badgeDescription": "拡張機能のアイコンに通貨ペアのレートを表示し、何も開かずに確認できます。30 分ごとと、ポップアップを開いたときに更新され、データが古いと灰色になります。",
+    "badgeLabel": "アイコンに表示",
+    "badgeOff": "表示しない",
+    "badgeTooltip": "FX Pulse · $1 = $2 · 更新日時 $3"
   }
 };

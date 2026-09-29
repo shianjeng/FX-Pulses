@@ -535,5 +535,20 @@
   },
   "timeAgo": {
     "message": " ($1)"
+  },
+  "badgeSectionTitle": {
+    "message": "Toolbar icon"
+  },
+  "badgeDescription": {
+    "message": "Show one pair's rate on the extension icon, so you can read it without opening anything. It updates every 30 minutes and whenever the popup opens, and turns grey when the data is old."
+  },
+  "badgeLabel": {
+    "message": "Show on icon"
+  },
+  "badgeOff": {
+    "message": "Nothing"
+  },
+  "badgeTooltip": {
+    "message": "FX Pulse · $1 = $2 · as of $3"
   }
 }

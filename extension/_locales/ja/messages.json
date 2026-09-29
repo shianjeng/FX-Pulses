@@ -535,5 +535,20 @@
   },
   "timeAgo": {
     "message": "（$1）"
+  },
+  "badgeSectionTitle": {
+    "message": "ツールバーアイコン"
+  },
+  "badgeDescription": {
+    "message": "拡張機能のアイコンに通貨ペアのレートを表示し、何も開かずに確認できます。30 分ごとと、ポップアップを開いたときに更新され、データが古いと灰色になります。"
+  },
+  "badgeLabel": {
+    "message": "アイコンに表示"
+  },
+  "badgeOff": {
+    "message": "表示しない"
+  },
+  "badgeTooltip": {
+    "message": "FX Pulse · $1 = $2 · 更新日時 $3"
   }
 }
