@@ -47,10 +47,10 @@ test('single observation has no filled triangle; time spacing and gaps are respe
  const {w,el}=await popup(t);
  w.eval('drawChart([{midpoint:7,captured_at:"2026-09-20T00:00:00Z"}])');
  assert.match(el('chart').textContent,/仅有一个/);
- assert.equal(el('chart').querySelector('path').getAttribute('fill'),'none');
- assert.doesNotMatch(el('chart').querySelector('path').getAttribute('d'),/L|Z/);
+ assert.equal(el('chart').querySelector('path.chart-line').getAttribute('fill'),'none');
+ assert.doesNotMatch(el('chart').querySelector('path.chart-line').getAttribute('d'),/L|Z/);
  w.eval('drawChart([{midpoint:7,captured_at:"2026-09-13T00:00:00Z"},{midpoint:8,captured_at:"2026-09-13T00:01:00Z"},{midpoint:7,captured_at:"2026-09-20T00:00:00Z"}])');
- const d=el('chart').querySelector('path').getAttribute('d');
+ const d=el('chart').querySelector('path.chart-line').getAttribute('d');
  assert.match(d,/L 0\.03 /);assert.match(d,/M 340\.00 /);assert.doesNotMatch(d,/C/);
 });
 test('empty, negative and excessive amounts are rejected; zero and reverse work',async t=>{
