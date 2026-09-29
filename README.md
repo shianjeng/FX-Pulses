@@ -32,6 +32,8 @@ The extension and hover converter share the same backend, one-minute cache, watc
 
 ## What's new in 2.8.5
 
+- **A smoother trend chart.** The line is now a smooth curve that still never invents a high or low between samples. It has a round-numbered price scale on the right, dates or hours underneath, and headroom above and below. The tooltip also shows the move since the range began. Outages show as a faint dashed span, and the line draws itself in, with no animation when the system asks for reduced motion.
+- **Hover works on more shops.** Amazon writes prices in pieces ("¥" and "26,990" in separate elements, "$29.99" in four), and Mercari lays them over thumbnails where the pointer passes straight through. Hover now reads both, looks inside open shadow roots, and is no longer switched off by pages that stop mouse events or by carousels that scroll on their own.
 - **Rate on the toolbar icon (optional).** In Settings, choose a pair under **Toolbar icon** and its rate appears on the extension icon: 6.70, 157, .043. It updates every 30 minutes and whenever the popup opens, turns grey when the quote is old, and costs no extra requests. Off by default.
 - **Keyboard shortcut.** Alt+Shift+F opens the popup. Change it at `chrome://extensions/shortcuts`.
 - **Amounts read the way the currency is written.** The converter shows yen and won without decimals (157,431 JPY) and three decimals for currencies that have them, like the hover card already did. Small results keep two significant digits instead of rounding to 0.00.
@@ -88,9 +90,9 @@ Rates below 1 show at least six decimal places, with more precision for smaller 
 | ⭐ | Watchlist | Save up to eight pairs of any currencies and switch between them in one click |
 | 👁️ | Simple view | Opens on the midpoint and converter; full detail is one click away |
 | ↕️ | Market quote detail | Bid, ask, midpoint, spread, freshness, and 24-hour movement (detailed view) |
-| 📈 | Trend chart | 24-hour, 7-day, 1-month and 3-month lines with the period high, low, average and change |
+| 📈 | Trend chart | Smooth 24-hour to 3-month lines with a price scale, time axis, high and low markers, and range statistics |
 | 🏛️ | Official references | Compare market midpoints with central-bank reference observations |
-| ⚡ | Hover conversion | Point at an amount on a webpage to convert it without leaving the page |
+| ⚡ | Hover conversion | Point at an amount on a webpage to convert it without leaving the page, including prices shops split into pieces (Amazon, Mercari) |
 | 🧮 | Quick converter | Choose source and target currencies, swap direction, and see the rate source and date |
 | 🔔 | Optional alerts | Local target-price alerts powered by `chrome.alarms` |
 | 🏷️ | Rate on the icon | Optionally show one pair's rate on the toolbar icon, grey when the quote is old |
@@ -472,7 +474,9 @@ Edge 用户：打开 `edge://extensions`，在左侧打开 **开发人员模式*
 
 同一币对有多家央行报价时，2.8.4 起按实测准确度挑选（加拿大央行、欧洲央行优先，其次人民银行、日本银行，最后是晚一周发布的美联储），日期只在最新报价前后四天内的来源之间起作用。此前按“日期最新”挑选，周一早上几乎总会选中人民银行的中间价，与市场偏差 0.3%～0.4%。
 
-2.8.5 新增可选的「工具栏图标」显示：在设置页选一个币对，它的汇率会直接显示在插件图标上（如 6.70、157），每 30 分钟和每次打开插件时更新，数据较旧时变灰，不额外消耗请求，默认关闭。其他改动：
+2.8.5 起走势图改为平滑曲线（仍不会在两个数据点之间凭空画出高点或低点）：右侧有整数刻度，下方有日期或时间，悬停时显示相对区间起点的涨跌幅。网页悬停现在支持亚马逊这类把价格拆成多段显示的网站（「¥」和「26,990」分开写），也支持煤炉（Mercari）盖在商品图上的价格标签，页面拦截鼠标事件或轮播图自动滚动时也不会失效。
+
+2.8.5 还新增了可选的「工具栏图标」显示：在设置页选一个币对，它的汇率会直接显示在插件图标上（如 6.70、157），每 30 分钟和每次打开插件时更新，数据较旧时变灰，不额外消耗请求，默认关闭。其他改动：
 - 快捷键 Alt+Shift+F 可打开插件。
 - 换算结果按币种惯例显示小数：日元、韩元不带小数，很小的金额不再显示成 0.00。
 - 状态栏会注明数据是多久以前的，例如「9/29 23:21（5小时前）」。
