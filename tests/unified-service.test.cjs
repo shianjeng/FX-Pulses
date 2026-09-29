@@ -108,8 +108,8 @@ test('hover registration is opt-in, isolated, and removed when permission is rev
   assert.equal(h.registrations().length, 0); assert.equal(h.local.hoverEnabled, false);
 });
 
-async function hover(t, {language = 'en', text = '$10', target = 'CNY'} = {}) {
-  const h = worker({initial: {language, hoverTarget: target, hoverMode: 'detail', hoverSize: 'm', watchlist: pairs}});
+async function hover(t, {language = 'en', text = '$10', target = 'CNY', liveRates = true} = {}) {
+  const h = worker({initial: {language, hoverTarget: target, hoverMode: 'detail', hoverSize: 'm', watchlist: pairs, liveRates}});
   const dom = new JSDOM(`<body><span id="price"></span></body>`, {runScripts: 'outside-only', url: 'https://example.com'});
   t.after(() => dom.window.close());
   const w = dom.window, requests = []; let shadow;
@@ -133,15 +133,19 @@ test('integrated hover uses shared service, closed shadow and no uploaded page t
   const h = await hover(t);
   assert.match(h.shadow().querySelector('.amount').textContent, /70\.00 CNY/);
   assert.equal(h.w.document.getElementById('fx-pulse-unified-hover').shadowRoot, null);
-  // The card asks for the shared snapshot and, once per page, the public list of
-  // covered currencies. A message is its type alone, so no page text can ride along.
-  assert.deepEqual(h.requests.map(message => message.type).sort(), ['FX_CURRENCIES', 'FX_SNAPSHOT']);
+  // The card asks for the shared snapshot, the live rates and, once per page, the
+  // public list of covered currencies. A message is its type alone, so no page
+  // text can ride along.
+  assert.deepEqual(h.requests.map(message => message.type).sort(), ['FX_CURRENCIES', 'FX_LIVE', 'FX_SNAPSHOT']);
   assert.ok(h.requests.every(message => Object.keys(message).join() === 'type'), JSON.stringify(h.requests));
-  assert.deepEqual(h.calls.map(url => url.split('/').pop()).sort(), ['currencies', 'pairs', 'rates']);
+  // The worker alone goes out: to the backend, and to the live-rate endpoint with nothing but its fixed query.
+  assert.deepEqual(h.calls.map(url => url.split('/').pop()).sort(), ['currencies', 'exchange-rates?currency=USD', 'pairs', 'rates']);
+  assert.ok(h.calls.every(url => url.startsWith('http://localhost:8000/api/v1/') || url === 'https://api.coinbase.com/v2/exchange-rates?currency=USD'));
 });
 
 test('hover uses the direct CNY/JPY quote instead of a different cross-rate provider', async t => {
-  const h = await hover(t, {text: '100元', target: 'JPY', language: 'zh'});
+  // With live rates off, the backend is the only source there is.
+  const h = await hover(t, {text: '100元', target: 'JPY', language: 'zh', liveRates: false});
   assert.match(h.shadow().querySelector('.amount').textContent, /2,000 JPY/);
   assert.equal(h.calls.every(url => url.startsWith('http://localhost:8000/api/v1/')), true);
 });

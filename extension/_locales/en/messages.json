@@ -33,7 +33,7 @@
     "message": "Loading rates…"
   },
   "refreshHint": {
-    "message": "Refresh reloads stored backend data; it does not trigger a new provider collection."
+    "message": "Refresh fetches live rates again; history for the chart is collected about every three hours."
   },
   "eyebrowOfficial": {
     "message": "OFFICIAL REFERENCE"
@@ -96,7 +96,7 @@
     "message": "You receive"
   },
   "converterHint": {
-    "message": "Uses market midpoints when available; otherwise an official daily reference with source and date. Fees and spreads excluded."
+    "message": "Uses live mid-market rates (Coinbase) first, then market midpoints collected about every three hours, then an official daily reference with source and date. Fees and spreads excluded."
   },
   "targetTitle": {
     "message": "Rate alerts"
@@ -540,7 +540,7 @@
     "message": "Toolbar icon"
   },
   "badgeDescription": {
-    "message": "Show one pair's rate on the extension icon, so you can read it without opening anything. It updates every 30 minutes and whenever the popup opens, and turns grey when the data is old."
+    "message": "Show one pair's rate on the extension icon, so you can read it without opening anything. It updates about every 5 minutes with live rates on (every 30 without), and whenever the popup opens, and turns grey when the data is old."
   },
   "badgeLabel": {
     "message": "Show on icon"
@@ -550,5 +550,35 @@
   },
   "badgeTooltip": {
     "message": "FX Pulse · $1 = $2 · as of $3"
+  },
+  "liveSectionTitle": {
+    "message": "Live rates"
+  },
+  "liveDescription": {
+    "message": "While the popup is open, a hover card is shown or the icon shows a rate, the latest mid-market rates are fetched from Coinbase's public API at most once a minute (about 160 currencies, no account; nothing from the page and no settings are sent). Coinbase sees your IP address. Charts still use collected history. Turned off, rates come from the backend, updated about every three hours."
+  },
+  "liveEnable": {
+    "message": "Use live rates"
+  },
+  "liveOn": {
+    "message": "Live rates on"
+  },
+  "liveOff": {
+    "message": "Live rates off; using rates updated about every three hours"
+  },
+  "liveSource": {
+    "message": "Live · Coinbase"
+  },
+  "converterLiveSource": {
+    "message": "Live mid-market rate · Coinbase"
+  },
+  "liveBadge": {
+    "message": "Live"
+  },
+  "liveRate": {
+    "message": "Coinbase live mid-market rate"
+  },
+  "interval5": {
+    "message": "5 minutes"
   }
 }

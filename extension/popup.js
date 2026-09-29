@@ -18,6 +18,7 @@ let supportedPairs = [];
 let officialCurrencies = [];
 let converterQuote = null;
 let offline = false;
+let live = null;
 const validPair = pair => typeof pair === "string" && /^[A-Z]{3}\/[A-Z]{3}$/.test(pair);
 
 const RANGE_DAYS = [1, 7, 30, 90];
@@ -57,10 +58,11 @@ function formatMoney(amount, code) {
 }
 // "3 hours ago" next to the clock time: a time alone did not say whether it was old.
 function timeAgo(value) {
-  const minutes = Math.max(1, Math.round((Date.now() - parseUtc(value)) / 60000));
+  const minutes = Math.round((Date.now() - parseUtc(value)) / 60000);
   if (!Number.isFinite(minutes)) return "";
   const relative = new Intl.RelativeTimeFormat(docLocale(), {numeric: "auto"});
-  const text = minutes < 60 ? relative.format(-minutes, "minute")
+  // A live rate fetched seconds ago reads "now", not "1 minute ago".
+  const text = minutes < 1 ? relative.format(0, "second") : minutes < 60 ? relative.format(-minutes, "minute")
     : minutes < 2880 ? relative.format(-Math.round(minutes / 60), "hour")
       : relative.format(-Math.round(minutes / 1440), "day");
   return t("timeAgo", text);
@@ -106,10 +108,15 @@ async function request(path) {
 function rateCard(rate) {
   const pair = pairOf(rate);
   const change = Number(rate.change_percent || 0);
+  // A live rate has no bid or ask of its own; the backend's would be hours older.
+  const detail = rate.live ? `<span class="pro-only">${t("converterLiveSource")}</span>`
+    : `<span class="pro-only">${t("bid")} ${formatRate(rate.bid)} · ${t("ask")} ${formatRate(rate.ask)}</span>`;
+  const [state, label] = rate.live ? ["live", t("liveBadge")] : offline ? ["stale", t("offlineCache")]
+    : rate.is_stale ? ["stale", t("outdated")] : ["", t("updated")];
   return `<button class="rate-card ${pair === selectedPair ? "selected" : ""}" data-pair="${pair}">
     <div class="rate-top"><span class="pair">${pair}</span><span class="change ${rate.change_percent === null || rate.change_percent === undefined ? "" : change >= 0 ? "positive" : "negative"}">${changeText(rate.change_percent)}</span></div>
     <strong>${formatRate(rate.midpoint)}</strong>
-    <div class="rate-bottom"><span class="pro-only">${t("bid")} ${formatRate(rate.bid)} · ${t("ask")} ${formatRate(rate.ask)}</span><span class="${offline || rate.is_stale ? "stale" : ""}">${offline ? t("offlineCache") : rate.is_stale ? t("outdated") : t("updated")}</span></div>
+    <div class="rate-bottom">${detail}<span class="${state}">${label}</span></div>
     <small class="quote-time">${chartTimeLabel(rate.captured_at)}</small>
   </button>`;
 }
@@ -122,6 +129,35 @@ function currentRate() {
   return inverse ? {...inverse, base_currency: base, quote_currency: quote,
     midpoint: 1 / Number(inverse.midpoint), bid: 1 / Number(inverse.ask),
     ask: 1 / Number(inverse.bid), change_percent: null} : null;
+}
+
+/* Live mid-market rates (Coinbase, through the worker's one-minute cache): the
+   number shown and converted with whenever they are on and current. History,
+   bid/ask and official references still come from the backend. */
+const LIVE_FRESH_MS = 10 * 60000;
+const liveCurrent = () => live && Date.now() - live.fetchedAt <= LIVE_FRESH_MS ? live : null;
+function liveRate(base, quote) {
+  const value = liveCurrent()?.rates?.[quote] / liveCurrent()?.rates?.[base];
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+async function loadLive(force = false) {
+  if (!chrome.runtime?.sendMessage) return;
+  try {
+    const reply = await chrome.runtime.sendMessage({type: "FX_LIVE", force: force === true});
+    const data = reply?.ok ? reply.data : null;
+    live = data?.rates && typeof data.rates === "object" && Number.isFinite(data.fetchedAt) ? data : null;
+  } catch { live = null; }
+}
+
+// What the card shows: the live rate when there is one, over the backend's quote.
+function shownRate() {
+  const market = currentRate();
+  const [base, quote] = selectedPair.split("/");
+  const value = liveRate(base, quote);
+  if (value === null) return market;
+  return {...market, base_currency: base, quote_currency: quote, midpoint: value, live: true,
+    change_percent: market?.change_percent ?? null, captured_at: new Date(live.fetchedAt).toISOString(), is_stale: false};
 }
 
 async function reconcileWatchlist() {
@@ -139,6 +175,8 @@ let watchVersion = 0;
 
 function watchRate(pair) {
   const [base, quote] = pair.split("/");
+  const current = liveRate(base, quote);
+  if (current !== null) return current;
   const market = marketConverterQuote(base, quote);
   if (market) return market.rate;
   return watchOfficial.get(pair) ?? null;
@@ -208,7 +246,7 @@ async function loadWatchRates() {
   const version = ++watchVersion;
   const missing = settings.watchlist.filter(pair => {
     const [base, quote] = pair.split("/");
-    return !marketConverterQuote(base, quote) && !watchOfficial.has(pair);
+    return liveRate(base, quote) === null && !marketConverterQuote(base, quote) && !watchOfficial.has(pair);
   });
   await Promise.all(missing.map(async pair => {
     try {
@@ -220,7 +258,7 @@ async function loadWatchRates() {
 }
 
 function renderRates() {
-  const rate = currentRate();
+  const rate = shownRate();
   if (rate) $("rates").innerHTML = rateCard(rate);
   else {
     $("rates").replaceChildren();
@@ -241,7 +279,7 @@ function renderRates() {
     card.append(title, value, source);
     $("rates").append(card);
   }
-  $("copy-button").disabled = offline || (!rate && !converterQuote);
+  $("copy-button").disabled = (offline && !rate?.live) || (!rate && !converterQuote);
   renderWatchlist();
 }
 
@@ -255,6 +293,8 @@ function renderSelects() {
   const available = [...new Set([
     ...pairs.flatMap(pair => pair.split("/")),
     ...officialCurrencies,
+    // Every currency the live rates cover, about 160 of them.
+    ...Object.keys(liveCurrent()?.rates || {}),
   ])].filter(currency => /^[A-Z]{3}$/.test(currency)).sort();
   // A saved currency stays selectable while coverage is unknown (offline, or
   // /currencies not answered yet); losing the selection silently looked like the
@@ -563,6 +603,7 @@ function marketConverterQuote(base, quote) {
 function converterStatus() {
   if (!converterQuote) return t("converterNoRate");
   if (converterQuote.kind === "identity") return t("converterSameCurrency");
+  if (converterQuote.kind === "live") return t("converterLiveSource");
   if (converterQuote.kind === "official") {
     const source = t("converterOfficialSource", institutionName(converterQuote.institution), converterQuote.referenceDate);
     return converterQuote.via ? `${source} · ${t("converterViaCurrency", converterQuote.via)}` : source;
@@ -584,13 +625,13 @@ function updateConverter() {
   $("conversion-rate").title = converterQuote
     ? `1 ${base} = ${converterQuote.rate} ${quote}` : "";
   renderRates();
-  const market = currentRate();
-  $("status").textContent = market ? t("statusLine", chartTimeLabel(market.captured_at) + timeAgo(market.captured_at),
-    market.provider === "mock" ? t("mockData") : t("providerLive")) : converterStatus();
+  const shown = shownRate();
+  $("status").textContent = shown ? t("statusLine", chartTimeLabel(shown.captured_at) + timeAgo(shown.captured_at),
+    shown.live ? t("liveSource") : shown.provider === "mock" ? t("mockData") : t("providerLive")) : converterStatus();
   // Same reason: for an official-only pair the subtitle states the source, so a
   // third copy under the converter was noise. A market pair's line differs.
-  $("converter-status").hidden = !market;
-  if (offline) $("status").textContent += " · " + t("offlineCache");
+  $("converter-status").hidden = !shown;
+  if (offline && !shown?.live) $("status").textContent += " · " + t("offlineCache");
   if (!converterQuote) { $("converted").textContent = "—"; return; }
   const raw = $("amount").value.trim();
   const amount = Number(raw);
@@ -639,8 +680,10 @@ async function loadConverterRate() {
   if (!base || !quote) return;
   if (base === quote) converterQuote = {kind: "identity", rate: 1};
   else {
+    const current = liveRate(base, quote);
     const market = marketConverterQuote(base, quote);
-    if (market) converterQuote = {kind: "market", ...market};
+    if (current !== null) converterQuote = {kind: "live", rate: current};
+    else if (market) converterQuote = {kind: "market", ...market};
   }
   if (converterQuote) { updateConverter(); return; }
   try {
@@ -658,9 +701,10 @@ async function loadConverterRate() {
 function targetStatus(pair) {
   const target = settings.targets[pair];
   const rate = rates.find((item) => pairOf(item) === pair);
-  if (!target || !rate) return t("noTarget");
-  if (offline || rate.is_stale) return t("targetPaused");
-  const current = Number(rate.midpoint);
+  const liveValue = liveRate(...pair.split("/"));
+  const current = liveValue ?? (rate ? Number(rate.midpoint) : null);
+  if (!target || current === null) return t("noTarget");
+  if (liveValue === null && (offline || rate.is_stale)) return t("targetPaused");
   const reached = target.direction === "above" ? current >= target.value : current <= target.value;
   const sign = target.direction === "above" ? "≥" : "≤";
   return t(reached ? "targetReached" : "targetNotReached", sign, target.value);
@@ -685,6 +729,7 @@ async function loadData(force = false) {
       const [response, nextCoverage] = await Promise.all([
         chrome.runtime.sendMessage({type: "FX_SNAPSHOT", force: force === true}),
         request("/currencies").catch(() => null),
+        loadLive(force),
       ]);
       if (!response?.ok) throw new Error(response?.error || t("cannotConnect"));
       ({pairs: nextPairs, rates: nextRates, offline: snapshotOffline} = response.data);
@@ -776,7 +821,7 @@ $("range-buttons").addEventListener("click", (event) => {
   void loadHistory();
 });
 $("copy-button").addEventListener("click", async () => {
-  const rate = currentRate();
+  const rate = shownRate();
   if (!rate && !converterQuote) return;
   const text = `${selectedPair} ${rate ? rate.midpoint : converterQuote.rate}`;
   try {
@@ -864,8 +909,18 @@ async function init() {
 }
 
 init();
+// While the popup stays open the live rate follows the market, about once a
+// minute; history and official references are left as they are.
+if (chrome.runtime?.sendMessage) globalThis.setInterval(async () => {
+  await loadLive();
+  const [base, quote] = [$("converter-from").value, $("converter-to").value];
+  if (converterQuote?.kind === "live" || (base !== quote && liveRate(base, quote) !== null)) void loadConverterRate();
+  else renderRates();
+  loadTarget();
+}, 60000);
 chrome.storage.onChanged?.addListener((changes, area) => {
   if (area !== "local") return;
+  if (changes.liveRates) { live = null; void loadData(); }
   if (changes.apiUrl) { converterVersion++; converterQuote = null; officialCurrencies = []; rates = []; watchOfficial.clear(); }
   if (changes.apiUrl || changes.watchlist) void init();
   if (changes.language) globalThis.location.reload();

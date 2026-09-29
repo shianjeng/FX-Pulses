@@ -112,11 +112,15 @@ function setTargetOptions(codes, selected) {
 }
 async function loadTargetCurrencies() {
   try {
-    const reply = await chrome.runtime?.sendMessage?.({type: "FX_API", path: "/currencies"});
+    const [reply, liveReply] = await Promise.all([
+      chrome.runtime?.sendMessage?.({type: "FX_API", path: "/currencies"}),
+      chrome.runtime?.sendMessage?.({type: "FX_LIVE"})?.catch(() => null),
+    ]);
     const coverage = reply?.ok ? reply.data : null;
     const codes = [
       ...(Array.isArray(coverage?.market_pairs) ? coverage.market_pairs.flatMap(pair => String(pair).split("/")) : []),
       ...(Array.isArray(coverage?.official_currencies) ? coverage.official_currencies : []),
+      ...Object.keys(liveReply?.ok && liveReply.data?.rates && typeof liveReply.data.rates === "object" ? liveReply.data.rates : {}),
     ];
     if (codes.length) setTargetOptions(codes, hoverControls.hoverTarget.value);
   } catch { /* the three defaults remain */ }
@@ -145,6 +149,31 @@ hoverEnabled.addEventListener("change", async () => {
     await chrome.storage.local.set({hoverEnabled: false}); hoverEnabled.checked = false;
     hoverResult.textContent = t("hoverFailed");
   } finally { hoverEnabled.disabled = false; }
+});
+
+/* ---- Live rates (on by default) --------------------------------------------
+   The one setting that decides whether a third party sees requests, so it says
+   who, what and why in plain words next to the switch. */
+const liveInfo = document.createElement("section");
+const liveHeading = document.createElement("h2");
+liveHeading.textContent = t("liveSectionTitle");
+const liveDescription = document.createElement("p");
+liveDescription.textContent = t("liveDescription");
+const liveLabel = document.createElement("label");
+liveLabel.className = "hover-toggle";
+const liveEnabled = document.createElement("input");
+liveEnabled.id = "live-rates"; liveEnabled.type = "checkbox"; liveEnabled.checked = true;
+const liveLabelText = document.createElement("span");
+liveLabelText.textContent = t("liveEnable");
+liveLabel.append(liveEnabled, liveLabelText);
+const liveResult = document.createElement("p");
+liveResult.id = "live-result"; liveResult.setAttribute("role", "status");
+liveInfo.append(liveHeading, liveDescription, liveLabel, liveResult);
+document.querySelector("main").append(liveInfo);
+chrome.storage.local.get({liveRates: true}).then(value => { liveEnabled.checked = value.liveRates !== false; });
+liveEnabled.addEventListener("change", async () => {
+  await chrome.storage.local.set({liveRates: liveEnabled.checked});
+  liveResult.textContent = t(liveEnabled.checked ? "liveOn" : "liveOff");
 });
 
 /* ---- Toolbar badge (opt-in) ------------------------------------------------
@@ -209,7 +238,7 @@ const intervalLabel = document.createElement("label");
 intervalLabel.textContent = t("alertIntervalLabel");
 const intervalSelect = document.createElement("select");
 intervalSelect.id = "alert-interval";
-for (const value of ["30", "60", "180", "360"]) {
+for (const value of ["5", "30", "60", "180", "360"]) {
   const option = document.createElement("option");
   option.value = value; option.textContent = t(`interval${value}`); intervalSelect.append(option);
 }
