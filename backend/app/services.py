@@ -163,6 +163,79 @@ def latest_official_tables(db: Session) -> list[OfficialTable]:
     return tables
 
 
+# Charts need months of history; the collector started in late September 2026.
+REFERENCE_INSTITUTION = "European Central Bank"
+REFERENCE_DAYS = 90
+REFERENCE_SOURCE = "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html"
+
+
+async def backfill_reference_history(db: Session, provider) -> int:
+    """Fill the chart history from the ECB's 90-day file, once.
+
+    A database holding fewer than 40 of the ECB's dates from the last 90 days
+    gets the missing ones; after that the daily table keeps it current, so the
+    file is not fetched again. Dates already stored are left as they are.
+    """
+    since = (datetime.now(timezone.utc) - timedelta(days=REFERENCE_DAYS)).date()
+    stored = set(db.scalars(
+        select(OfficialAnchorRate.reference_date).distinct().where(
+            OfficialAnchorRate.institution == provider.institution,
+            OfficialAnchorRate.reference_date >= since,
+        )
+    ).all())
+    if len(stored) >= 40:
+        return 0
+    added = 0
+    for table in await provider.get_history():
+        if table.reference_date >= since and table.reference_date not in stored:
+            store_official_table(db, table)
+            added += 1
+    return added
+
+
+async def backfill_quietly(db: Session, provider) -> None:
+    """A chart without months of history is no reason to fail the round."""
+    try:
+        added = await backfill_reference_history(db, provider)
+    except Exception:
+        db.rollback()
+        logger.warning("History backfill failed for %s", provider.institution, exc_info=True)
+        return
+    if added:
+        logger.info("Backfilled %s days of %s history", added, provider.institution)
+
+
+def reference_history(db: Session, days: int = REFERENCE_DAYS) -> dict:
+    """The ECB's daily reference rates, one column per currency against EUR.
+
+    One small file answers a long-range chart for every pair the ECB covers;
+    the client divides two columns for a cross, the same arithmetic as
+    OfficialTable.quote, so no second triangulation lives in JavaScript.
+    """
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).date()
+    rows = db.scalars(
+        select(OfficialAnchorRate).where(
+            OfficialAnchorRate.institution == REFERENCE_INSTITUTION,
+            OfficialAnchorRate.anchor_currency == "EUR",
+            OfficialAnchorRate.reference_date >= since,
+        )
+    ).all()
+    dates = sorted({row.reference_date for row in rows})
+    column = {day: index for index, day in enumerate(dates)}
+    currencies = sorted({row.currency for row in rows} - {"EUR"})
+    rates: dict[str, list[float | None]] = {code: [None] * len(dates) for code in currencies}
+    for row in rows:
+        if row.currency in rates:
+            rates[row.currency][column[row.reference_date]] = float(row.units_per_anchor)
+    return {
+        "institution": REFERENCE_INSTITUTION,
+        "anchor_currency": "EUR",
+        "source_url": REFERENCE_SOURCE,
+        "dates": [day.isoformat() for day in dates],
+        "rates": rates,
+    }
+
+
 def official_currencies(db: Session) -> list[str]:
     return sorted({
         currency
@@ -313,6 +386,8 @@ async def refresh_official_rates() -> dict[str, int]:
                 table = await provider.get_table()
                 refreshed += store_official_table(db, table)
                 record_run(db, official_job(name), ok=True)
+                if hasattr(provider, "get_history"):
+                    await backfill_quietly(db, provider)
             except Exception as exc:
                 db.rollback()
                 logger.exception("Official-rate refresh failed for %s", provider.institution)

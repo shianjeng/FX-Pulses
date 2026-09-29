@@ -21,6 +21,7 @@ from app.services import (
     latest_official_for_pair,
     official_currencies,
     percentage_change,
+    reference_history,
 )
 
 router = APIRouter()
@@ -87,6 +88,13 @@ def currencies(db: Session = Depends(get_db)) -> CoverageOut:
         market_pairs=get_settings().tracked_pairs,
         official_currencies=official_currencies(db),
     )
+
+
+@router.get("/reference-history")
+def reference_history_route(db: Session = Depends(get_db)) -> dict:
+    """The ECB's daily reference rates for the last 90 days, for long-range
+    charts of any pair it covers."""
+    return reference_history(db)
 
 
 @router.get("/rates", response_model=list[RateOut])
