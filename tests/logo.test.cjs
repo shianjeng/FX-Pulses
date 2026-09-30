@@ -22,12 +22,14 @@ test('popup and settings use the same local FX monogram logo', () => {
   // The F is an outline taken from the font, so no installed font is needed.
   assert.match(svg, /<path transform="translate\([\d. ]+\) scale\([\d.]+\)" fill="#121c28" d="M[^"]{500,}"/);
   assert.doesNotMatch(svg, /<text/);
-  // The arrows keep their geometry: rising green over falling red, the
-  // arrowheads meeting on the centre line.
-  assert.match(svg, /M61\.75 86L105\.75 42" stroke="#0b8a6f"/);
-  assert.match(svg, /M61\.75 42L105\.75 86" stroke="#c53650"/);
-  assert.match(svg, /M83\.75 42H105\.75V64" stroke="#0b8a6f"/);
-  assert.match(svg, /M83\.75 86H105\.75V64" stroke="#c53650"/);
+  // The X: a hollow thick stroke outlined red, with its top and right edges
+  // redrawn green through a half-plane clip...
+  const thick = svg.match(/<path d="([^"]+)" fill="none" stroke="#c53650" stroke-width="[\d.]+" stroke-linejoin="miter"\/>/);
+  assert.ok(thick, 'red outline of the thick stroke');
+  assert.ok(svg.includes(`<path d="${thick[1]}" fill="none" stroke="#0b8a6f"`), 'the same outline in green');
+  assert.match(svg, /stroke="#0b8a6f"[^>]*clip-path="url\(#fx-green-half\)"/);
+  // ...and a thin stroke in ink that stops short of the outline where they cross.
+  assert.match(svg, /fill="#121c28" mask="url\(#fx-thin-gap\)"/);
   assert.doesNotMatch(svg, /<script|<image|<foreignObject/);
   for (const file of ['popup.html', 'options.html']) {
     assert.match(readFileSync(join(root, file), 'utf8'), /class="brand-logo" src="icons\/icon.svg"/);
