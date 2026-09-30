@@ -19,8 +19,13 @@ test('icon PNGs have the correct sizes and are registered for both extension and
 
 test('popup and settings use the same local FX monogram logo', () => {
   const svg = readFileSync(join(root, 'icons/icon.svg'), 'utf8');
-  assert.match(svg, /M22\.25 86V42H45\.25M22\.25 62\.24H41\.11/);
-  // the rising (green) and falling (red) arrowheads meet on the centre line
+  // The F is an outline taken from the font, so no installed font is needed.
+  assert.match(svg, /<path transform="translate\([\d. ]+\) scale\([\d.]+\)" fill="#121c28" d="M[^"]{500,}"/);
+  assert.doesNotMatch(svg, /<text/);
+  // The arrows keep their geometry: rising green over falling red, the
+  // arrowheads meeting on the centre line.
+  assert.match(svg, /M61\.75 86L105\.75 42" stroke="#0b8a6f"/);
+  assert.match(svg, /M61\.75 42L105\.75 86" stroke="#c53650"/);
   assert.match(svg, /M83\.75 42H105\.75V64" stroke="#0b8a6f"/);
   assert.match(svg, /M83\.75 86H105\.75V64" stroke="#c53650"/);
   assert.doesNotMatch(svg, /<script|<image|<foreignObject/);
