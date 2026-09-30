@@ -1,21 +1,35 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="FX Pulse">
-  <!-- Straight strokes sit on 4n+2, so at 32 px (the toolbar on a Retina screen)
-       every edge lands on a pixel. The arrowheads stop short of each other: meeting
-       on the centre line, they merged into one block at toolbar size. 16.png is
-       drawn from icon-16.svg, simplified for that size. -->
+  <!-- Where the red and the green arrow meet, they mix to yellow, as red and
+       green light do: the diamond at the centre of the X, and the joint on the
+       right edge, where each arrowhead's vertical arm now runs one stroke
+       width past the centre line so the two overlap. The yellow is the green
+       arrow redrawn through a mask of the red one, so it covers exactly the
+       overlap and nothing else. -->
   <defs>
     <linearGradient id="fx-icon-bg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="1" stop-color="#eaeff4"/>
+      <stop offset="1" stop-color="#edf1f5"/>
     </linearGradient>
+    <mask id="fx-red-arrow" maskUnits="userSpaceOnUse" x="0" y="0" width="128" height="128">
+      <g fill="none" stroke="#ffffff" stroke-width="10.5" stroke-linejoin="round">
+        <path d="M61.75 42L105.75 86" stroke-linecap="round"/>
+        <path d="M83.75 86H105.75V58.75"/>
+      </g>
+    </mask>
   </defs>
-  <rect x="6" y="6" width="116" height="116" rx="28" fill="url(#fx-icon-bg)"/>
-  <rect x="6.75" y="6.75" width="114.5" height="114.5" rx="27.25" fill="none" stroke="#c9d3dd" stroke-width="1.5"/>
-  <g fill="none" stroke-width="12" stroke-linejoin="round">
-    <path d="M22 86V42H42M22 62H38" stroke="#121c28" stroke-linecap="round"/>
-    <path d="M62 42L106 86" stroke="#c53650" stroke-linecap="round"/>
-    <path d="M88 86H106V68" stroke="#c53650"/>
-    <path d="M62 86L106 42" stroke="#0b8a6f" stroke-linecap="round"/>
-    <path d="M88 42H106V60" stroke="#0b8a6f"/>
+  <rect x="6" y="6" width="116" height="116" rx="30" fill="url(#fx-icon-bg)"/>
+  <rect x="6.5" y="6.5" width="115" height="115" rx="29.5" fill="none" stroke="#d3dbe3"/>
+  <g fill="none" stroke-width="10.5" stroke-linejoin="round">
+    <path d="M22.25 86V42H45.25M22.25 62.24H41.11" stroke="#121c28" stroke-linecap="round"/>
+    <path d="M61.75 42L105.75 86" stroke="#c53650" stroke-linecap="round"/>
+    <path d="M83.75 86H105.75V58.75" stroke="#c53650" stroke-linecap="butt"/>
+    <path d="M61.75 86L105.75 42" stroke="#0b8a6f" stroke-linecap="round"/>
+    <path d="M83.75 42H105.75V69.25" stroke="#0b8a6f" stroke-linecap="butt"/>
   </g>
+  <g mask="url(#fx-red-arrow)" fill="none" stroke="#f5b700" stroke-width="10.5" stroke-linejoin="round">
+    <path d="M61.75 86L105.75 42" stroke-linecap="round"/>
+    <path d="M83.75 42H105.75V69.25" stroke-linecap="butt"/>
+  </g>
+  <circle cx="83.75" cy="42" r="5.25" fill="#0b8a6f"/>
+  <circle cx="83.75" cy="86" r="5.25" fill="#c53650"/>
 </svg>
