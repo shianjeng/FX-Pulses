@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="extension/icons/128.png" alt="FX Pulse logo" width="112" />
+  <img src="extension/icons/icon.svg" alt="FX Pulse logo" width="112" height="112" />
 
   # FX Pulse
 
