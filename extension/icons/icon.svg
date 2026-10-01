@@ -2,21 +2,18 @@
   <!-- F: the outline of Playfair Display ExtraBold Italic (SIL Open Font License
        1.1), so the icon depends on no installed font. X: square and upright, in
        a double-struck style, as tall as the F. Its thick stroke is a hollow
-       outline, green along the top and right edges and red along the bottom and
-       left, split through its two pointed corners; its thin stroke is ink like
-       the F and stops short of the outline where the two cross. -->
+       green outline; its thin stroke is red and stops short of the outline
+       where the two cross. -->
   <defs>
     <linearGradient id="fx-icon-bg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#ffffff"/>
       <stop offset="1" stop-color="#edf1f5"/>
     </linearGradient>
     <mask id="fx-thin-gap" maskUnits="userSpaceOnUse" x="0" y="0" width="128" height="128"><rect width="128" height="128" fill="#fff"/><path d="M66.13 39.16H87.00L115.81 88.84H94.95Z" fill="#000" stroke="#000" stroke-width="7.6" stroke-linejoin="miter"/></mask>
-    <clipPath id="fx-green-half" clipPathUnits="userSpaceOnUse"><path d="M-75.29 -102.26L257.23 230.26L398.66 88.84L66.13 -243.68Z"/></clipPath>
   </defs>
   <rect x="6" y="6" width="116" height="116" rx="30" fill="url(#fx-icon-bg)"/>
   <rect x="6.5" y="6.5" width="115" height="115" rx="29.5" fill="none" stroke="#d3dbe3"/>
   <path transform="translate(15.344 88.841) scale(0.070172)" fill="#121c28" d="M620 -498L598 -498Q605 -569 593.5 -610Q582 -651 553.5 -668Q525 -685 481 -685L481 -685L468 -685Q438 -685 421 -679.5Q404 -674 394 -656.5Q384 -639 375 -602L375 -602L312 -364L348 -364Q373 -364 394 -373Q415 -382 432.5 -398Q450 -414 464 -435Q478 -456 488 -480L488 -480L511 -480Q496 -437 489.5 -411Q483 -385 475 -354L475 -354Q468 -324 461 -289.5Q454 -255 444 -204L444 -204L422 -204Q422 -237 418 -262.5Q414 -288 404 -306.5Q394 -325 377 -334.5Q360 -344 336 -344L336 -344L306 -344L243 -106Q234 -70 237 -52Q240 -34 260 -28Q280 -22 322 -20L322 -20L317 0Q285 -2 233.5 -2.5Q182 -3 129 -3L129 -3Q75 -3 29 -2.5Q-17 -2 -45 0L-45 0L-41 -20Q-7 -22 12 -28Q31 -34 42 -52Q53 -70 62 -106L62 -106L194 -602Q204 -639 202 -656.5Q200 -674 184.5 -680.5Q169 -687 135 -688L135 -688L140 -708Q182 -707 229.5 -706.5Q277 -706 323.5 -705.5Q370 -705 410 -705L410 -705L476 -705Q521 -705 578 -705.5Q635 -706 681 -708L681 -708Q668 -672 659.5 -645.5Q651 -619 643 -588L643 -588Q636 -562 630 -539Q624 -516 620 -498L620 -498Z"/>
-  <path d="M66.13 88.84H74.58L115.81 39.16H107.37Z" fill="#121c28" mask="url(#fx-thin-gap)"/>
-  <path d="M66.13 39.16H87.00L115.81 88.84H94.95Z" fill="none" stroke="#c53650" stroke-width="3.2" stroke-linejoin="miter"/>
-  <path d="M66.13 39.16H87.00L115.81 88.84H94.95Z" fill="none" stroke="#0b8a6f" stroke-width="3.2" stroke-linejoin="miter" clip-path="url(#fx-green-half)"/>
+  <path d="M66.13 88.84H74.58L115.81 39.16H107.37Z" fill="#c53650" mask="url(#fx-thin-gap)"/>
+  <path d="M66.13 39.16H87.00L115.81 88.84H94.95Z" fill="none" stroke="#0b8a6f" stroke-width="3.2" stroke-linejoin="miter"/>
 </svg>
