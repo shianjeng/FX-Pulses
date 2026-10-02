@@ -10,6 +10,8 @@ const script = readFileSync(join(root, "popup.js"), "utf8");
 const messages = readFileSync(join(root, "messages.js"), "utf8");
 const i18n = readFileSync(join(root, "i18n.js"), "utf8");
 const tick = () => new Promise(resolve => setTimeout(resolve, 20));
+// The result box as it reads: its figure and the currency code beside it, or "—" while it is empty.
+const shown = box => box.value ? `${box.value} ${box.parentElement.querySelector(".amount-code").textContent}` : "—";
 
 async function setup({ clipboardFails = false, watchlist = ["USD/CNY"] } = {}) {
   const dom = new JSDOM(html, { runScripts: "outside-only", url: "https://test.invalid" });
@@ -83,7 +85,7 @@ test("clipboard denial exposes selectable fallback", async () => {
 test("converter reverses and target persists locally", async () => {
   const app = await setup();
   app.w.document.getElementById("reverse-button").click();
-  assert.match(app.w.document.getElementById("converted").textContent, /140.45 USD/);
+  assert.match(shown(app.w.document.getElementById("converted")), /140.45 USD/);
   app.w.document.getElementById("target-value").value = "7";
   app.w.document.getElementById("target-form").dispatchEvent(
     new app.w.Event("submit", { cancelable: true }));
@@ -101,16 +103,16 @@ test("official-only conversion selects the preferred reference and preserves pre
     el('converter-from').value = 'EUR';
     el('converter-from').dispatchEvent(new app.w.Event('change'));
     await tick();
-    assert.equal(el('converted').textContent, '8,000.00 CNY');
+    assert.equal(shown(el('converted')), '8,000.00 CNY');
     assert.match(el('converter-status').textContent, /官方日参考价.*欧洲央行.*2026-09-18/);
     assert.equal(app.state.converterFrom, 'EUR');
     el('amount').value = '2';
     el('amount').dispatchEvent(new app.w.Event('input'));
-    assert.equal(el('converted').textContent, '16.00 CNY');
+    assert.equal(shown(el('converted')), '16.00 CNY');
     el('converter-to').value = 'EUR';
     el('converter-to').dispatchEvent(new app.w.Event('change'));
     await tick();
-    assert.equal(el('converted').textContent, '2.00 EUR');
+    assert.equal(shown(el('converted')), '2.00 EUR');
     assert.match(el('converter-status').textContent, /1:1/);
   } finally { app.close(); }
 });
@@ -128,13 +130,13 @@ test("late official response cannot replace a newer currency selection; missing 
     el('converter-from').dispatchEvent(new app.w.Event('change'));
     finish([{rate: 99, institution: 'Bank of Canada', reference_date: '2026-09-20'}]);
     await tick();
-    assert.equal(el('converted').textContent, '7,120.00 CNY');
+    assert.equal(shown(el('converted')), '7,120.00 CNY');
     assert.match(el('converter-status').textContent, /市场中间价/);
     app.w.fetch = async () => ({ok: true, json: async () => []});
     el('converter-from').value = 'GBP';
     el('converter-from').dispatchEvent(new app.w.Event('change'));
     await tick();
-    assert.equal(el('converted').textContent, '—');
+    assert.equal(shown(el('converted')), '—');
     assert.match(el('converter-status').textContent, /暂无可用汇率/);
   } finally { app.close(); }
 });
@@ -213,10 +215,10 @@ test("small rates agree across card, history and converter without rounding calc
     assert.equal(el('stat-low').textContent, '0.042575');
     assert.equal(el('official-rates').querySelector('strong').textContent, '0.042575');
     assert.equal(el('conversion-rate').textContent, '1 JPY ≈ 0.042575 CNY');
-    assert.equal(el('converted').textContent, '42.57 CNY');
+    assert.equal(shown(el('converted')), '42.57 CNY');
     el('amount').value = '1000000';
     el('amount').dispatchEvent(new app.w.Event('input'));
-    assert.equal(el('converted').textContent, '42,574.90 CNY');
+    assert.equal(shown(el('converted')), '42,574.90 CNY');
     assert.match(el('conversion-rate').title, /0\.0425749/);
     assert.notEqual(app.w.eval('formatRate(1e-14)'), '0.000000');
     assert.match(app.w.eval('formatRate(1e-14)'), /E-14/i);

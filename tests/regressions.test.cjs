@@ -5,6 +5,8 @@ const {readFileSync}=require('node:fs');
 const {join}=require('node:path');
 const read=name=>readFileSync(join(__dirname,'../extension',name),'utf8');
 const tick=()=>new Promise(resolve=>setTimeout(resolve,20));
+// The result box as it reads: its figure and the currency code beside it, or "—" while it is empty.
+const shown=box=>box.value?`${box.value} ${box.parentElement.querySelector('.amount-code').textContent}`:'—';
 const pairs=['USD/CNY','USD/JPY','CNY/JPY'];
 const quote=(midpoint=7)=>({base_currency:'USD',quote_currency:'CNY',midpoint,bid:midpoint-.01,ask:midpoint+.01,provider:'mock',captured_at:new Date().toISOString(),is_stale:false});
 const response=data=>({ok:true,json:async()=>data});
@@ -56,16 +58,16 @@ test('single observation has no filled triangle; time spacing and gaps are respe
 test('empty, negative and excessive amounts are rejected; zero and reverse work',async t=>{
  const {w,el}=await popup(t);
  for(const amount of ['','-1','1000000000001','1e309']){
-  el('amount').value=amount;w.eval('updateConverter()');assert.equal(el('converted').textContent,'—');assert.ok(el('amount-error').textContent);
+  el('amount').value=amount;w.eval('updateConverter()');assert.equal(shown(el('converted')),'—');assert.ok(el('amount-error').textContent);
  }
- el('amount').value='0';w.eval('updateConverter()');assert.equal(el('converted').textContent,'0.00 CNY');
- el('amount').value='700';el('reverse-button').click();assert.equal(el('converted').textContent,'100.00 USD');
+ el('amount').value='0';w.eval('updateConverter()');assert.equal(shown(el('converted')),'0.00 CNY');
+ el('amount').value='700';el('reverse-button').click();assert.equal(shown(el('converted')),'100.00 USD');
  await tick();
 });
 test('an empty but reachable API is waiting, not a connection error',async t=>{
  const {w,other,el}=await popup(t);w.fetch=async url=>url.endsWith('/rates')?response([]):other(url);
  await w.eval('loadData()');assert.match(el('status').textContent,/暂无可用汇率/);assert.ok(el('error').classList.contains('hidden'));
- assert.equal(el('converted').textContent,'—');
+ assert.equal(shown(el('converted')),'—');
 });
 test('HTTP rate limiting is distinguished from network errors',async t=>{
  const {w,el}=await popup(t);w.fetch=async()=>({ok:false,status:429});await w.eval('loadData()');assert.match(el('error').textContent,/频繁/);

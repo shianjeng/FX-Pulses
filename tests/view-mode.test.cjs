@@ -11,6 +11,8 @@ const {join} = require('node:path');
 
 const source = name => readFileSync(join(__dirname, '../extension', name), 'utf8');
 const tick = (ms = 40) => new Promise(resolve => setTimeout(resolve, ms));
+// The result box as it reads: its figure and the currency code beside it, or "—" while it is empty.
+const shown = box => box.value ? `${box.value} ${box.parentElement.querySelector('.amount-code').textContent}` : '—';
 const pairs = ['USD/CNY', 'USD/JPY', 'CNY/JPY'];
 const quote = {
   base_currency: 'USD', quote_currency: 'CNY', midpoint: 7.1, bid: 7.09, ask: 7.11,
@@ -61,7 +63,7 @@ test('the converter keeps working in the simple view', async t => {
   const {w, el} = await popup(t);
   el('amount').value = '100';
   el('amount').dispatchEvent(new w.Event('input'));
-  assert.match(el('converted').textContent, /710/);
+  assert.match(shown(el('converted')), /710/);
 });
 
 test('switching to details loads the skipped panels and remembers the choice', async t => {
