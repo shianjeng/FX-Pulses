@@ -13,6 +13,8 @@ const {join} = require('node:path');
 
 const source = name => readFileSync(join(__dirname, '../extension', name), 'utf8');
 const tick = (ms = 30) => new Promise(resolve => setTimeout(resolve, ms));
+// The result box as it reads: its figure and the currency code beside it, or "—" while it is empty.
+const shown = box => box.value ? `${box.value} ${box.parentElement.querySelector('.amount-code').textContent}` : '—';
 const row = (institution, reference_date, rate, extra = {}) => ({institution, reference_date, rate, ...extra});
 
 async function popup(t, rows) {
@@ -35,7 +37,7 @@ async function popup(t, rows) {
   for (const name of ['config.js', 'messages.js', 'i18n.js', 'popup.js']) w.eval(source(name));
   await tick(60);
   const el = id => w.document.getElementById(id);
-  return {converted: el('converted').textContent, status: el('converter-status').textContent};
+  return {converted: shown(el('converted')), status: el('converter-status').textContent};
 }
 
 async function hover(t, rows) {

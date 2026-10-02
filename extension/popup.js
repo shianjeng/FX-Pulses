@@ -649,11 +649,33 @@ function converterStatus() {
   return [t("converterMarketSource", provider), freshness].filter(Boolean).join(" · ");
 }
 
+/* Either box takes a figure, and the other is worked out from it. The box typed
+   into last is the anchor: a change of currency, a refresh or a live update
+   recomputes the other box from it, and the swap button swaps only the
+   currencies, so the figure typed stays where it is. */
+let anchor = "from";
+
+// "1,000", "1 000" and a full-width "１，０００" all read as 1000.
+function parseAmount(raw) {
+  const text = String(raw).trim()
+    .replace(/[\uFF10-\uFF19]/g, digit => String.fromCharCode(digit.charCodeAt(0) - 0xFEE0))
+    .replace(/\uFF0E/g, ".")
+    .replace(/[,\uFF0C\s\u00A0\u202F']/g, "");
+  return /^(\d+\.?\d*|\.\d+)$/.test(text) ? Number(text) : NaN;
+}
+
 function updateConverter() {
   const base = $("converter-from").value;
   const quote = $("converter-to").value;
-  $("from-label").textContent = `${t("amountLabel")} (${base})`;
-  $("to-label").textContent = `${t("convertedLabel")} (${quote})`;
+  const reverse = anchor === "to";
+  const typed = reverse ? $("converted") : $("amount");
+  const worked = reverse ? $("amount") : $("converted");
+  $("from-label").textContent = `${t(reverse ? "convertedLabel" : "amountLabel")} (${base})`;
+  $("to-label").textContent = `${t(reverse ? "amountLabel" : "convertedLabel")} (${quote})`;
+  $("from-code").textContent = base;
+  $("to-code").textContent = quote;
+  typed.parentElement.classList.remove("computed");
+  worked.parentElement.classList.add("computed");
   $("amount-error").textContent = "";
   $("converter-status").textContent = converterStatus();
   $("conversion-rate").textContent = converterQuote
@@ -668,17 +690,16 @@ function updateConverter() {
   // third copy under the converter was noise. A market pair's line differs.
   $("converter-status").hidden = !shown;
   if (offline && !shown?.live) $("status").textContent += " · " + t("offlineCache");
-  if (!converterQuote) { $("converted").textContent = "—"; return; }
-  const raw = $("amount").value.trim();
-  const amount = Number(raw);
-  if (!raw || !Number.isFinite(amount) || amount < 0 || amount > 1e12) {
-    $("converted").textContent = "—";
+  if (!converterQuote) { worked.value = ""; return; }
+  const amount = parseAmount(typed.value);
+  if (!Number.isFinite(amount) || amount < 0 || amount > 1e12) {
+    worked.value = "";
     $("amount-error").textContent = t("amountRange");
     return;
   }
-  const value = amount * converterQuote.rate;
-  if (!Number.isFinite(value) || converterQuote.rate <= 0) { $("converted").textContent = "—"; return; }
-  $("converted").textContent = `${formatMoney(value, quote)} ${quote}`;
+  const value = reverse ? amount / converterQuote.rate : amount * converterQuote.rate;
+  if (!Number.isFinite(value) || converterQuote.rate <= 0) { worked.value = ""; return; }
+  worked.value = formatMoney(value, reverse ? base : quote);
 }
 
 /* Which official reference to convert with when several institutions publish
@@ -821,7 +842,8 @@ $("view-toggle").addEventListener("click", async () => {
   // Simple mode skipped these requests, so the panels are empty until now.
   if (detailed()) await loadHistory();
 });
-$("amount").addEventListener("input", updateConverter);
+$("amount").addEventListener("input", () => { anchor = "from"; updateConverter(); });
+$("converted").addEventListener("input", () => { anchor = "to"; updateConverter(); });
 async function saveConverterCurrencies() {
   await selectPair($("converter-from").value + "/" + $("converter-to").value);
 }

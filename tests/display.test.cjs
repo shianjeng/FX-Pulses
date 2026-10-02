@@ -12,6 +12,8 @@ const {join} = require('node:path');
 
 const source = name => readFileSync(join(__dirname, '../extension', name), 'utf8');
 const tick = (ms = 30) => new Promise(resolve => setTimeout(resolve, ms));
+// The result box as it reads: its figure and the currency code beside it, or "—" while it is empty.
+const shown = box => box.value ? `${box.value} ${box.parentElement.querySelector('.amount-code').textContent}` : '—';
 const hoursAgo = hours => new Date(Date.now() - hours * 3600000).toISOString().replace(/\.\d+Z$/, 'Z');
 const market = (base_currency, quote_currency, midpoint, captured_at = hoursAgo(3)) => ({base_currency, quote_currency,
   midpoint, bid: midpoint, ask: midpoint, provider: 'alpha_vantage', captured_at, change_percent: null, is_stale: false});
@@ -35,7 +37,7 @@ async function popup(t, {from, to, amount, official = {}}) {
   await tick(60);
   const el = id => w.document.getElementById(id);
   if (amount !== undefined) { el('amount').value = amount; el('amount').dispatchEvent(new w.Event('input')); }
-  return {converted: el('converted').textContent, status: el('status').textContent};
+  return {converted: shown(el('converted')), status: el('status').textContent};
 }
 
 async function hover(t, {text, target, official = {}}) {

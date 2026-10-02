@@ -13,6 +13,8 @@ const {join} = require('node:path');
 
 const source = name => readFileSync(join(__dirname, '../extension', name), 'utf8');
 const tick = (ms = 30) => new Promise(resolve => setTimeout(resolve, ms));
+// The result box as it reads: its figure and the currency code beside it, or "—" while it is empty.
+const shown = box => box.value ? `${box.value} ${box.parentElement.querySelector('.amount-code').textContent}` : '—';
 const BASE = 'https://cdn.example/api/v1';
 const LIVE = 'https://api.coinbase.com/v2/exchange-rates?currency=USD';
 const quote = (base_currency, quote_currency, midpoint, captured_at = new Date(Date.now() - 3600000).toISOString()) => ({
@@ -197,7 +199,7 @@ const liveData = (rates, age = 30000) => ({source: 'coinbase', base: 'USD', rate
 
 test('the popup converts with the live rate and says where it comes from', async t => {
   const app = await popup(t, {liveData: liveData({USD: 1, CNY: 7.2, JPY: 150, KRW: 1350})});
-  assert.equal(app.el('converted').textContent, '7,200.00 CNY');
+  assert.equal(shown(app.el('converted')), '7,200.00 CNY');
   assert.match(app.el('status').textContent, /实时 · Coinbase/);
   assert.match(app.el('rates').textContent, /7\.2000/);
   assert.equal(app.el('rates').querySelector('.rate-bottom .live').textContent, '实时');
@@ -209,13 +211,13 @@ test('live rates cover pairs the backend has no quote for, without asking it', a
   // Currencies only the live table knows are offered too.
   assert.ok([...app.el('converter-to').options].some(option => option.value === 'VND'));
   await app.choose('USD', 'KRW');
-  assert.equal(app.el('converted').textContent, '1,350,000 KRW');
+  assert.equal(shown(app.el('converted')), '1,350,000 KRW');
   assert.equal(app.asked.some(path => String(path).startsWith('/official-rates/')), false);
 });
 
 test('a live copy older than ten minutes is not used', async t => {
   const app = await popup(t, {liveData: liveData({USD: 1, CNY: 7.2}, 11 * 60000)});
-  assert.equal(app.el('converted').textContent, '7,100.00 CNY');
+  assert.equal(shown(app.el('converted')), '7,100.00 CNY');
   assert.doesNotMatch(app.el('status').textContent, /Coinbase/);
 });
 
@@ -225,11 +227,11 @@ test('while open, the popup follows the live rate every minute', async t => {
   assert.ok(poll, 'a one-minute refresh is scheduled');
   app.setLive(liveData({USD: 1, CNY: 7.25}, 0));
   await poll.fn(); await tick(40);
-  assert.equal(app.el('converted').textContent, '7,250.00 CNY');
+  assert.equal(shown(app.el('converted')), '7,250.00 CNY');
   // And when live rates go away, the backend's quote takes over again.
   app.setLive(null);
   await poll.fn(); await tick(40);
-  assert.equal(app.el('converted').textContent, '7,100.00 CNY');
+  assert.equal(shown(app.el('converted')), '7,100.00 CNY');
 });
 
 /* ---- hover ---------------------------------------------------------------- */

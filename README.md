@@ -38,6 +38,7 @@ The extension and hover converter share the same backend, one-minute cache, watc
 - **Hover works on more shops.** Amazon writes prices in pieces ("¥" and "26,990" in separate elements, "$29.99" in four), and Mercari lays them over thumbnails where the pointer passes straight through. Hover now reads both, looks inside open shadow roots, and is no longer switched off by pages that stop mouse events or by carousels that scroll on their own.
 - **Rate on the toolbar icon (optional).** In Settings, choose a pair under **Toolbar icon** and its rate appears on the extension icon: 6.70, 157, .043. It updates every 30 minutes and whenever the popup opens, turns grey when the quote is old, and costs no extra requests. Off by default.
 - **Keyboard shortcut.** Alt+Shift+F opens the popup. Change it at `chrome://extensions/shortcuts`.
+- **The converter works both ways.** Either box takes an amount: type 1,000 into the CNY box and the JPY box reads 23,533; type into the JPY box instead and the CNY box works out the yuan. Swapping or changing currencies keeps the figure you typed and recomputes the other box. Thousands separators and full-width digits are accepted.
 - **Amounts read the way the currency is written.** The converter shows yen and won without decimals (157,431 JPY) and three decimals for currencies that have them, like the hover card already did. Small results keep two significant digits instead of rounding to 0.00.
 - **Clearer sources.** The status line says how old the quote is ("9/29 23:21 (5 hours ago)"). The hover card names central banks in your language, and a bridged reference is translated in both parts.
 - **Fixes.** Hovering an amount already in the target currency shows 1:1 instead of "not collected". The trend chart works with a pen or touch screen. The detailed view no longer shows a horizontal scrollbar.
@@ -95,7 +96,7 @@ Rates below 1 show at least six decimal places, with more precision for smaller 
 | 📈 | Trend chart | Smooth 24-hour to 3-month lines with a price scale, time axis, high and low markers, and range statistics; ECB daily history fills ranges the collector has not reached |
 | 🏛️ | Official references | Compare market midpoints with central-bank reference observations |
 | ⚡ | Hover conversion | Point at an amount on a webpage to convert it without leaving the page, including prices shops split into pieces (Amazon, Mercari) |
-| 🧮 | Quick converter | Choose source and target currencies, swap direction, and see the rate source and date |
+| 🧮 | Quick converter | Choose source and target currencies, type an amount in either box, swap direction, and see the rate source and date |
 | 🔔 | Optional alerts | Local target-price alerts powered by `chrome.alarms` |
 | 🏷️ | Rate on the icon | Optionally show one pair's rate on the toolbar icon, grey when the quote is old |
 | ⌨️ | Shortcut | Alt+Shift+F opens the popup; change it at `chrome://extensions/shortcuts` |
@@ -505,6 +506,7 @@ Edge 用户：打开 `edge://extensions`，在左侧打开 **开发人员模式*
 
 2.8.5 还新增了可选的「工具栏图标」显示：在设置页选一个币对，它的汇率会直接显示在插件图标上（如 6.70、157），每 30 分钟和每次打开插件时更新，数据较旧时变灰，不额外消耗请求，默认关闭。其他改动：
 - 快捷键 Alt+Shift+F 可打开插件。
+- 换算器的两个框都能输入：在目标货币一栏输入金额，即可反算出需要多少源货币；对调或更换币种时，你输入的数字保持不变，另一栏重新计算。支持千位分隔符和全角数字。
 - 换算结果按币种惯例显示小数：日元、韩元不带小数，很小的金额不再显示成 0.00。
 - 状态栏会注明数据是多久以前的，例如「9/29 23:21（5小时前）」。
 - 网页悬停卡片用中文显示央行名称。
