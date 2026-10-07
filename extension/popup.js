@@ -21,7 +21,7 @@ let offline = false;
 let live = null;
 const validPair = pair => typeof pair === "string" && /^[A-Z]{3}\/[A-Z]{3}$/.test(pair);
 
-const RANGE_DAYS = [1, 7, 30, 90];
+const RANGE_DAYS = [1, 7, 30, 90, 365];
 const t = (key, ...values) => globalThis.FXI18N.t(key, ...values);
 let historyDays = 7;
 
@@ -450,8 +450,10 @@ function drawChart(points, {daily = false} = {}) {
   const scale = ticks.filter(value => yOf(value) > 8 && yOf(value) < height - 8);
   const grid = scale.map(value => `<line class="chart-grid" x1="0" x2="${f(plotWidth)}" y1="${f(yOf(value))}" y2="${f(yOf(value))}"></line>`).join("");
   const priceLabels = scale.map(value => `<span class="chart-y" style="left:${f(plotWidth + 8)}px;top:${f(yOf(value))}px">${fmt(value, digits)}</span>`).join("");
+  // A year runs from one October to the next, so its ends are told apart by the year.
   const stamp = time => new Date(time).toLocaleString(docLocale(), historyDays === 1
-    ? {hour: "2-digit", minute: "2-digit", hourCycle: "h23"} : {month: "numeric", day: "numeric"});
+    ? {hour: "2-digit", minute: "2-digit", hourCycle: "h23"}
+    : historyDays === 365 ? {year: "numeric", month: "numeric"} : {month: "numeric", day: "numeric"});
   const timeLabels = (duration ? [[0, start], [0.5, start + duration / 2], [1, start + duration]] : [[0.5, start]])
     .map(([share, time]) => `<span style="left:${f(share * plotWidth)}px;transform:translateX(-${share * 100}%)">${stamp(time)}</span>`).join("");
   const line = segments.map(smoothPath).join(" ");
@@ -510,7 +512,8 @@ function drawChart(points, {daily = false} = {}) {
     dot.setAttribute("cy", point.y);
     dot.setAttribute("visibility", "visible");
     // A daily reference has a date, not a time of day.
-    tipTime.textContent = daily ? point.time.slice(5, 10).split("-").map(Number).join("/") : chartTimeLabel(point.time);
+    tipTime.textContent = daily
+      ? point.time.slice(historyDays === 365 ? 0 : 5, 10).split("-").map(Number).join("/") : chartTimeLabel(point.time);
     tipValue.textContent = `${selectedPair}  ${formatRate(point.value)}`;
     // How far this sample is from the start of the range.
     const moved = (point.value - values[0]) / values[0] * 100;
@@ -655,13 +658,67 @@ function converterStatus() {
    currencies, so the figure typed stays where it is. */
 let anchor = "from";
 
-// "1,000", "1 000" and a full-width "１，０００" all read as 1000.
-function parseAmount(raw) {
-  const text = String(raw).trim()
-    .replace(/[\uFF10-\uFF19]/g, digit => String.fromCharCode(digit.charCodeAt(0) - 0xFEE0))
-    .replace(/\uFF0E/g, ".")
-    .replace(/[,\uFF0C\s\u00A0\u202F']/g, "");
-  return /^(\d+\.?\d*|\.\d+)$/.test(text) ? Number(text) : NaN;
+/* What a box holds, as a number. Grouping is dropped, so "1,000", "1 000" and
+   a full-width "１，０００" all read 1000, and arithmetic is worked out the way
+   a calculator does it: "1200/3", "(80+45)*2", and a percentage taken from the
+   figure before it, so a 20% discount is "1000-20%" and reads 800. Anything
+   else, a minus sign in front included, reads NaN. Never eval(). */
+const OPERATORS = /[-+*/%()×÷]/;
+const halfWidth = text => String(text).replace(/[\uFF01-\uFF5E]/g, char => String.fromCharCode(char.charCodeAt(0) - 0xFEE0));
+function readAmount(raw) {
+  const text = halfWidth(raw)
+    .replace(/×/g, "*").replace(/÷/g, "/")
+    .replace(/[,\s\u00A0\u202F']/g, "");
+  let at = 0;
+  // A figure, or a bracket, with a "%" after it taken as hundredths.
+  const factor = () => {
+    let value;
+    if (text[at] === "(") {
+      at++;
+      value = sum();
+      if (text[at++] !== ")") return null;
+    } else {
+      const number = /^(?:\d+\.?\d*|\.\d+)/.exec(text.slice(at));
+      if (!number) return null;
+      at += number[0].length;
+      value = Number(number[0]);
+    }
+    if (text[at] !== "%") return {value, percent: false};
+    at++;
+    return {value: value / 100, percent: true};
+  };
+  const product = () => {
+    let left = factor();
+    while (left && (text[at] === "*" || text[at] === "/")) {
+      const operator = text[at++], right = factor();
+      if (!right) return null;
+      left = {value: operator === "*" ? left.value * right.value : left.value / right.value, percent: false};
+    }
+    return left;
+  };
+  // "+ 20%" and "- 20%" are a share of the running total, not 0.2.
+  const sum = () => {
+    const first = product();
+    let total = first ? first.value : NaN;
+    while (first && (text[at] === "+" || text[at] === "-")) {
+      const operator = text[at++], term = product();
+      if (!term) return NaN;
+      const amount = term.percent ? total * term.value : term.value;
+      total = operator === "+" ? total + amount : total - amount;
+    }
+    return total;
+  };
+  const value = sum();
+  return text && at === text.length ? value : NaN;
+}
+
+// Enter, or leaving the box, turns a sum into its result, as a calculator's "=" does.
+function settleSum(box, code) {
+  if (!OPERATORS.test(halfWidth(box.value))) return;
+  const value = readAmount(box.value);
+  if (!Number.isFinite(value) || value < 0 || value > 1e12) return;
+  box.value = formatMoney(value, code);
+  updateConverter();
 }
 
 function updateConverter() {
@@ -691,7 +748,7 @@ function updateConverter() {
   $("converter-status").hidden = !shown;
   if (offline && !shown?.live) $("status").textContent += " · " + t("offlineCache");
   if (!converterQuote) { worked.value = ""; return; }
-  const amount = parseAmount(typed.value);
+  const amount = readAmount(typed.value);
   if (!Number.isFinite(amount) || amount < 0 || amount > 1e12) {
     worked.value = "";
     $("amount-error").textContent = t("amountRange");
@@ -844,6 +901,11 @@ $("view-toggle").addEventListener("click", async () => {
 });
 $("amount").addEventListener("input", () => { anchor = "from"; updateConverter(); });
 $("converted").addEventListener("input", () => { anchor = "to"; updateConverter(); });
+for (const [id, side] of [["amount", "converter-from"], ["converted", "converter-to"]]) {
+  const settle = () => settleSum($(id), $(side).value);
+  $(id).addEventListener("change", settle);
+  $(id).addEventListener("keydown", event => { if (event.key === "Enter") settle(); });
+}
 async function saveConverterCurrencies() {
   await selectPair($("converter-from").value + "/" + $("converter-to").value);
 }

@@ -4,7 +4,7 @@
   globalThis.__fxHoverInstalled = true;
   const parser = globalThis.FXAmountParser;
   const defaults = {hoverEnabled: false, hoverTarget: "CNY", hoverSize: "m", hoverMode: "simple", language: "zh", watchlist: ["USD/CNY", "USD/JPY", "CNY/JPY"]};
-  let settings = {...defaults}, host, shadow, card, active, snapshot, liveData = null, error = "", timer, hiding, version = 0, pointerVersion = 0;
+  let settings = {...defaults}, host, shadow, card, active, snapshot, liveData = null, error = "", timer, hiding, selecting, overCard = false, version = 0, pointerVersion = 0;
   const MEMORY_LIMIT = 200;
   const officialCache = new Map();   // "FROM/TO" -> observation | null
   const officialPending = new Set();
@@ -37,7 +37,7 @@
   const locale = () => ({zh: "zh-CN", en: "en-US", ja: "ja-JP"}[settings.language] || "zh-CN");
   const el = (tag, text, className) => { const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node; };
   const validCode = code => typeof code === "string" && /^[A-Z]{3}$/.test(code);
-  const hide = () => { version++; pointerVersion++; globalThis.clearTimeout(timer); globalThis.clearTimeout(hiding); active = null; if (host) host.style.display = "none"; };
+  const hide = () => { version++; pointerVersion++; globalThis.clearTimeout(timer); globalThis.clearTimeout(hiding); active = null; overCard = false; if (host) host.style.display = "none"; };
 
   function quote(from, to) {
     // Converting a currency into itself needs no data, and "S$10 → SGD" used to
@@ -223,8 +223,9 @@ input{width:100%;margin-top:6px;padding:6px 8px;border:1px solid var(--line);bor
 button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}`;
     shadow.append(style);
     card = el("section", "", "card"); card.setAttribute("role", "dialog"); shadow.append(card);
-    host.addEventListener("mouseenter", () => { globalThis.clearTimeout(hiding); globalThis.clearTimeout(timer); });
-    host.addEventListener("mouseleave", () => { hiding = setTimeout(hide, 350); });
+    host.addEventListener("mouseenter", () => { overCard = true; globalThis.clearTimeout(hiding); globalThis.clearTimeout(timer); });
+    // A card for a selected price stays until the selection goes.
+    host.addEventListener("mouseleave", () => { overCard = false; if (!active?.selected) hiding = setTimeout(hide, 350); });
     shadow.addEventListener("keydown", event => { if (event.key === "Escape") hide(); });
     document.documentElement.append(host);
   }
@@ -459,11 +460,12 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
      readers. Those are read from the visible text of the smallest short
      container around the caret, so a stray number is never joined to a
      currency from further away. */
+  const parse = (text, sample) => parser.parseAll(text, {
+    host: globalThis.location.hostname, lang: document.documentElement.lang,
+    profile: parser.buildProfile(document, globalThis, sample.slice(0, 4000)),
+  }).accepted;
+
   function amountAt(node, offset) {
-    const parse = (text, sample) => parser.parseAll(text, {
-      host: globalThis.location.hostname, lang: document.documentElement.lang,
-      profile: parser.buildProfile(document, globalThis, sample.slice(0, 4000)),
-    }).accepted;
     const start = Math.max(0, offset - 64), text = node.data.slice(start, offset + 64);
     const alone = parse(text, node.parentElement.textContent).find(item => offset - start >= item.start && offset - start <= item.end);
     if (alone) return {match: alone, rect: boundsOf([{node, from: start + alone.start, to: start + alone.end}])};
@@ -511,12 +513,52 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
     active = {match, rect, node, confirmed: Boolean(remembered)}; error = ""; globalThis.clearTimeout(hiding); render(); void refresh();
   }
 
+  /* A selected price converts too: the gesture other converters use, and a way
+     in wherever hovering cannot read the page. The selection is read on its
+     own ("¥26,990"); a double-click picks the figure without its symbol, so
+     that one is read where it sits, as hovering would. Two prices, a long
+     passage, or text in a form field or editor open nothing. */
+  function selectedAmount() {
+    const selection = document.getSelection?.();
+    if (!selection || selection.isCollapsed || !selection.rangeCount) return null;
+    const text = selection.toString().trim();
+    if (!text || text.length > 80) return null;
+    const range = selection.getRangeAt(0), common = range.commonAncestorContainer;
+    const element = common.nodeType === 1 ? common : common.parentElement;
+    if (!element || element.closest(SKIP) || document.activeElement?.closest?.(SKIP)) return null;
+    const accepted = parse(text, element.textContent);
+    if (accepted.length === 1) return {match: accepted[0], rect: range.getBoundingClientRect(), node: range.startContainer};
+    if (accepted.length || range.startContainer.nodeType !== 3) return null;
+    const found = amountAt(range.startContainer, range.startOffset);
+    return found?.rect ? {...found, node: range.startContainer} : null;
+  }
+
+  async function detectSelection() {
+    if (!settings.hoverEnabled || (globalThis.__fxBridgeInstalled && globalThis.__fxUserscriptUntil > Date.now())) return;
+    const found = selectedAmount();
+    if (!found) return;
+    const own = ++version;
+    const saved = await chrome.storage.local.get(memoryKey(found.match));
+    if (own !== version || !settings.hoverEnabled) return;
+    const remembered = storedCode(saved[memoryKey(found.match)]);
+    if (remembered) found.match.code = remembered;
+    active = {match: found.match, rect: found.rect, node: found.node, confirmed: Boolean(remembered), selected: true};
+    error = ""; globalThis.clearTimeout(hiding); globalThis.clearTimeout(timer); render(); void refresh();
+  }
+  const checkSelection = () => { globalThis.clearTimeout(selecting); selecting = setTimeout(() => { void detectSelection(); }, 30); };
+  document.addEventListener("mouseup", event => { if (!event.composedPath().includes(host)) checkSelection(); }, {capture: true});
+  document.addEventListener("keyup", event => { if (event.shiftKey || event.key === "Shift") checkSelection(); }, {capture: true});
+  document.addEventListener("selectionchange", () => {
+    if (active?.selected && !overCard && document.getSelection()?.isCollapsed) hide();
+  });
+
   document.addEventListener("mousemove", event => {
     // Only the opt-in bridge can set this, and only once per document.
     if (globalThis.__fxBridgeInstalled && globalThis.__fxUserscriptUntil > Date.now()) { hide(); return; }
     pointerVersion++;
     globalThis.clearTimeout(timer);
     if (!settings.hoverEnabled || event.composedPath().includes(host)) { globalThis.clearTimeout(hiding); return; }
+    if (active?.selected) return;
     globalThis.clearTimeout(hiding);
     if (active) hiding = setTimeout(hide, 550);
     timer = setTimeout(() => { void detect(event.clientX, event.clientY); }, 200);
@@ -530,7 +572,7 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outlin
     if (scrolled === document || scrolled === document.documentElement || !active.node || scrolled.contains?.(active.node)) hide();
   }, {passive: true, capture: true});
   document.addEventListener("keydown", event => { if (event.key === "Escape") hide(); });
-  document.addEventListener("mouseleave", hide);
+  document.addEventListener("mouseleave", () => { if (!active?.selected) hide(); });
   globalThis.addEventListener("blur", hide);
   const interval = globalThis.setInterval(() => { if (document.visibilityState === "visible") void refresh(); }, 60000);
   globalThis.addEventListener("pagehide", () => { globalThis.clearInterval(interval); hide(); }, {once: true});

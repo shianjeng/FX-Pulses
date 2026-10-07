@@ -1,10 +1,11 @@
-"""Long-range chart history from the ECB's 90-day reference file.
+"""Long-range chart history from the ECB's reference history file.
 
 The collector began in late September 2026, so a one-month or three-month
 chart had a week of points and looked the same as the seven-day one. The ECB
-publishes its last 90 days of reference rates in one file; it is read once
-into the same table the daily fetch fills, and exported as one small
-column-per-currency file that the client divides for any cross.
+publishes every day of reference rates since 1999 in one file; its last year
+is read once into the same table the daily fetch fills, kept for a year, and
+exported as one small column-per-currency file that the client divides for
+any cross.
 """
 import json
 from dataclasses import replace
@@ -15,9 +16,11 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.database import SessionLocal
+from app.models import OfficialAnchorRate
 from app.official_providers import EcbReferenceProvider, OfficialTable
 from app.services import (
     backfill_reference_history,
+    prune_history,
     reference_history,
     refresh_official_rates,
     store_official_table,
@@ -56,7 +59,7 @@ def business_days(count: int) -> list[date]:
     return sorted(days)
 
 
-def test_the_90_day_file_parses_into_one_table_per_date_oldest_first():
+def test_the_history_file_parses_into_one_table_per_date_oldest_first():
     tables = EcbReferenceProvider().parse_history(HISTORY)
     assert [table.reference_date for table in tables] == [
         date(2026, 9, 25), date(2026, 9, 26), date(2026, 9, 29)]
@@ -64,23 +67,29 @@ def test_the_90_day_file_parses_into_one_table_per_date_oldest_first():
     assert tables[-1].values_per_anchor["EUR"] == Decimal("1")
     # A currency missing on one day is simply absent from that day's table.
     assert "CNY" not in tables[0].values_per_anchor
-    assert tables[0].source_url.endswith("eurofxref-hist-90d.xml")
+    assert tables[0].source_url.endswith("eurofxref-hist.xml")
+
+
+def test_only_the_dates_asked_for_are_built():
+    # The file goes back to 1999; only the last year is wanted.
+    tables = EcbReferenceProvider().parse_history(HISTORY, since=date(2026, 9, 26))
+    assert [table.reference_date for table in tables] == [date(2026, 9, 26), date(2026, 9, 29)]
 
 
 @pytest.mark.asyncio
 async def test_backfill_runs_once_and_keeps_the_daily_rows_it_finds():
-    days = business_days(64)
+    days = business_days(210)
     provider = AsyncMock()
     provider.institution = "European Central Bank"
     provider.get_history.return_value = [ecb_table(day, source="history") for day in days]
     with SessionLocal() as db:
         store_official_table(db, ecb_table(days[-1], usd="1.2", source="daily"))
-        assert await backfill_reference_history(db, provider) == 63
+        assert await backfill_reference_history(db, provider) == 209
         # The latest date came from the daily table and stays as it was.
         latest = reference_history(db)
         assert latest["rates"]["USD"][-1] == 1.2
-        assert len(latest["dates"]) == 64
-        # With 64 dates stored the file is not fetched again.
+        assert len(latest["dates"]) == 210
+        # With 210 dates stored the file is not fetched again.
         assert await backfill_reference_history(db, provider) == 0
     assert provider.get_history.await_count == 1
 
@@ -88,7 +97,7 @@ async def test_backfill_runs_once_and_keeps_the_daily_rows_it_finds():
 def test_reference_history_is_one_column_per_currency(client):
     with SessionLocal() as db:
         for table in EcbReferenceProvider().parse_history(HISTORY):
-            # Keep the fixture inside the 90-day window whatever today is.
+            # Keep the fixture inside the one-year window whatever today is.
             shift = datetime.now(timezone.utc).date() - date(2026, 9, 29)
             store_official_table(db, replace(table, reference_date=table.reference_date + shift))
         other = ecb_table(datetime.now(timezone.utc).date())
@@ -123,3 +132,15 @@ async def test_a_failed_history_download_does_not_fail_the_round(monkeypatch, ca
     result = await refresh_official_rates()
     assert result == {"refreshed": 3, "errors": 0}
     assert "History backfill failed" in caplog.text
+
+
+def test_the_ecb_tables_are_kept_for_a_year_and_the_others_for_the_retention():
+    today = datetime.now(timezone.utc).date()
+    old = today - timedelta(days=200)
+    with SessionLocal() as db:
+        store_official_table(db, ecb_table(old))
+        store_official_table(db, replace(ecb_table(old), institution="Bank of Canada"))
+        store_official_table(db, ecb_table(today - timedelta(days=400)))
+        prune_history(db)
+        left = {(row.institution, row.reference_date) for row in db.query(OfficialAnchorRate)}
+    assert left == {("European Central Bank", old)}

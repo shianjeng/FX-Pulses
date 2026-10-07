@@ -7,15 +7,15 @@ include = ["app*"]
 
 [project]
 name = "fx-pulse-api"
-version = "2.8.5"
+version = "2.9.0"
 description = "Public exchange-rate midpoint API for a login-free browser extension"
 requires-python = ">=3.12"
 dependencies = [
-  "fastapi==0.141.1",
+  "fastapi==0.142.2",
   # Floor for the Host-header, form-limit and Range-header advisories fixed in 0.49.1 to 1.3.1.
   "starlette>=1.3.1",
   "uvicorn[standard]==0.54.0",
-  "sqlalchemy==2.1.1",
+  "sqlalchemy==2.1.3",
   "psycopg[binary]==3.3.6",
   "pydantic-settings==2.15.0",
   "httpx==0.28.1",
@@ -30,7 +30,7 @@ dependencies = [
 dev = [
   "pytest==9.1.1",
   "pytest-asyncio==1.4.0",
-  "ruff==0.16.9",
+  "ruff==0.16.10",
 ]
 
 [tool.pytest.ini_options]

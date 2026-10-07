@@ -56,7 +56,7 @@ test('every key used by the extension exists, and every key is used', () => {
   for (const match of sources.matchAll(/data-i18n(?:-attr)?="([^"]+)"/g)) {
     for (const part of match[1].split(',')) used.add(part.includes(':') ? part.split(':')[1].trim() : part.trim());
   }
-  for (const extra of ['range1', 'range7', 'range30', 'range90', 'interval5', 'interval30', 'interval60',
+  for (const extra of ['range1', 'range7', 'range30', 'range90', 'range365', 'interval5', 'interval30', 'interval60',
     'interval180', 'interval360', 'sizeS', 'sizeM', 'sizeL', 'modeSimple', 'modeDetail',
     'cardSize', 'cardMode', 'hoverTargetLabel', 'langZh', 'langEn', 'langJa',
     'extensionName', 'extensionDescription']) used.add(extra);

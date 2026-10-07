@@ -142,6 +142,10 @@ test('history comes from one 90-day file, sliced to the requested window', async
   const day = await w.send({type: 'FX_API', path: '/rates/USD/CNY/history?days=1'});
   assert.deepEqual(day.data.map(p => p.midpoint), ['7.2']);
 
+  // The one-year chart asks too; the file holds what was collected.
+  const year = await w.send({type: 'FX_API', path: '/rates/USD/CNY/history?days=365'});
+  assert.deepEqual(year.data.map(p => p.midpoint), ['7.0', '7.1', '7.2']);
+
   // All three windows share a single fetch of the same file.
   const historyCalls = w.calls.filter(url => url.includes('/history'));
   assert.deepEqual([...new Set(historyCalls)], [`${BASE}/rates/USD/CNY/history.json`]);

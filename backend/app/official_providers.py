@@ -94,19 +94,20 @@ class EcbReferenceProvider:
     rate_type = "Euro foreign exchange reference rate"
     anchor_currency = "EUR"
     source_url = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
-    # The same table for each of the last 90 days, in one file.
-    history_url = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist-90d.xml"
+    # The same table for every day since 1999, in one file of about 8 MB. It is
+    # read once, for the one-year chart; the daily table keeps it current after.
+    history_url = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.xml"
 
     async def get_table(self) -> OfficialTable:
         return self.parse(await self._fetch(self.source_url))
 
-    async def get_history(self) -> list[OfficialTable]:
-        """Months of daily references at once, for charts that would otherwise
+    async def get_history(self, since: date | None = None) -> list[OfficialTable]:
+        """A year of daily references at once, for charts that would otherwise
         begin on the day collection did."""
-        return self.parse_history(await self._fetch(self.history_url))
+        return self.parse_history(await self._fetch(self.history_url, timeout=120), since)
 
-    async def _fetch(self, url: str) -> bytes:
-        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+    async def _fetch(self, url: str, timeout: float = 30) -> bytes:
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
             response = await client.get(url)
             if response.is_error:
                 raise ProviderError(f"ECB HTTP status {response.status_code}")
@@ -143,9 +144,12 @@ class EcbReferenceProvider:
             raise ProviderError("ECB response contains no usable rates")
         return table
 
-    def parse_history(self, payload: bytes) -> list[OfficialTable]:
+    def parse_history(self, payload: bytes, since: date | None = None) -> list[OfficialTable]:
         try:
             cubes = self._dated_cubes(payload, "history")
+            # ISO dates compare as text; 27 years of tables are never built.
+            if since:
+                cubes = [cube for cube in cubes if cube.attrib["time"] >= since.isoformat()]
             tables = [self._table(cube, self.history_url) for cube in cubes]
         except (KeyError, ValueError, InvalidOperation) as exc:
             raise ProviderError("ECB history is malformed") from exc

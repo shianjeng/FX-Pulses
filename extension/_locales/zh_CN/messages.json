@@ -80,6 +80,9 @@
   "range90": {
     "message": "九十日"
   },
+  "range365": {
+    "message": "一年"
+  },
   "statLow": {
     "message": "最低"
   },
@@ -160,6 +163,9 @@
   },
   "amountRange": {
     "message": "请输入0到1万亿之间的有效金额"
+  },
+  "amountHint": {
+    "message": "可以输入算式，例如 1200/3 或 1000-20%"
   },
   "targetPaused": {
     "message": "行情不可用，暂停目标价判断"
@@ -499,6 +505,9 @@
   },
   "rangeTab90": {
     "message": "3个月"
+  },
+  "rangeTab365": {
+    "message": "1年"
   },
   "statAvg": {
     "message": "平均"

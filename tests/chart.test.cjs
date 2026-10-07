@@ -155,5 +155,5 @@ test('the tooltip reads the time, the rate and the move since the range began', 
 test('range tabs use readable, localized labels', async t => {
   const {el} = await popup(t);
   const labels = [...el('range-buttons').querySelectorAll('button')].map(button => button.textContent);
-  assert.deepEqual(labels, ['24小时', '7天', '1个月', '3个月']);
+  assert.deepEqual(labels, ['24小时', '7天', '1个月', '3个月', '1年']);
 });

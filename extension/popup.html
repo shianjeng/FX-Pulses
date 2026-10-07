@@ -45,9 +45,9 @@
 
         <div class="converter-block">
           <div class="converter">
-            <label><span id="from-label" data-i18n="amountLabel">金额</span><span class="amount-box"><input id="amount" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value="1000" /><span id="from-code" class="amount-code" aria-hidden="true"></span></span></label>
+            <label><span id="from-label" data-i18n="amountLabel">金额</span><span class="amount-box"><input id="amount" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value="1000" data-i18n-attr="title:amountHint" /><span id="from-code" class="amount-code" aria-hidden="true"></span></span></label>
             <span class="equals" aria-hidden="true">=</span>
-            <label><span id="to-label" data-i18n="convertedLabel">换算结果</span><span class="amount-box computed"><input id="converted" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="—" /><span id="to-code" class="amount-code" aria-hidden="true"></span></span></label>
+            <label><span id="to-label" data-i18n="convertedLabel">换算结果</span><span class="amount-box computed"><input id="converted" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="—" data-i18n-attr="title:amountHint" /><span id="to-code" class="amount-code" aria-hidden="true"></span></span></label>
           </div>
           <p id="amount-error" class="field-error" role="status"></p>
           <div class="hero-foot">
@@ -70,6 +70,7 @@
           <button type="button" class="range-tab selected" data-days="7" data-i18n="rangeTab7">7天</button>
           <button type="button" class="range-tab" data-days="30" data-i18n="rangeTab30">1个月</button>
           <button type="button" class="range-tab" data-days="90" data-i18n="rangeTab90">3个月</button>
+          <button type="button" class="range-tab" data-days="365" data-i18n="rangeTab365">1年</button>
         </div>
         <div id="chart" class="chart"><span data-i18n="loadingChart">载入走势…</span></div>
         <p id="chart-source" class="chart-source" aria-live="polite"></p>

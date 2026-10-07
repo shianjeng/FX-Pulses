@@ -7,7 +7,8 @@ const {join} = require('node:path');
 /* The converter works both ways. Either box takes a figure, and the other is
    worked out from it: 1,000 CNY reads 23,533 JPY, and typing 47,066 into the
    yen box reads 2,000.00 CNY. The box typed into last keeps its figure while
-   the currencies change or swap round, and the other box follows. */
+   the currencies change or swap round, and the other box follows. Either box
+   also takes a sum, worked out as a calculator would. */
 
 const source = name => readFileSync(join(__dirname, '../extension', name), 'utf8');
 const tick = (ms = 40) => new Promise(resolve => setTimeout(resolve, ms));
@@ -92,4 +93,46 @@ test('grouped and full-width figures are read; anything else is refused', async 
   type('converted', '0');
   assert.equal(el('amount').value, '0.00');
   assert.equal(el('amount-error').textContent, '');
+});
+
+test('a sum is worked out as it is typed, and settled by Enter or leaving the box', async t => {
+  const {el, type, w} = await popup(t);
+  const cases = [
+    ['1200/3', '9,413'],        // 400 CNY
+    ['1000-20%', '18,826'],     // a 20% discount: 800 CNY
+    ['200+10%', '5,177'],       // 220 CNY
+    ['(80+45)*2', '5,883'],     // 250 CNY
+    ['（80＋45）×2', '5,883'],   // typed with a Chinese keyboard
+    ['1,000*8%', '1,883'],      // 80 CNY
+  ];
+  for (const [sum, yen] of cases) {
+    type('amount', sum);
+    assert.equal(el('converted').value, yen, sum);
+    assert.equal(el('amount-error').textContent, '', sum);
+  }
+
+  type('amount', '1200/3');
+  el('amount').dispatchEvent(new w.KeyboardEvent('keydown', {key: 'Enter'}));
+  assert.equal(el('amount').value, '400.00');
+  assert.equal(el('converted').value, '9,413');
+
+  // The same in the second box, in yen, which has no minor unit; leaving the box settles it.
+  type('converted', '10000/3');
+  el('converted').dispatchEvent(new w.Event('change'));
+  assert.equal(el('converted').value, '3,333');
+  assert.equal(el('amount').value, (3333 / 23.533).toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+
+  // A plain figure is left exactly as typed.
+  type('amount', '1000');
+  el('amount').dispatchEvent(new w.Event('change'));
+  assert.equal(el('amount').value, '1000');
+
+  for (const sum of ['1/0', '5+', '2*(3', '-1', '1e309']) {
+    type('amount', sum);
+    assert.equal(el('converted').value, '', sum);
+    assert.equal(el('amount-error').textContent, '请输入0到1万亿之间的有效金额', sum);
+    el('amount').dispatchEvent(new w.Event('change'));
+    assert.equal(el('amount').value, sum, `${sum} is left for the reader to fix`);
+  }
+  assert.equal(el('amount').title, '可以输入算式，例如 1200/3 或 1000-20%');
 });

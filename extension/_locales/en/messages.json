@@ -80,6 +80,9 @@
   "range90": {
     "message": "90-day"
   },
+  "range365": {
+    "message": "1-year"
+  },
   "statLow": {
     "message": "Low"
   },
@@ -160,6 +163,9 @@
   },
   "amountRange": {
     "message": "Enter a valid amount from 0 to 1 trillion"
+  },
+  "amountHint": {
+    "message": "Sums work too, such as 1200/3 or 1000-20%"
   },
   "targetPaused": {
     "message": "Quotes unavailable; target checks paused"
@@ -499,6 +505,9 @@
   },
   "rangeTab90": {
     "message": "3M"
+  },
+  "rangeTab365": {
+    "message": "1Y"
   },
   "statAvg": {
     "message": "Average"
