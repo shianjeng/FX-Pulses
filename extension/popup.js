@@ -658,13 +658,67 @@ function converterStatus() {
    currencies, so the figure typed stays where it is. */
 let anchor = "from";
 
-// "1,000", "1 000" and a full-width "１，０００" all read as 1000.
-function parseAmount(raw) {
-  const text = String(raw).trim()
-    .replace(/[\uFF10-\uFF19]/g, digit => String.fromCharCode(digit.charCodeAt(0) - 0xFEE0))
-    .replace(/\uFF0E/g, ".")
-    .replace(/[,\uFF0C\s\u00A0\u202F']/g, "");
-  return /^(\d+\.?\d*|\.\d+)$/.test(text) ? Number(text) : NaN;
+/* What a box holds, as a number. Grouping is dropped, so "1,000", "1 000" and
+   a full-width "１，０００" all read 1000, and arithmetic is worked out the way
+   a calculator does it: "1200/3", "(80+45)*2", and a percentage taken from the
+   figure before it, so a 20% discount is "1000-20%" and reads 800. Anything
+   else, a minus sign in front included, reads NaN. Never eval(). */
+const OPERATORS = /[-+*/%()×÷]/;
+const halfWidth = text => String(text).replace(/[\uFF01-\uFF5E]/g, char => String.fromCharCode(char.charCodeAt(0) - 0xFEE0));
+function readAmount(raw) {
+  const text = halfWidth(raw)
+    .replace(/×/g, "*").replace(/÷/g, "/")
+    .replace(/[,\s\u00A0\u202F']/g, "");
+  let at = 0;
+  // A figure, or a bracket, with a "%" after it taken as hundredths.
+  const factor = () => {
+    let value;
+    if (text[at] === "(") {
+      at++;
+      value = sum();
+      if (text[at++] !== ")") return null;
+    } else {
+      const number = /^(?:\d+\.?\d*|\.\d+)/.exec(text.slice(at));
+      if (!number) return null;
+      at += number[0].length;
+      value = Number(number[0]);
+    }
+    if (text[at] !== "%") return {value, percent: false};
+    at++;
+    return {value: value / 100, percent: true};
+  };
+  const product = () => {
+    let left = factor();
+    while (left && (text[at] === "*" || text[at] === "/")) {
+      const operator = text[at++], right = factor();
+      if (!right) return null;
+      left = {value: operator === "*" ? left.value * right.value : left.value / right.value, percent: false};
+    }
+    return left;
+  };
+  // "+ 20%" and "- 20%" are a share of the running total, not 0.2.
+  const sum = () => {
+    const first = product();
+    let total = first ? first.value : NaN;
+    while (first && (text[at] === "+" || text[at] === "-")) {
+      const operator = text[at++], term = product();
+      if (!term) return NaN;
+      const amount = term.percent ? total * term.value : term.value;
+      total = operator === "+" ? total + amount : total - amount;
+    }
+    return total;
+  };
+  const value = sum();
+  return text && at === text.length ? value : NaN;
+}
+
+// Enter, or leaving the box, turns a sum into its result, as a calculator's "=" does.
+function settleSum(box, code) {
+  if (!OPERATORS.test(halfWidth(box.value))) return;
+  const value = readAmount(box.value);
+  if (!Number.isFinite(value) || value < 0 || value > 1e12) return;
+  box.value = formatMoney(value, code);
+  updateConverter();
 }
 
 function updateConverter() {
@@ -694,7 +748,7 @@ function updateConverter() {
   $("converter-status").hidden = !shown;
   if (offline && !shown?.live) $("status").textContent += " · " + t("offlineCache");
   if (!converterQuote) { worked.value = ""; return; }
-  const amount = parseAmount(typed.value);
+  const amount = readAmount(typed.value);
   if (!Number.isFinite(amount) || amount < 0 || amount > 1e12) {
     worked.value = "";
     $("amount-error").textContent = t("amountRange");
@@ -847,6 +901,11 @@ $("view-toggle").addEventListener("click", async () => {
 });
 $("amount").addEventListener("input", () => { anchor = "from"; updateConverter(); });
 $("converted").addEventListener("input", () => { anchor = "to"; updateConverter(); });
+for (const [id, side] of [["amount", "converter-from"], ["converted", "converter-to"]]) {
+  const settle = () => settleSum($(id), $(side).value);
+  $(id).addEventListener("change", settle);
+  $(id).addEventListener("keydown", event => { if (event.key === "Enter") settle(); });
+}
 async function saveConverterCurrencies() {
   await selectPair($("converter-from").value + "/" + $("converter-to").value);
 }

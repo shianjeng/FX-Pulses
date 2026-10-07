@@ -164,6 +164,9 @@
   "amountRange": {
     "message": "0から1兆までの有効な金額を入力してください"
   },
+  "amountHint": {
+    "message": "計算式も入力できます（例：1200/3、1000-20%）"
+  },
   "targetPaused": {
     "message": "レートを取得できないため目標の判定を停止中"
   },

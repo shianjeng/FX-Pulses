@@ -164,6 +164,9 @@
   "amountRange": {
     "message": "Enter a valid amount from 0 to 1 trillion"
   },
+  "amountHint": {
+    "message": "Sums work too, such as 1200/3 or 1000-20%"
+  },
   "targetPaused": {
     "message": "Quotes unavailable; target checks paused"
   },
