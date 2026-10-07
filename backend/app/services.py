@@ -4,7 +4,7 @@ from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-from sqlalchemy import delete, desc, func, select
+from sqlalchemy import delete, desc, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -71,9 +71,15 @@ def prune_history(db: Session) -> None:
     db.execute(delete(ProviderRequest).where(
         ProviderRequest.attempted_at < now - timedelta(days=2)
     ).execution_options(**bulk))
+    # The ECB's tables draw the one-year chart, so they are kept for a year.
+    keep = max(get_settings().retention_days, REFERENCE_DAYS + 7)
     db.execute(delete(OfficialAnchorRate).where(
         OfficialAnchorRate.reference_date
-        < (now - timedelta(days=get_settings().retention_days)).date()
+        < (now - timedelta(days=get_settings().retention_days)).date(),
+        or_(
+            OfficialAnchorRate.institution != REFERENCE_INSTITUTION,
+            OfficialAnchorRate.reference_date < (now - timedelta(days=keep)).date(),
+        ),
     ).execution_options(**bulk))
     db.commit()
 
@@ -165,14 +171,17 @@ def latest_official_tables(db: Session) -> list[OfficialTable]:
 
 # Charts need months of history; the collector started in late September 2026.
 REFERENCE_INSTITUTION = "European Central Bank"
-REFERENCE_DAYS = 90
+REFERENCE_DAYS = 365
+# The ECB publishes on about 255 days a year. Fewer stored than this means the
+# history was never read, or was lost, rather than a run of holidays.
+REFERENCE_MIN_DATES = 200
 REFERENCE_SOURCE = "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html"
 
 
 async def backfill_reference_history(db: Session, provider) -> int:
-    """Fill the chart history from the ECB's 90-day file, once.
+    """Fill the chart history from the ECB's history file, once.
 
-    A database holding fewer than 40 of the ECB's dates from the last 90 days
+    A database holding fewer than 200 of the ECB's dates from the last year
     gets the missing ones; after that the daily table keeps it current, so the
     file is not fetched again. Dates already stored are left as they are.
     """
@@ -183,10 +192,10 @@ async def backfill_reference_history(db: Session, provider) -> int:
             OfficialAnchorRate.reference_date >= since,
         )
     ).all())
-    if len(stored) >= 40:
+    if len(stored) >= REFERENCE_MIN_DATES:
         return 0
     added = 0
-    for table in await provider.get_history():
+    for table in await provider.get_history(since):
         if table.reference_date >= since and table.reference_date not in stored:
             store_official_table(db, table)
             added += 1

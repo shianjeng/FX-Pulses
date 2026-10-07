@@ -80,6 +80,9 @@
   "range90": {
     "message": "90日間"
   },
+  "range365": {
+    "message": "1年間"
+  },
   "statLow": {
     "message": "安値"
   },
@@ -499,6 +502,9 @@
   },
   "rangeTab90": {
     "message": "3ヶ月"
+  },
+  "rangeTab365": {
+    "message": "1年"
   },
   "statAvg": {
     "message": "平均"

@@ -16,10 +16,10 @@ const tick = (ms = 40) => new Promise(resolve => setTimeout(resolve, ms));
 const DAY = 86400000;
 const API = 'https://api.invalid';
 
-// Business days over the last 95 days, oldest first, with a gentle trend.
-function referenceFile() {
+// Business days over the last `days` days, oldest first, with a gentle trend.
+function referenceFile(days = 95) {
   const dates = [];
-  for (let back = 95; back >= 0; back--) {
+  for (let back = days; back >= 0; back--) {
     const day = new Date(Date.now() - back * DAY);
     if (day.getUTCDay() % 6) dates.push(day.toISOString().slice(0, 10));
   }
@@ -44,10 +44,10 @@ function marketHistory(days) {
   return points;
 }
 
-async function popup(t, {from = 'USD', to = 'JPY', collectedDays = 7} = {}) {
+async function popup(t, {from = 'USD', to = 'JPY', collectedDays = 7, referenceDays} = {}) {
   const dom = new JSDOM(source('popup.html'), {runScripts: 'outside-only', url: 'https://test.invalid'});
   t.after(() => dom.window.close());
-  const w = dom.window, asked = [], reference = referenceFile();
+  const w = dom.window, asked = [], reference = referenceFile(referenceDays);
   const state = {watchlist: ['USD/JPY'], targets: {}, apiUrl: API, viewMode: 'detail', converterFrom: from, converterTo: to};
   w.chrome = {storage: {local: {get: async d => ({...d, ...state}), set: async v => Object.assign(state, v)}}, runtime: {openOptionsPage() {}}};
   w.fetch = async url => {
@@ -81,6 +81,22 @@ test('three months: the ECB line until the collector has caught up', async t => 
   const crosses = app.reference.dates.map((date, index) => app.reference.rates.JPY[index] / app.reference.rates.USD[index])
     .filter((value, index) => Date.parse(`${app.reference.dates[index]}T12:00:00Z`) >= Date.now() - 90 * DAY);
   assert.equal(app.el('stat-high').textContent, Math.max(...crosses).toLocaleString('zh-CN', {minimumFractionDigits: 3, maximumFractionDigits: 3}));
+});
+
+test('one year: the ECB line, with the year on the axis and in the tooltip', async t => {
+  const app = await popup(t, {referenceDays: 370});
+  await app.range(365);
+  assert.match(app.el('chart-source').textContent, /欧洲央行每日参考价/);
+  assert.equal(app.samples(), inRange(app.reference, 365));
+  // October to October: a month and day alone would read the same at both ends.
+  const labels = [...app.el('chart').querySelectorAll('.chart-x span')].map(span => span.textContent);
+  assert.equal(labels.length, 3);
+  for (const label of labels) assert.match(label, /^\d{4}\/\d{1,2}$/);
+  const svg = app.el('chart').querySelector('svg');
+  svg.getBoundingClientRect = () => ({left: 0, top: 0, width: 384, height: 132});
+  app.el('chart').querySelector('.chart-hit').dispatchEvent(new app.w.MouseEvent('pointermove', {clientX: 20, clientY: 40}));
+  assert.match(app.el('chart').querySelector('.chart-tip small').textContent, /^\d{4}\/\d{1,2}\/\d{1,2}$/);
+  assert.match(app.el('chart').querySelector('svg').getAttribute('aria-label'), /一年/);
 });
 
 test('seven days: the collected quotes, which already span the range', async t => {

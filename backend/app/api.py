@@ -92,7 +92,7 @@ def currencies(db: Session = Depends(get_db)) -> CoverageOut:
 
 @router.get("/reference-history")
 def reference_history_route(db: Session = Depends(get_db)) -> dict:
-    """The ECB's daily reference rates for the last 90 days, for long-range
+    """The ECB's daily reference rates for the last year, for long-range
     charts of any pair it covers."""
     return reference_history(db)
 
@@ -161,7 +161,7 @@ def rate(base: str, quote: str, db: Session = Depends(get_db)) -> RateOut:
 def history(
     base: str,
     quote: str,
-    days: int = Query(default=7, ge=1, le=90),
+    days: int = Query(default=7, ge=1, le=365),
     db: Session = Depends(get_db),
 ) -> list[HistoryPoint]:
     base, quote = parse_pair(base, quote)

@@ -21,7 +21,7 @@ let offline = false;
 let live = null;
 const validPair = pair => typeof pair === "string" && /^[A-Z]{3}\/[A-Z]{3}$/.test(pair);
 
-const RANGE_DAYS = [1, 7, 30, 90];
+const RANGE_DAYS = [1, 7, 30, 90, 365];
 const t = (key, ...values) => globalThis.FXI18N.t(key, ...values);
 let historyDays = 7;
 
@@ -450,8 +450,10 @@ function drawChart(points, {daily = false} = {}) {
   const scale = ticks.filter(value => yOf(value) > 8 && yOf(value) < height - 8);
   const grid = scale.map(value => `<line class="chart-grid" x1="0" x2="${f(plotWidth)}" y1="${f(yOf(value))}" y2="${f(yOf(value))}"></line>`).join("");
   const priceLabels = scale.map(value => `<span class="chart-y" style="left:${f(plotWidth + 8)}px;top:${f(yOf(value))}px">${fmt(value, digits)}</span>`).join("");
+  // A year runs from one October to the next, so its ends are told apart by the year.
   const stamp = time => new Date(time).toLocaleString(docLocale(), historyDays === 1
-    ? {hour: "2-digit", minute: "2-digit", hourCycle: "h23"} : {month: "numeric", day: "numeric"});
+    ? {hour: "2-digit", minute: "2-digit", hourCycle: "h23"}
+    : historyDays === 365 ? {year: "numeric", month: "numeric"} : {month: "numeric", day: "numeric"});
   const timeLabels = (duration ? [[0, start], [0.5, start + duration / 2], [1, start + duration]] : [[0.5, start]])
     .map(([share, time]) => `<span style="left:${f(share * plotWidth)}px;transform:translateX(-${share * 100}%)">${stamp(time)}</span>`).join("");
   const line = segments.map(smoothPath).join(" ");
@@ -510,7 +512,8 @@ function drawChart(points, {daily = false} = {}) {
     dot.setAttribute("cy", point.y);
     dot.setAttribute("visibility", "visible");
     // A daily reference has a date, not a time of day.
-    tipTime.textContent = daily ? point.time.slice(5, 10).split("-").map(Number).join("/") : chartTimeLabel(point.time);
+    tipTime.textContent = daily
+      ? point.time.slice(historyDays === 365 ? 0 : 5, 10).split("-").map(Number).join("/") : chartTimeLabel(point.time);
     tipValue.textContent = `${selectedPair}  ${formatRate(point.value)}`;
     // How far this sample is from the start of the range.
     const moved = (point.value - values[0]) / values[0] * 100;

@@ -69,7 +69,8 @@ def test_history_window_supports_long_ranges(client: TestClient):
     month = client.get("/api/v1/rates/USD/JPY/history?days=30").json()
     assert len(month) > len(week)
     assert client.get("/api/v1/rates/USD/JPY/history?days=0").status_code == 422
-    assert client.get("/api/v1/rates/USD/JPY/history?days=91").status_code == 422
+    assert client.get("/api/v1/rates/USD/JPY/history?days=365").status_code == 200
+    assert client.get("/api/v1/rates/USD/JPY/history?days=366").status_code == 422
 
 
 def test_unchanged_reads_are_answered_with_304(client: TestClient):

@@ -268,7 +268,7 @@ async function liveRates(force = false) {
   return livePending;
 }
 
-const UI_PATHS = /^\/(?:comparisons\/[A-Z]{3}\/[A-Z]{3}|currencies|reference-history|official-rates\/[A-Z]{3}\/[A-Z]{3}|rates\/[A-Z]{3}\/[A-Z]{3}\/history\?days=(?:1|7|30|90))$/;
+const UI_PATHS = /^\/(?:comparisons\/[A-Z]{3}\/[A-Z]{3}|currencies|reference-history|official-rates\/[A-Z]{3}\/[A-Z]{3}|rates\/[A-Z]{3}\/[A-Z]{3}\/history\?days=(?:1|7|30|90|365))$/;
 /* Content scripts may read a single official cross rate or the list of covered
    currencies (public, and it carries nothing from the page), never other paths. */
 const PAGE_PATHS = /^\/(?:official-rates\/[A-Z]{3}\/[A-Z]{3}|currencies)$/;
