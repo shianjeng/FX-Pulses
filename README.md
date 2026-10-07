@@ -30,6 +30,15 @@ The extension and hover converter share the same backend, one-minute cache, watc
 
 > **Market midpoint** = `(bid + ask) / 2`. It is not a bank settlement rate, card-network rate, or central-bank fixing.
 
+## What's new in 2.9.0
+
+Ideas taken from comparable converters: the yearly charts of XE, Wise and the Currencies app, the select-to-convert of Currency Converter Pro, and the calculator built into Currencies.
+
+- **A one-year chart.** The trend chart has a **1Y** tab. It draws the ECB's daily reference rates for the last year, read once from the ECB's full history file and kept for a year, so every pair the ECB covers (about 30 currencies) has a real year-long line. Its axis and tooltip carry the year.
+- **Select a price to convert it.** With hover conversion on, selecting a price opens the same card as hovering. Double-clicking the figure of a price that a shop writes in pieces ("¥" and "26,990") works too. The card stays while the price is selected. Selecting two prices, a long passage, or text in a form field opens nothing. This also works on pages where hovering cannot read the price.
+- **Sums in the converter.** Either box takes a sum: `1200/3`, `(80+45)*2`, or a percentage of the figure before it, so a 20% discount is `1000-20%`. Full-width input from a Chinese or Japanese keyboard works. The other box follows as you type, and Enter turns the sum into its result.
+- **Maintenance.** FastAPI 0.142.2, SQLAlchemy 2.1.3, Ruff 0.16.10, ESLint 10.12 and jsdom 30.1.2. A patched source-map-js fixes an npm audit finding in the development tools; nothing shipped in the extension was affected.
+
 ## What's new in 2.8.5
 
 - **Real one-month and three-month charts.** Collection began on 23 September 2026, so 7 days, 1 month and 3 months all showed that one week. Until the collector's own quotes span a range, the chart now draws the ECB's daily reference rates for the last 90 days. They are read once from the ECB's official 90-day file and kept current by the daily fetch. That gives every pair the ECB covers a real long-range line (about 30 currencies, EUR/KRW included), and a caption under the chart names the source.
@@ -93,10 +102,10 @@ Rates below 1 show at least six decimal places, with more precision for smaller 
 | ⭐ | Watchlist | Save up to eight pairs of any currencies and switch between them in one click |
 | 👁️ | Simple view | Opens on the midpoint and converter; full detail is one click away |
 | ↕️ | Market quote detail | Bid, ask, midpoint, spread, freshness, and 24-hour movement (detailed view) |
-| 📈 | Trend chart | Smooth 24-hour to 3-month lines with a price scale, time axis, high and low markers, and range statistics; ECB daily history fills ranges the collector has not reached |
+| 📈 | Trend chart | Smooth 24-hour to 1-year lines with a price scale, time axis, high and low markers, and range statistics; ECB daily history fills ranges the collector has not reached |
 | 🏛️ | Official references | Compare market midpoints with central-bank reference observations |
-| ⚡ | Hover conversion | Point at an amount on a webpage to convert it without leaving the page, including prices shops split into pieces (Amazon, Mercari) |
-| 🧮 | Quick converter | Choose source and target currencies, type an amount in either box, swap direction, and see the rate source and date |
+| ⚡ | Hover conversion | Point at or select an amount on a webpage to convert it without leaving the page, including prices shops split into pieces (Amazon, Mercari) |
+| 🧮 | Quick converter | Choose source and target currencies, type an amount or a sum in either box, swap direction, and see the rate source and date |
 | 🔔 | Optional alerts | Local target-price alerts powered by `chrome.alarms` |
 | 🏷️ | Rate on the icon | Optionally show one pair's rate on the toolbar icon, grey when the quote is old |
 | ⌨️ | Shortcut | Alt+Shift+F opens the popup; change it at `chrome://extensions/shortcuts` |
@@ -112,10 +121,10 @@ FX Pulse labels each data layer instead of presenting unrelated rates as if they
 
 ### Chart history
 
-The chart draws the collector's own market quotes when they span the selected range: always for 24 hours, and for longer ranges once enough has been collected. Otherwise it draws the European Central Bank's daily reference rates. That covers pairs the market feed does not track, and 1 month or 3 months before the collector reaches that far back.
+The chart draws the collector's own market quotes when they span the selected range: always for 24 hours, and for longer ranges once enough has been collected. Otherwise it draws the European Central Bank's daily reference rates. That covers pairs the market feed does not track, and 1 month, 3 months or a year before the collector reaches that far back. Market quotes are kept for 90 days, so the one-year chart always draws the ECB's line.
 
-- **Where the history comes from.** The first collection reads the ECB's official 90-day file (`eurofxref-hist-90d.xml`) once. The daily reference fetch keeps it current, and retention keeps 90 days.
-- **What is published.** The export publishes it as `reference-history.json`: one column per currency against EUR, about 15 KB. A cross is one column divided by another, the same arithmetic the API uses for official quotes. The API serves the same data at `/api/v1/reference-history`.
+- **Where the history comes from.** A collection that finds fewer than 200 of the last year's ECB dates reads the ECB's official history file (`eurofxref-hist.xml`, about 8 MB, every day since 1999) once and keeps the last year. The daily reference fetch keeps it current. The ECB's tables are kept for a year; other institutions' tables follow the 90-day retention.
+- **What is published.** The export publishes it as `reference-history.json`: one column per currency against EUR, about 58 KB (19 KB compressed). A cross is one column divided by another, the same arithmetic the API uses for official quotes. The API serves the same data at `/api/v1/reference-history`.
 - **How it is drawn.** One point per business day; weekends and holidays are not treated as outages, and the tooltip shows a date. The caption under the chart says which source is drawn.
 
 ### Live rates
@@ -360,7 +369,7 @@ All application endpoints are public, cached, rate-limited, and read-only.
 | `GET` | `/api/v1/currencies` | Market and official-source coverage |
 | `GET` | `/api/v1/rates` | Latest cached market quotes |
 | `GET` | `/api/v1/rates/{base}/{quote}` | Latest quote for one pair |
-| `GET` | `/api/v1/rates/{base}/{quote}/history?days=7` | One to 90 days of history |
+| `GET` | `/api/v1/rates/{base}/{quote}/history?days=7` | One to 365 days of history, within the retention (90 days by default) |
 | `GET` | `/api/v1/official-rates` | Latest official observations |
 | `GET` | `/api/v1/official-rates/{base}/{quote}` | Official observations for a covered pair |
 | `GET` | `/api/v1/comparisons/{base}/{quote}` | Market and official-rate comparison |
@@ -455,6 +464,7 @@ and keys are never exposed to a page.
 - Personal preferences are not uploaded to the backend.
 - Extension CORS is restricted to browser-extension origins.
 - Content scripts use a constrained message gateway rather than arbitrary backend access.
+- Hovering and selecting read the page only inside your browser. The text you point at or select is never sent anywhere; the card asks the extension for rates by currency code only.
 - Official XML is parsed with `defusedxml`.
 - Provider URLs containing credentials are excluded from normal logs.
 - The Docker image runs as a non-root user.
@@ -497,6 +507,12 @@ Edge 用户：打开 `edge://extensions`，在左侧打开 **开发人员模式*
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
 
 同一币对有多家央行报价时，2.8.4 起按实测准确度挑选（加拿大央行、欧洲央行优先，其次人民银行、日本银行，最后是晚一周发布的美联储），日期只在最新报价前后四天内的来源之间起作用。此前按“日期最新”挑选，周一早上几乎总会选中人民银行的中间价，与市场偏差 0.3%～0.4%。
+
+2.9.0 参考了同类软件（XE、Wise、Currencies 的年度走势，Currency Converter Pro 的划词换算，Currencies 的内置计算器），新增：
+- 走势图增加「1年」：使用欧洲央行最近一年的每日参考价，从欧洲央行的完整历史文件一次性读入并保留一年，约 30 种货币都有真实的一年走势，坐标轴和提示会标出年份。
+- 划词换算：开启网页悬停后，选中网页上的价格即可弹出换算卡片；双击亚马逊这类拆开显示的价格数字（「¥」和「26,990」分开）也能识别。选中两个价格、长段文字或输入框里的文字不会弹出。悬停读不到价格的网页也可以用这个方法。
+- 换算框支持算式：两个框都可以输入 `1200/3`、`(80+45)*2`，百分比按前面的数计算，打八折就是 `1000-20%`。支持中文和日文输入法的全角符号。输入时另一个框实时换算，按回车会把算式换成结果。
+- 维护：更新 FastAPI 0.142.2、SQLAlchemy 2.1.3、Ruff 0.16.10、ESLint 10.12、jsdom 30.1.2，并修复开发工具依赖中的一个 npm audit 安全提示（不影响插件本身）。
 
 2.8.5 起 1 个月和 3 个月的走势图显示真实历史：此前采集从 9 月 23 日才开始，7 天、1 个月、3 个月看到的都是同一周的数据。现在在采集的数据还不够覆盖所选区间时，图表改用欧洲央行最近 90 天的每日参考价。这份数据从欧洲央行官方的 90 天文件一次性读入，之后随每日采集更新。欧洲央行覆盖的约 30 种货币（包括欧元/韩元等）都有真实的长期走势，图表下方会注明数据来源。
 
