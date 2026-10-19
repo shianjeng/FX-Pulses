@@ -205,7 +205,11 @@ globalThis.FXMessages = {
     "omniboxNoRate": "暂时没有 $1/$2 的汇率",
     "omniboxOpen": "回车在弹窗中打开",
     "omniboxMarket": "市场中间价",
-    "omniboxOfficial": "官方参考价 · $1 · $2"
+    "omniboxOfficial": "官方参考价 · $1 · $2",
+    "yearRangeTitle": "一年区间 · 欧洲央行参考价",
+    "yearRangeShare": "1 $1 能换的 $2 多于过去一年 $3 的日子",
+    "yearRangeMost": "1 $1 能换的 $2 是一年来最多的",
+    "yearRangeLeast": "1 $1 能换的 $2 是一年来最少的"
   },
   "en": {
     "extensionName": "FX Pulse — exchange rates at hand",
@@ -412,7 +416,11 @@ globalThis.FXMessages = {
     "omniboxNoRate": "No rate for $1/$2 yet",
     "omniboxOpen": "Enter opens it in the popup",
     "omniboxMarket": "Market midpoint",
-    "omniboxOfficial": "Official reference · $1 · $2"
+    "omniboxOfficial": "Official reference · $1 · $2",
+    "yearRangeTitle": "Past year · ECB reference rates",
+    "yearRangeShare": "1 $1 buys more $2 than on $3 of the past year's days",
+    "yearRangeMost": "1 $1 buys the most $2 it has in a year",
+    "yearRangeLeast": "1 $1 buys the least $2 it has in a year"
   },
   "ja": {
     "extensionName": "FX Pulse — 手元で為替レート",
@@ -619,6 +627,10 @@ globalThis.FXMessages = {
     "omniboxNoRate": "$1/$2 のレートはまだありません",
     "omniboxOpen": "Enter でポップアップに表示",
     "omniboxMarket": "市場仲値",
-    "omniboxOfficial": "公的参考レート · $1 · $2"
+    "omniboxOfficial": "公的参考レート · $1 · $2",
+    "yearRangeTitle": "過去1年 · 欧州中央銀行の参考レート",
+    "yearRangeShare": "1 $1 で買える $2 は過去1年の $3 の日より多い",
+    "yearRangeMost": "1 $1 で買える $2 はこの1年で最も多い",
+    "yearRangeLeast": "1 $1 で買える $2 はこの1年で最も少ない"
   }
 };

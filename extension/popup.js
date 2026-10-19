@@ -570,6 +570,28 @@ function referenceSeries(data, base, quote, days) {
     .filter(point => Number.isFinite(point.midpoint) && point.midpoint > 0 && Date.parse(point.captured_at) >= since);
 }
 
+/* Where today's rate sits in its past year, from the same ECB file the long
+   ranges draw: the 52-week range quote pages show, said the way someone
+   changing money reads it, "1 CNY buys more JPY than on 82% of the past
+   year's days". Shown once there is half a year to compare with. */
+async function loadYearRange(version) {
+  $("year-range").hidden = true;
+  const [base, quote] = selectedPair.split("/");
+  if (base === quote) return;
+  const series = referenceSeries(await request("/reference-history").catch(() => null), base, quote, 365);
+  if (version !== historyVersion || series.length < 120) return;
+  const values = series.map(point => point.midpoint);
+  const low = Math.min(...values), high = Math.max(...values);
+  const now = Number(shownRate()?.midpoint) || (converterQuote?.kind === "identity" ? 0 : converterQuote?.rate) || values.at(-1);
+  const share = Math.round(values.filter(value => value < now).length / values.length * 100);
+  $("year-range-note").textContent = now > high ? t("yearRangeMost", base, quote)
+    : now < low ? t("yearRangeLeast", base, quote) : t("yearRangeShare", base, quote, `${share}%`);
+  $("year-range-low").textContent = formatRate(low);
+  $("year-range-high").textContent = formatRate(high);
+  $("year-range-dot").style.left = `${(high > low ? Math.min(1, Math.max(0, (now - low) / (high - low))) : 0.5) * 100}%`;
+  $("year-range").hidden = false;
+}
+
 function showHistory(points, source, daily = false) {
   drawChart(points, {daily});
   $("chart-source").textContent = source;
@@ -585,6 +607,7 @@ async function loadHistory() {
   $("chart").innerHTML = `<span>${t("loadingChart")}</span>`;
   $("chart-source").textContent = "";
   resetChartStats();
+  void loadYearRange(version);
   try {
     const [base, quote] = selectedPair.split("/");
     const inverse = !supportedPairs.includes(selectedPair) && supportedPairs.includes(`${quote}/${base}`);

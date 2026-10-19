@@ -613,5 +613,17 @@
   },
   "omniboxOfficial": {
     "message": "官方参考价 · $1 · $2"
+  },
+  "yearRangeTitle": {
+    "message": "一年区间 · 欧洲央行参考价"
+  },
+  "yearRangeShare": {
+    "message": "1 $1 能换的 $2 多于过去一年 $3 的日子"
+  },
+  "yearRangeMost": {
+    "message": "1 $1 能换的 $2 是一年来最多的"
+  },
+  "yearRangeLeast": {
+    "message": "1 $1 能换的 $2 是一年来最少的"
   }
 }

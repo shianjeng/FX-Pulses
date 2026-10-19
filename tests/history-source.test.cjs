@@ -44,7 +44,7 @@ function marketHistory(days) {
   return points;
 }
 
-async function popup(t, {from = 'USD', to = 'JPY', collectedDays = 7, referenceDays} = {}) {
+async function popup(t, {from = 'USD', to = 'JPY', collectedDays = 7, referenceDays, midpoint = '157'} = {}) {
   const dom = new JSDOM(source('popup.html'), {runScripts: 'outside-only', url: 'https://test.invalid'});
   t.after(() => dom.window.close());
   const w = dom.window, asked = [], reference = referenceFile(referenceDays);
@@ -54,7 +54,7 @@ async function popup(t, {from = 'USD', to = 'JPY', collectedDays = 7, referenceD
     const path = url.slice(API.length);
     asked.push(path);
     const json = path === '/pairs' ? ['USD/CNY', 'USD/JPY', 'CNY/JPY']
-      : path === '/rates' ? [{base_currency: 'USD', quote_currency: 'JPY', midpoint: '157', bid: '157', ask: '157', provider: 'alpha_vantage', captured_at: new Date().toISOString(), is_stale: false}]
+      : path === '/rates' ? [{base_currency: 'USD', quote_currency: 'JPY', midpoint, bid: midpoint, ask: midpoint, provider: 'alpha_vantage', captured_at: new Date().toISOString(), is_stale: false}]
         : path === '/currencies' ? {market_pairs: ['USD/CNY', 'USD/JPY', 'CNY/JPY'], official_currencies: ['CNY', 'EUR', 'JPY', 'KRW', 'USD']}
           : path === '/reference-history' ? reference
             : path.includes('/history') ? marketHistory(collectedDays).filter(point => Date.parse(point.captured_at) >= Date.now() - Number(path.split('days=')[1]) * DAY)
@@ -103,7 +103,34 @@ test('seven days: the collected quotes, which already span the range', async t =
   const app = await popup(t);
   assert.match(app.el('chart-source').textContent, /市场中间价/);
   assert.equal(app.samples(), marketHistory(7).length);
-  assert.equal(app.asked.includes('/reference-history'), false, 'no second file when the first one covers the range');
+  // The chart needs nothing more; the one file asked for is the year range's.
+  assert.equal(app.asked.filter(path => path === '/reference-history').length, 1);
+});
+
+test('the year range says where the rate sits in its past year', async t => {
+  const app = await popup(t, {referenceDays: 370});
+  const box = app.el('year-range');
+  assert.equal(box.hidden, false);
+  // USD/JPY from the ECB columns runs from about 154.5 up to 163; the market says 157.
+  const values = app.reference.dates.map((date, index) => app.reference.rates.JPY[index] / app.reference.rates.USD[index])
+    .filter((value, index) => Date.parse(`${app.reference.dates[index]}T12:00:00Z`) >= Date.now() - 365 * DAY);
+  const share = Math.round(values.filter(value => value < 157).length / values.length * 100);
+  assert.equal(app.el('year-range-note').textContent, `1 USD 能换的 JPY 多于过去一年 ${share}% 的日子`);
+  const left = parseFloat(app.el('year-range-dot').style.left);
+  assert.ok(left > 0 && left < 100, `${left}%`);
+  assert.equal(app.el('year-range-low').textContent, Math.min(...values).toLocaleString('zh-CN', {minimumFractionDigits: 3, maximumFractionDigits: 3}));
+});
+
+test('beyond the year\'s range it says most or least; a short history shows nothing', async t => {
+  // The reference year runs from about 154.6 to 163.3 yen a dollar.
+  const high = await popup(t, {referenceDays: 370, midpoint: '170'});
+  assert.equal(high.el('year-range-note').textContent, '1 USD 能换的 JPY 是一年来最多的');
+  assert.equal(high.el('year-range-dot').style.left, '100%');
+  const low = await popup(t, {referenceDays: 370, midpoint: '150'});
+  assert.equal(low.el('year-range-note').textContent, '1 USD 能换的 JPY 是一年来最少的');
+  assert.equal(low.el('year-range-dot').style.left, '0%');
+  const short = await popup(t);
+  assert.equal(short.el('year-range').hidden, true, 'three months is not a year');
 });
 
 test('once the collector spans three months, its own quotes are drawn', async t => {

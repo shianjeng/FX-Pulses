@@ -613,5 +613,17 @@
   },
   "omniboxOfficial": {
     "message": "公的参考レート · $1 · $2"
+  },
+  "yearRangeTitle": {
+    "message": "過去1年 · 欧州中央銀行の参考レート"
+  },
+  "yearRangeShare": {
+    "message": "1 $1 で買える $2 は過去1年の $3 の日より多い"
+  },
+  "yearRangeMost": {
+    "message": "1 $1 で買える $2 はこの1年で最も多い"
+  },
+  "yearRangeLeast": {
+    "message": "1 $1 で買える $2 はこの1年で最も少ない"
   }
 }

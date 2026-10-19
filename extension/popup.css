@@ -394,6 +394,14 @@ main { display: flex; flex-direction: column; gap: 12px; padding: 14px 14px 18px
 .stats b { color: var(--text); font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .stats b.positive { color: var(--up); }
 .stats b.negative { color: var(--down); }
+/* Where the rate sits in its past year: a 52-week range, as quote pages show. */
+.year-range { display: grid; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.year-range[hidden] { display: none; }
+.year-range-title { margin: 0; color: var(--text-3); font-size: 11px; }
+.year-range-note { margin: 0; color: var(--text); font-size: 12.5px; font-weight: 600; }
+.year-range-track { position: relative; height: 6px; margin: 4px 6px 0; border-radius: 99px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); }
+#year-range-dot { position: absolute; top: 50%; width: 12px; height: 12px; border: 2px solid var(--surface); border-radius: 50%; background: var(--accent); transform: translate(-50%, -50%); box-shadow: 0 1px 3px rgb(18 28 40 / 25%); }
+.year-range-ends { display: flex; justify-content: space-between; color: var(--text-3); font-size: 11px; font-variant-numeric: tabular-nums; }
 
 /* ---- official references ------------------------------------------------- */
 

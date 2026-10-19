@@ -613,5 +613,17 @@
   },
   "omniboxOfficial": {
     "message": "Official reference · $1 · $2"
+  },
+  "yearRangeTitle": {
+    "message": "Past year · ECB reference rates"
+  },
+  "yearRangeShare": {
+    "message": "1 $1 buys more $2 than on $3 of the past year's days"
+  },
+  "yearRangeMost": {
+    "message": "1 $1 buys the most $2 it has in a year"
+  },
+  "yearRangeLeast": {
+    "message": "1 $1 buys the least $2 it has in a year"
   }
 }
