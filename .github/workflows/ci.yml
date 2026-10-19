@@ -46,6 +46,9 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run test:userscript
+      # The Firefox edition, built from the same files and checked the way
+      # addons.mozilla.org checks a submission. Warnings pass; errors fail.
+      - run: npm run lint:firefox
 
   versions:
     runs-on: ubuntu-latest
@@ -56,8 +59,9 @@ jobs:
           manifest=$(node -p 'require("./extension/manifest.json").version')
           api=$(grep -m1 -Po '(?<=^version = ")[^"]+' backend/pyproject.toml)
           app=$(grep -m1 -Po '(?<=version=")[^"]+' backend/app/main.py)
-          echo "manifest=$manifest api=$api app=$app"
-          test "$manifest" = "$api" && test "$api" = "$app"
+          badge=$(grep -m1 -Po '(?<=badge/version-)[0-9.]+(?=-)' README.md)
+          echo "manifest=$manifest api=$api app=$app readme=$badge"
+          test "$manifest" = "$api" && test "$api" = "$app" && test "$app" = "$badge"
 
   docker:
     runs-on: ubuntu-latest
