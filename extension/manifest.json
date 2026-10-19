@@ -18,6 +18,7 @@
     "default_popup": "popup.html"
   },
   "options_page": "options.html",
+  "omnibox": {"keyword": "fx"},
   "commands": {
     "_execute_action": {"suggested_key": {"default": "Alt+Shift+F"}}
   }

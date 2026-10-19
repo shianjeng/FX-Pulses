@@ -595,5 +595,23 @@
   },
   "chartSourceReference": {
     "message": "ECB daily reference rate · one point per business day"
+  },
+  "omniboxHint": {
+    "message": "Type an amount and currencies, such as 100 usd jpy, €12.50 gbp or ¥26,990"
+  },
+  "omniboxUnread": {
+    "message": "No amount or currency found. Try 100 usd jpy"
+  },
+  "omniboxNoRate": {
+    "message": "No rate for $1/$2 yet"
+  },
+  "omniboxOpen": {
+    "message": "Enter opens it in the popup"
+  },
+  "omniboxMarket": {
+    "message": "Market midpoint"
+  },
+  "omniboxOfficial": {
+    "message": "Official reference · $1 · $2"
   }
 }

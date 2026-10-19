@@ -199,7 +199,13 @@ globalThis.FXMessages = {
     "liveRate": "Coinbase 实时中间价",
     "interval5": "5分钟",
     "chartSourceMarket": "市场中间价 · 约每 3 小时采集一次",
-    "chartSourceReference": "欧洲央行每日参考价 · 每个工作日一个数据点"
+    "chartSourceReference": "欧洲央行每日参考价 · 每个工作日一个数据点",
+    "omniboxHint": "输入金额和币种，例如 100 usd jpy、¥26,990、5万日元",
+    "omniboxUnread": "没有读出金额或币种，试试 100 usd jpy",
+    "omniboxNoRate": "暂时没有 $1/$2 的汇率",
+    "omniboxOpen": "回车在弹窗中打开",
+    "omniboxMarket": "市场中间价",
+    "omniboxOfficial": "官方参考价 · $1 · $2"
   },
   "en": {
     "extensionName": "FX Pulse — exchange rates at hand",
@@ -400,7 +406,13 @@ globalThis.FXMessages = {
     "liveRate": "Coinbase live mid-market rate",
     "interval5": "5 minutes",
     "chartSourceMarket": "Market midpoint · collected about every three hours",
-    "chartSourceReference": "ECB daily reference rate · one point per business day"
+    "chartSourceReference": "ECB daily reference rate · one point per business day",
+    "omniboxHint": "Type an amount and currencies, such as 100 usd jpy, €12.50 gbp or ¥26,990",
+    "omniboxUnread": "No amount or currency found. Try 100 usd jpy",
+    "omniboxNoRate": "No rate for $1/$2 yet",
+    "omniboxOpen": "Enter opens it in the popup",
+    "omniboxMarket": "Market midpoint",
+    "omniboxOfficial": "Official reference · $1 · $2"
   },
   "ja": {
     "extensionName": "FX Pulse — 手元で為替レート",
@@ -601,6 +613,12 @@ globalThis.FXMessages = {
     "liveRate": "Coinbase リアルタイム仲値",
     "interval5": "5分",
     "chartSourceMarket": "市場仲値 · 約 3 時間ごとに収集",
-    "chartSourceReference": "欧州中央銀行の日次参考レート · 営業日ごとに 1 点"
+    "chartSourceReference": "欧州中央銀行の日次参考レート · 営業日ごとに 1 点",
+    "omniboxHint": "金額と通貨を入力（例：100 usd jpy、¥26,990、5000円 cny）",
+    "omniboxUnread": "金額か通貨が読み取れません。例：100 usd jpy",
+    "omniboxNoRate": "$1/$2 のレートはまだありません",
+    "omniboxOpen": "Enter でポップアップに表示",
+    "omniboxMarket": "市場仲値",
+    "omniboxOfficial": "公的参考レート · $1 · $2"
   }
 };
