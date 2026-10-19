@@ -426,6 +426,14 @@ python -m app.collector
 
 Add `--once` to collect a single round and exit instead of scheduling.
 
+Preview the popup, the settings page and the hover card in an ordinary browser, on live data:
+
+```bash
+make preview
+```
+
+Then open http://127.0.0.1:8765/ for the popup, `/options.html`, or `/hover-demo.html` to try hover and select-to-convert on prices written the ways shops write them. A stand-in for the Chrome extension APIs runs the worker in the same page, and settings are kept in that page's `localStorage`.
+
 Extension checks:
 
 ```bash
