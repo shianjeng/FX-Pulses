@@ -3,6 +3,9 @@ const DEFAULTS = {
   watchlist: ["USD/CNY", "USD/JPY", "CNY/JPY"],
   converterFrom: "USD",
   converterTo: "CNY",
+  // The last figure typed and which box it was typed in, so a reopened popup
+  // carries on where it was left.
+  converterAmount: {value: "1000", side: "from"},
   targets: {},
   alertsEnabled: false,
   viewMode: "simple",
@@ -719,6 +722,32 @@ function settleSum(box, code) {
   if (!Number.isFinite(value) || value < 0 || value > 1e12) return;
   box.value = formatMoney(value, code);
   updateConverter();
+  saveAmount();
+}
+
+const typedBox = () => $(anchor === "to" ? "converted" : "amount");
+let savingAmount;
+function saveAmount() {
+  globalThis.clearTimeout(savingAmount);
+  savingAmount = setTimeout(() => {
+    void chrome.storage.local.set({converterAmount: {value: typedBox().value.slice(0, 64), side: anchor}});
+  }, 300);
+}
+
+/* Once per opening: put back the last figure in the box it was typed in, and
+   put the cursor there with the figure selected, so the shortcut, then a
+   number, is a conversion. */
+let amountRestored = false;
+function restoreAmount() {
+  if (amountRestored) return;
+  amountRestored = true;
+  const saved = settings.converterAmount;
+  if (typeof saved?.value === "string" && saved.value.length <= 64 && ["from", "to"].includes(saved.side)) {
+    anchor = saved.side;
+    typedBox().value = saved.value;
+  }
+  typedBox().focus({preventScroll: true});
+  typedBox().select();
 }
 
 function updateConverter() {
@@ -899,8 +928,8 @@ $("view-toggle").addEventListener("click", async () => {
   // Simple mode skipped these requests, so the panels are empty until now.
   if (detailed()) await loadHistory();
 });
-$("amount").addEventListener("input", () => { anchor = "from"; updateConverter(); });
-$("converted").addEventListener("input", () => { anchor = "to"; updateConverter(); });
+$("amount").addEventListener("input", () => { anchor = "from"; updateConverter(); saveAmount(); });
+$("converted").addEventListener("input", () => { anchor = "to"; updateConverter(); saveAmount(); });
 for (const [id, side] of [["amount", "converter-from"], ["converted", "converter-to"]]) {
   const settle = () => settleSum($(id), $(side).value);
   $(id).addEventListener("change", settle);
@@ -1026,6 +1055,7 @@ async function init() {
   settings.watchlist = Array.isArray(settings.watchlist) ? settings.watchlist.filter(validPair) : [...DEFAULTS.watchlist];
   if (!settings.watchlist.length) settings.watchlist = [...DEFAULTS.watchlist];
   applyViewMode();
+  restoreAmount();
   await loadData();
 }
 
