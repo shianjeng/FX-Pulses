@@ -1,6 +1,6 @@
 /* The only runtime network gateway for popup and hover. No provider keys here. */
 // Generated from _locales; the worker localizes the errors it hands to the UI.
-if (typeof importScripts === "function") importScripts("config.js", "messages.js");
+if (typeof importScripts === "function") importScripts("config.js", "messages.js", "amount-parser.js");
 const FX_LANGUAGES = ["zh", "en", "ja"];
 let workerLanguage = "zh";
 const t = (key, ...values) => {
@@ -467,6 +467,139 @@ chrome.alarms?.onAlarm.addListener(alarm => {
 
 /* Our own content script is trusted because hover is on; anything a web page
    relays through the bridge additionally requires the bridge opt-in. */
+/* ---- Address bar --------------------------------------------------------------
+   "fx", a space, then "100 usd jpy", "¥26,990" or "5万日元": the suggestion line
+   answers before Enter is pressed, the way a search engine answers a sum. The
+   text is read as the hover card reads a page. Without a second currency it
+   goes to the hover card's target, and a bare number uses the popup's pair. The
+   lines below give the same amount in the watchlist's other currencies, and
+   Enter opens the popup on the conversion. Nothing typed leaves the browser:
+   rates come from the tables the worker already keeps. */
+const FX_INSTITUTIONS = {
+  "European Central Bank": "institutionEcb", "Bank of Canada": "institutionBoc",
+  "People's Bank of China": "institutionPboc", "Federal Reserve Board": "institutionFed", "Bank of Japan": "institutionBoj",
+};
+const halfWidth = text => String(text).replace(/[\uFF01-\uFF5E]/g, char => String.fromCharCode(char.charCodeAt(0) - 0xFEE0));
+const escapeXml = text => String(text).replace(/[&<>"']/g, char => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"})[char]);
+const omniboxLocale = () => FX_LOCALES[workerLanguage] || "zh-CN";
+const minorUnits = code => {
+  try { return new Intl.NumberFormat("en", {style: "currency", currency: code}).resolvedOptions().maximumFractionDigits; }
+  catch { return 2; }
+};
+// The popup's formatMoney(): the currency's own minor unit, two significant digits below one.
+function money(amount, code) {
+  const small = amount > 0 && amount < 1 ? Math.min(8, Math.ceil(-Math.log10(amount)) + 1) : 0;
+  const digits = Math.max(minorUnits(code), small);
+  return new Intl.NumberFormat(omniboxLocale(), {minimumFractionDigits: digits, maximumFractionDigits: digits}).format(amount);
+}
+const plainAmount = amount => new Intl.NumberFormat("en-US", {maximumFractionDigits: 8}).format(amount);
+
+// Currencies named in a text, in order: codes, names and symbols ("日元", "€").
+function currenciesIn(text) {
+  const found = [];
+  for (const match of text.matchAll(/(?<![A-Za-z])[A-Z]{3}(?![A-Za-z])/g)) {
+    if (FX_FIAT.has(match[0])) found.push({code: match[0], start: match.index, end: match.index + 3});
+  }
+  for (const marker of globalThis.FXAmountParser?.MARKERS || []) {
+    // "¥" alone is yen to a Japanese reader and yuan to a Chinese one.
+    const code = marker.code || (marker.amb?.includes("JPY") ? (workerLanguage === "ja" ? "JPY" : "CNY") : null);
+    if (!FX_FIAT.has(code)) continue;
+    const word = /^[A-Za-z]+$/.test(marker.p);
+    for (let at = text.indexOf(marker.p); at >= 0; at = text.indexOf(marker.p, at + 1)) {
+      const end = at + marker.p.length;
+      if (!word || (!/[A-Za-z]/.test(text[at - 1] || "") && !/[A-Za-z]/.test(text[end] || ""))) found.push({code, start: at, end});
+    }
+  }
+  // Earliest first, and at one place the longest name: "港币", not its "币".
+  found.sort((a, b) => a.start - b.start || b.end - a.end);
+  return found.filter((item, index) => !found.slice(0, index).some(other => item.start < other.end));
+}
+
+function omniboxQuery(text, prefs) {
+  // Codes in any case: "usd" as well as "USD".
+  const plain = halfWidth(text).replace(/\u3000/g, " ").trim().replace(/(?<![A-Za-z])[A-Za-z]{3}(?![A-Za-z])/g,
+    word => FX_FIAT.has(word.toUpperCase()) ? word.toUpperCase() : word);
+  if (!plain) return null;
+  const match = globalThis.FXAmountParser?.parseAll(plain, {host: "", lang: workerLanguage}).accepted
+    .find(item => FX_FIAT.has(item.code));
+  let amount = 1, from, to;
+  if (match) ({amount, code: from} = match);
+  else {
+    // "usd jpy" is one dollar; "100" alone, or "5万", is the popup's pair.
+    const named = currenciesIn(plain)[0];
+    const number = /\d[\d,]*(?:\.\d+)?|\.\d+/.exec(plain);
+    if (number) amount = Number(number[0].replace(/,/g, "")) * ({万: 1e4, 千: 1e3, k: 1e3, K: 1e3, 億: 1e8, 亿: 1e8}[plain[number.index + number[0].length]] ?? 1);
+    if (named) from = named.code;
+    else if (number) { from = prefs.converterFrom; to = prefs.converterTo; }
+    else return null;
+  }
+  // The parser may read "USD 100 JPY" as one dollar amount; the other currency named is the target.
+  to = currenciesIn(plain).find(item => item.code !== from)?.code ?? to
+    ?? [prefs.hoverTarget, prefs.converterTo, prefs.converterFrom, "USD", "CNY"].find(code => FX_FIAT.has(code) && code !== from);
+  if (!FX_FIAT.has(from) || !FX_FIAT.has(to) || !Number.isFinite(amount) || amount < 0 || amount > 1e12) return null;
+  return {amount, from, to};
+}
+
+// The best rate the worker holds: live, then a collected quote, then an official reference.
+async function rateBetween(from, to) {
+  if (from === to) return {value: 1, label: t("converterSameCurrency")};
+  const value = liveCross(await liveRates().catch(() => null), `${from}/${to}`);
+  if (value !== null) return {value, label: t("liveRate")};
+  const rates = (await snapshot().catch(() => null))?.rates || [];
+  const direct = rates.find(rate => rate.base_currency === from && rate.quote_currency === to);
+  const reverse = rates.find(rate => rate.base_currency === to && rate.quote_currency === from);
+  if (direct || reverse) return {value: direct ? Number(direct.midpoint) : 1 / Number(reverse.midpoint), label: t("omniboxMarket")};
+  const rows = await apiRequest(`/official-rates/${from}/${to}`).catch(() => []);
+  const best = (Array.isArray(rows) ? rows : []).filter(row => Number(row?.rate) > 0)
+    .sort((a, b) => String(b.reference_date).localeCompare(String(a.reference_date)))[0];
+  if (!best) return null;
+  const name = String(best.institution).split(" + ").map(part => FX_INSTITUTIONS[part] ? t(FX_INSTITUTIONS[part]) : part).join(" + ");
+  return {value: Number(best.rate), label: t("omniboxOfficial", name, best.reference_date)};
+}
+
+const omniboxLine = ({amount, from, to}, rate) => `${escapeXml(money(amount, from))} ${from} ≈ ` +
+  `<match>${escapeXml(money(amount * rate.value, to))} ${to}</match> <dim>· ${escapeXml(rate.label)}</dim>`;
+const omniboxPrefs = () => chrome.storage.local.get({hoverTarget: "CNY", converterFrom: "USD", converterTo: "CNY", watchlist: []});
+let omniboxVersion = 0;
+
+async function answerOmnibox(text, suggest) {
+  const own = ++omniboxVersion;
+  const prefs = await omniboxPrefs();
+  const query = omniboxQuery(text, prefs);
+  const rate = query && await rateBetween(query.from, query.to);
+  if (own !== omniboxVersion) return;
+  if (!rate) {
+    const hint = !text.trim() ? t("omniboxHint") : query ? t("omniboxNoRate", query.from, query.to) : t("omniboxUnread");
+    chrome.omnibox.setDefaultSuggestion({description: escapeXml(hint)});
+    suggest([]);
+    return;
+  }
+  chrome.omnibox.setDefaultSuggestion({description: `${omniboxLine(query, rate)} <dim>· ${escapeXml(t("omniboxOpen"))}</dim>`});
+  const others = [...new Set((Array.isArray(prefs.watchlist) ? prefs.watchlist : []).flatMap(pair => String(pair).split("/")))]
+    .filter(code => FX_FIAT.has(code) && code !== query.from && code !== query.to).slice(0, 4);
+  const rows = [];
+  for (const code of others) {
+    const other = await rateBetween(query.from, code);
+    if (other) rows.push({content: `${plainAmount(query.amount)} ${query.from} ${code}`, description: omniboxLine({...query, to: code}, other)});
+  }
+  if (own === omniboxVersion) suggest(rows);
+}
+
+async function openConversion(text) {
+  const query = omniboxQuery(text, await omniboxPrefs());
+  if (!query) return;
+  await chrome.storage.local.set({converterFrom: query.from, converterTo: query.to,
+    converterAmount: {value: plainAmount(query.amount), side: "from"}});
+  // Chrome 127 and later; before that the toolbar icon opens on this conversion.
+  try { await chrome.action.openPopup(); } catch { /* no window to open it in */ }
+}
+
+chrome.omnibox?.onInputStarted.addListener(() => {
+  chrome.omnibox.setDefaultSuggestion({description: escapeXml(t("omniboxHint"))});
+});
+chrome.omnibox?.onInputChanged.addListener((text, suggest) => { void answerOmnibox(text, suggest); });
+chrome.omnibox?.onInputEntered.addListener(text => { void openConversion(text); });
+
 async function pageAccessAllowed(message) {
   const {hoverEnabled, bridgeEnabled} = await chrome.storage.local.get({
     hoverEnabled: false, bridgeEnabled: false,

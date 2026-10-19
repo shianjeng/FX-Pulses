@@ -16,11 +16,11 @@ const quote = (base_currency, quote_currency, midpoint) => ({base_currency, quot
   bid: midpoint, ask: midpoint, provider: 'alpha_vantage', captured_at: new Date().toISOString(), is_stale: false});
 const response = data => ({ok: true, json: async () => data});
 
-async function popup(t) {
+async function popup(t, stored = {}) {
   const dom = new JSDOM(source('popup.html'), {runScripts: 'outside-only', url: 'https://test.invalid'});
   t.after(() => dom.window.close());
   const w = dom.window;
-  const state = {watchlist: ['CNY/JPY'], targets: {}, apiUrl: 'https://api.invalid', converterFrom: 'CNY', converterTo: 'JPY'};
+  const state = {watchlist: ['CNY/JPY'], targets: {}, apiUrl: 'https://api.invalid', converterFrom: 'CNY', converterTo: 'JPY', ...stored};
   w.chrome = {storage: {local: {get: async defaults => ({...defaults, ...state}), set: async values => Object.assign(state, values)}},
     runtime: {openOptionsPage() {}}};
   w.fetch = async url => {
@@ -34,7 +34,7 @@ async function popup(t) {
   const el = id => w.document.getElementById(id);
   const type = (id, value) => { el(id).value = value; el(id).dispatchEvent(new w.Event('input')); };
   const computed = id => el(id).parentElement.classList.contains('computed');
-  return {w, el, type, computed};
+  return {w, el, type, computed, state};
 }
 
 test('typing in the second box converts back into the first currency', async t => {
@@ -135,4 +135,35 @@ test('a sum is worked out as it is typed, and settled by Enter or leaving the bo
     assert.equal(el('amount').value, sum, `${sum} is left for the reader to fix`);
   }
   assert.equal(el('amount').title, '可以输入算式，例如 1200/3 或 1000-20%');
+});
+
+test('a reopened popup carries on with the last figure, in the box it was typed in', async t => {
+  const first = await popup(t);
+  // Opened with the shortcut, a number typed at once replaces the figure.
+  assert.equal(first.w.document.activeElement.id, 'amount');
+  assert.equal(first.el('amount').selectionStart, 0);
+  assert.equal(first.el('amount').selectionEnd, 4);
+  first.type('converted', '47,066');
+  await tick(400);
+  assert.deepEqual({...first.state.converterAmount}, {value: '47,066', side: 'to'});
+
+  const again = await popup(t, {converterAmount: first.state.converterAmount});
+  assert.equal(again.el('converted').value, '47,066');
+  assert.equal(again.el('amount').value, '2,000.00');
+  assert.ok(again.computed('amount'));
+  assert.equal(again.w.document.activeElement.id, 'converted');
+
+  // A sum settled with Enter is kept as its result.
+  again.type('converted', '10000/4');
+  again.el('converted').dispatchEvent(new again.w.KeyboardEvent('keydown', {key: 'Enter'}));
+  await tick(400);
+  assert.deepEqual({...again.state.converterAmount}, {value: '2,500', side: 'to'});
+});
+
+test('a damaged saved figure falls back to 1000', async t => {
+  for (const converterAmount of [{value: 42, side: 'from'}, {value: '5', side: 'sideways'}, null, 'x'.repeat(10)]) {
+    const app = await popup(t, {converterAmount});
+    assert.equal(app.el('amount').value, '1000', JSON.stringify(converterAmount));
+    assert.equal(app.el('converted').value, '23,533');
+  }
 });

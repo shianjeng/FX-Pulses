@@ -595,5 +595,35 @@
   },
   "chartSourceReference": {
     "message": "欧洲央行每日参考价 · 每个工作日一个数据点"
+  },
+  "omniboxHint": {
+    "message": "输入金额和币种，例如 100 usd jpy、¥26,990、5万日元"
+  },
+  "omniboxUnread": {
+    "message": "没有读出金额或币种，试试 100 usd jpy"
+  },
+  "omniboxNoRate": {
+    "message": "暂时没有 $1/$2 的汇率"
+  },
+  "omniboxOpen": {
+    "message": "回车在弹窗中打开"
+  },
+  "omniboxMarket": {
+    "message": "市场中间价"
+  },
+  "omniboxOfficial": {
+    "message": "官方参考价 · $1 · $2"
+  },
+  "yearRangeTitle": {
+    "message": "一年区间 · 欧洲央行参考价"
+  },
+  "yearRangeShare": {
+    "message": "1 $1 能换的 $2 多于过去一年 $3 的日子"
+  },
+  "yearRangeMost": {
+    "message": "1 $1 能换的 $2 是一年来最多的"
+  },
+  "yearRangeLeast": {
+    "message": "1 $1 能换的 $2 是一年来最少的"
   }
 }

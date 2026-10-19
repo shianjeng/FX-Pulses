@@ -1,7 +1,11 @@
-.PHONY: dev test lint check test-backend test-extension lint-backend lint-extension
+.PHONY: dev preview test lint check test-backend test-extension lint-backend lint-extension
 
 dev:
 	docker compose up --build
+
+# The popup, settings and a hover demo in an ordinary browser, on live data.
+preview:
+	python3 tools/preview.py
 
 # Every stack; the per-stack targets below still run on their own (from #9 by @Z-Han-Z).
 test: test-backend test-extension

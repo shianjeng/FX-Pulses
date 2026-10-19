@@ -595,5 +595,35 @@
   },
   "chartSourceReference": {
     "message": "欧州中央銀行の日次参考レート · 営業日ごとに 1 点"
+  },
+  "omniboxHint": {
+    "message": "金額と通貨を入力（例：100 usd jpy、¥26,990、5000円 cny）"
+  },
+  "omniboxUnread": {
+    "message": "金額か通貨が読み取れません。例：100 usd jpy"
+  },
+  "omniboxNoRate": {
+    "message": "$1/$2 のレートはまだありません"
+  },
+  "omniboxOpen": {
+    "message": "Enter でポップアップに表示"
+  },
+  "omniboxMarket": {
+    "message": "市場仲値"
+  },
+  "omniboxOfficial": {
+    "message": "公的参考レート · $1 · $2"
+  },
+  "yearRangeTitle": {
+    "message": "過去1年 · 欧州中央銀行の参考レート"
+  },
+  "yearRangeShare": {
+    "message": "1 $1 で買える $2 は過去1年の $3 の日より多い"
+  },
+  "yearRangeMost": {
+    "message": "1 $1 で買える $2 はこの1年で最も多い"
+  },
+  "yearRangeLeast": {
+    "message": "1 $1 で買える $2 はこの1年で最も少ない"
   }
 }

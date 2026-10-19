@@ -595,5 +595,35 @@
   },
   "chartSourceReference": {
     "message": "ECB daily reference rate · one point per business day"
+  },
+  "omniboxHint": {
+    "message": "Type an amount and currencies, such as 100 usd jpy, €12.50 gbp or ¥26,990"
+  },
+  "omniboxUnread": {
+    "message": "No amount or currency found. Try 100 usd jpy"
+  },
+  "omniboxNoRate": {
+    "message": "No rate for $1/$2 yet"
+  },
+  "omniboxOpen": {
+    "message": "Enter opens it in the popup"
+  },
+  "omniboxMarket": {
+    "message": "Market midpoint"
+  },
+  "omniboxOfficial": {
+    "message": "Official reference · $1 · $2"
+  },
+  "yearRangeTitle": {
+    "message": "Past year · ECB reference rates"
+  },
+  "yearRangeShare": {
+    "message": "1 $1 buys more $2 than on $3 of the past year's days"
+  },
+  "yearRangeMost": {
+    "message": "1 $1 buys the most $2 it has in a year"
+  },
+  "yearRangeLeast": {
+    "message": "1 $1 buys the least $2 it has in a year"
   }
 }

@@ -199,7 +199,17 @@ globalThis.FXMessages = {
     "liveRate": "Coinbase 实时中间价",
     "interval5": "5分钟",
     "chartSourceMarket": "市场中间价 · 约每 3 小时采集一次",
-    "chartSourceReference": "欧洲央行每日参考价 · 每个工作日一个数据点"
+    "chartSourceReference": "欧洲央行每日参考价 · 每个工作日一个数据点",
+    "omniboxHint": "输入金额和币种，例如 100 usd jpy、¥26,990、5万日元",
+    "omniboxUnread": "没有读出金额或币种，试试 100 usd jpy",
+    "omniboxNoRate": "暂时没有 $1/$2 的汇率",
+    "omniboxOpen": "回车在弹窗中打开",
+    "omniboxMarket": "市场中间价",
+    "omniboxOfficial": "官方参考价 · $1 · $2",
+    "yearRangeTitle": "一年区间 · 欧洲央行参考价",
+    "yearRangeShare": "1 $1 能换的 $2 多于过去一年 $3 的日子",
+    "yearRangeMost": "1 $1 能换的 $2 是一年来最多的",
+    "yearRangeLeast": "1 $1 能换的 $2 是一年来最少的"
   },
   "en": {
     "extensionName": "FX Pulse — exchange rates at hand",
@@ -400,7 +410,17 @@ globalThis.FXMessages = {
     "liveRate": "Coinbase live mid-market rate",
     "interval5": "5 minutes",
     "chartSourceMarket": "Market midpoint · collected about every three hours",
-    "chartSourceReference": "ECB daily reference rate · one point per business day"
+    "chartSourceReference": "ECB daily reference rate · one point per business day",
+    "omniboxHint": "Type an amount and currencies, such as 100 usd jpy, €12.50 gbp or ¥26,990",
+    "omniboxUnread": "No amount or currency found. Try 100 usd jpy",
+    "omniboxNoRate": "No rate for $1/$2 yet",
+    "omniboxOpen": "Enter opens it in the popup",
+    "omniboxMarket": "Market midpoint",
+    "omniboxOfficial": "Official reference · $1 · $2",
+    "yearRangeTitle": "Past year · ECB reference rates",
+    "yearRangeShare": "1 $1 buys more $2 than on $3 of the past year's days",
+    "yearRangeMost": "1 $1 buys the most $2 it has in a year",
+    "yearRangeLeast": "1 $1 buys the least $2 it has in a year"
   },
   "ja": {
     "extensionName": "FX Pulse — 手元で為替レート",
@@ -601,6 +621,16 @@ globalThis.FXMessages = {
     "liveRate": "Coinbase リアルタイム仲値",
     "interval5": "5分",
     "chartSourceMarket": "市場仲値 · 約 3 時間ごとに収集",
-    "chartSourceReference": "欧州中央銀行の日次参考レート · 営業日ごとに 1 点"
+    "chartSourceReference": "欧州中央銀行の日次参考レート · 営業日ごとに 1 点",
+    "omniboxHint": "金額と通貨を入力（例：100 usd jpy、¥26,990、5000円 cny）",
+    "omniboxUnread": "金額か通貨が読み取れません。例：100 usd jpy",
+    "omniboxNoRate": "$1/$2 のレートはまだありません",
+    "omniboxOpen": "Enter でポップアップに表示",
+    "omniboxMarket": "市場仲値",
+    "omniboxOfficial": "公的参考レート · $1 · $2",
+    "yearRangeTitle": "過去1年 · 欧州中央銀行の参考レート",
+    "yearRangeShare": "1 $1 で買える $2 は過去1年の $3 の日より多い",
+    "yearRangeMost": "1 $1 で買える $2 はこの1年で最も多い",
+    "yearRangeLeast": "1 $1 で買える $2 はこの1年で最も少ない"
   }
 };
