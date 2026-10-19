@@ -30,6 +30,15 @@ The extension and hover converter share the same backend, one-minute cache, watc
 
 > **Market midpoint** = `(bid + ask) / 2`. It is not a bank settlement rate, card-network rate, or central-bank fixing.
 
+## What's new in 2.10.0
+
+Small touches for everyday use.
+
+- **Convert from the address bar.** Type `fx`, a space, then an amount: `100 usd jpy`, `¥26,990 to usd`, `5万日元` or `26,990円 cny`. The answer is the suggestion line itself, before you press Enter, with the same amount in your watchlist's other currencies on the lines below. Without a second currency it converts to your hover target; a bare number such as `2k` uses the popup's pair. Enter opens the popup on that conversion (Chrome 127 and later). What you type stays in the browser; rates come from what the extension already holds.
+- **Where today's rate sits in its year.** Under the chart statistics, the detailed view says where the rate stands against its past year: "1 CNY buys more JPY than on 80% of the past year's days". A bar runs from the year's low to its high, with today's rate marked on it. It uses the same ECB year the 1Y chart draws.
+- **The popup carries on where you left it.** It keeps the last figure and the box you typed it in, and opens with that figure selected: Alt+Shift+F, then a number, is a conversion.
+- **Maintenance.** FastAPI 0.147, SQLAlchemy 2.1.5, pydantic-settings 2.16, Ruff 0.17.1, ESLint 10.13 and jsdom 30.1.3. filelock may now be 4.x, and the tests run on httpx2 as Starlette now asks. `make preview` opens the popup, settings page and a hover demo in an ordinary browser on live data.
+
 ## What's new in 2.9.0
 
 Ideas taken from comparable converters: the yearly charts of XE, Wise and the Currencies app, the select-to-convert of Currency Converter Pro, and the calculator built into Currencies.
@@ -108,6 +117,7 @@ Rates below 1 show at least six decimal places, with more precision for smaller 
 | 🧮 | Quick converter | Choose source and target currencies, type an amount or a sum in either box, swap direction, and see the rate source and date |
 | 🔔 | Optional alerts | Local target-price alerts powered by `chrome.alarms` |
 | 🏷️ | Rate on the icon | Optionally show one pair's rate on the toolbar icon, grey when the quote is old |
+| 🔎 | Address bar | Type `fx`, a space and an amount (`100 usd jpy`, `5万日元`) for the answer on the suggestion line |
 | ⌨️ | Shortcut | Alt+Shift+F opens the popup; change it at `chrome://extensions/shortcuts` |
 | 🌐 | Three languages | Complete Chinese, English, and Japanese interfaces |
 | 🌙 | Dark mode | The popup follows the system's light or dark appearance |
@@ -472,6 +482,7 @@ and keys are never exposed to a page.
 - Personal preferences are not uploaded to the backend.
 - Extension CORS is restricted to browser-extension origins.
 - Content scripts use a constrained message gateway rather than arbitrary backend access.
+- What you type after `fx` in the address bar goes to the extension alone, not to your search engine, and is converted with the rates the extension already holds.
 - Hovering and selecting read the page only inside your browser. The text you point at or select is never sent anywhere; the card asks the extension for rates by currency code only.
 - Official XML is parsed with `defusedxml`.
 - Provider URLs containing credentials are excluded from normal logs.
@@ -515,6 +526,12 @@ Edge 用户：打开 `edge://extensions`，在左侧打开 **开发人员模式*
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
 
 同一币对有多家央行报价时，2.8.4 起按实测准确度挑选（加拿大央行、欧洲央行优先，其次人民银行、日本银行，最后是晚一周发布的美联储），日期只在最新报价前后四天内的来源之间起作用。此前按“日期最新”挑选，周一早上几乎总会选中人民银行的中间价，与市场偏差 0.3%～0.4%。
+
+2.10.0 增加了一些日常使用的小巧思：
+- 地址栏换算：在地址栏输入 `fx` 加空格，再输入 `100 usd jpy`、`¥26,990 to usd`、`5万日元` 或 `26,990円 cny`，候选栏直接显示结果，不用按回车；下面几行是同一金额换成自选里其他货币的结果。只写一种货币时换成网页悬停的目标货币，只写数字（如 `2k`）时使用弹窗里的币对。按回车会在弹窗中打开这次换算（Chrome 127 及以上）。输入的内容不会离开浏览器。
+- 一年区间：详细视图的走势统计下方会说明当前汇率在过去一年中的位置，例如「1 CNY 能换的 JPY 多于过去一年 80% 的日子」，并用一条从一年最低到最高的刻度条标出当前位置。数据与「1年」走势图相同，来自欧洲央行参考价。
+- 弹窗记住上次的金额和输入框，打开时已选中这个数字：按 Alt+Shift+F 后直接输入数字即可换算。
+- 维护：更新 FastAPI 0.147、SQLAlchemy 2.1.5、pydantic-settings 2.16、Ruff 0.17.1、ESLint 10.13、jsdom 30.1.3；测试改用 Starlette 推荐的 httpx2；新增 `make preview`，可在普通浏览器里用实时数据预览弹窗、设置页和悬停演示页。
 
 2.9.0 参考了同类软件（XE、Wise、Currencies 的年度走势，Currency Converter Pro 的划词换算，Currencies 的内置计算器），新增：
 - 走势图增加「1年」：使用欧洲央行最近一年的每日参考价，从欧洲央行的完整历史文件一次性读入并保留一年，约 30 种货币都有真实的一年走势，坐标轴和提示会标出年份。
