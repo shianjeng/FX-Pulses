@@ -480,7 +480,11 @@ const FX_INSTITUTIONS = {
   "People's Bank of China": "institutionPboc", "Federal Reserve Board": "institutionFed", "Bank of Japan": "institutionBoj",
 };
 const halfWidth = text => String(text).replace(/[\uFF01-\uFF5E]/g, char => String.fromCharCode(char.charCodeAt(0) - 0xFEE0));
-const escapeXml = text => String(text).replace(/[&<>"']/g, char => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"})[char]);
+// Chrome styles a suggestion with <match> and <dim>; Firefox shows it as plain text, tags and all.
+const FX_PLAIN_SUGGESTIONS = typeof globalThis.browser?.runtime?.getBrowserInfo === "function";
+const escapeXml = text => FX_PLAIN_SUGGESTIONS ? String(text)
+  : String(text).replace(/[&<>"']/g, char => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"})[char]);
+const styled = (tag, text) => FX_PLAIN_SUGGESTIONS ? text : `<${tag}>${text}</${tag}>`;
 const omniboxLocale = () => FX_LOCALES[workerLanguage] || "zh-CN";
 const minorUnits = code => {
   try { return new Intl.NumberFormat("en", {style: "currency", currency: code}).resolvedOptions().maximumFractionDigits; }
@@ -558,7 +562,7 @@ async function rateBetween(from, to) {
 }
 
 const omniboxLine = ({amount, from, to}, rate) => `${escapeXml(money(amount, from))} ${from} ≈ ` +
-  `<match>${escapeXml(money(amount * rate.value, to))} ${to}</match> <dim>· ${escapeXml(rate.label)}</dim>`;
+  `${styled("match", `${escapeXml(money(amount * rate.value, to))} ${to}`)} ${styled("dim", `· ${escapeXml(rate.label)}`)}`;
 const omniboxPrefs = () => chrome.storage.local.get({hoverTarget: "CNY", converterFrom: "USD", converterTo: "CNY", watchlist: []});
 let omniboxVersion = 0;
 
@@ -574,7 +578,7 @@ async function answerOmnibox(text, suggest) {
     suggest([]);
     return;
   }
-  chrome.omnibox.setDefaultSuggestion({description: `${omniboxLine(query, rate)} <dim>· ${escapeXml(t("omniboxOpen"))}</dim>`});
+  chrome.omnibox.setDefaultSuggestion({description: `${omniboxLine(query, rate)} ${styled("dim", `· ${escapeXml(t("omniboxOpen"))}`)}`});
   const others = [...new Set((Array.isArray(prefs.watchlist) ? prefs.watchlist : []).flatMap(pair => String(pair).split("/")))]
     .filter(code => FX_FIAT.has(code) && code !== query.from && code !== query.to).slice(0, 4);
   const rows = [];

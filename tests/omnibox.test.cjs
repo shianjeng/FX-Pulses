@@ -27,7 +27,7 @@ const files = {
 const LIVE = {EUR: 0.9, JPY: 150, CNY: 7.1, KRW: 1400, GBP: 0.8, AUD: 1.5, CAD: 1.4, CHF: 0.9, HKD: 7.8, SGD: 1.3,
   SEK: 10.5, NOK: 10.8, DKK: 6.7, NZD: 1.6, THB: 35, MYR: 4.4, PHP: 57, INR: 84, BRL: 5.4, MXN: 18, ZAR: 18, TWD: 32};
 
-function worker({local = {}} = {}) {
+function worker({local = {}, firefox = false} = {}) {
   const event = () => { const l = []; return {addListener: fn => l.push(fn), listeners: l}; };
   const omnibox = {defaultSuggestion: null, onInputStarted: event(), onInputChanged: event(), onInputEntered: event(),
     setDefaultSuggestion(value) { this.defaultSuggestion = value.description; }};
@@ -57,6 +57,8 @@ function worker({local = {}} = {}) {
     },
   });
   context.globalThis = context;
+  // Firefox alone has runtime.getBrowserInfo().
+  if (firefox) context.browser = {runtime: {getBrowserInfo: async () => ({name: 'Firefox'})}};
   vm.runInContext(source('background.js'), context);
   const type = async text => {
     let rows;
@@ -121,4 +123,12 @@ test('Enter opens the popup on that conversion', async () => {
   assert.equal(w.opened.length, 1);
   await w.enter('nonsense');
   assert.equal(w.opened.length, 1, 'nothing to open');
+});
+
+test('Firefox shows suggestions as plain text, so they carry no markup', async () => {
+  const w = worker({firefox: true});
+  const {line, rows} = await w.type('100 usd jpy & more');
+  assert.equal(line, '100.00 USD ≈ 15,000 JPY · Coinbase 实时中间价 · 回车在弹窗中打开');
+  assert.equal(rows.length, 0);
+  assert.equal((await w.type('<b>')).line, '没有读出金额或币种，试试 100 usd jpy');
 });

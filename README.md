@@ -5,16 +5,17 @@
 
   **Exchange rates at a glance — live market quotes, official references, and instant webpage conversion.**
 
-  A privacy-friendly Chrome extension that works out of the box: rates come from a free static backend on GitHub Pages, or from your own FastAPI server.
+  A privacy-friendly extension for Chrome, Edge and Firefox that works out of the box: rates come from a free static backend on GitHub Pages, or from your own FastAPI server.
 
   [What's New](#whats-new-in-283) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
 
   <p>
     <a href="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml"><img src="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
-    <img src="https://img.shields.io/badge/version-2.8.3-36D9A0" alt="Version 2.8.3" />
+    <img src="https://img.shields.io/badge/version-2.11.0-36D9A0" alt="Version 2.11.0" />
     <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
-    <img src="https://img.shields.io/badge/FastAPI-0.116-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.116" />
+    <img src="https://img.shields.io/badge/FastAPI-0.147-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.147" />
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Manifest V3" />
+    <img src="https://img.shields.io/badge/Firefox-140%2B-FF7139?logo=firefoxbrowser&logoColor=white" alt="Firefox 140+" />
     <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL 16" />
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-F5C542" alt="MIT License" /></a>
   </p>
@@ -29,6 +30,12 @@ FX Pulse brings a compact exchange-rate dashboard and webpage hover converter in
 The extension and hover converter share the same backend, one-minute cache, watchlist, target currency, and language preference. No Tampermonkey script is required. The optional 2.5.0 userscript also reads quotes through the extension; it no longer requests ER-API or Frankfurter or keeps a separate persistent quote cache.
 
 > **Market midpoint** = `(bid + ask) / 2`. It is not a bank settlement rate, card-network rate, or central-bank fixing.
+
+## What's new in 2.11.0
+
+- **Firefox.** FX Pulse now runs in Firefox 140 or later, with every feature of the Chrome edition: live rates, the converter and its sums, the 1Y chart and year range, hover and select-to-convert, the toolbar badge, alerts and `fx` in the address bar. It is built from the same files, so the two editions cannot drift apart. `npm run package:firefox` makes the zip; see [Install the extension](#1-install-the-extension). The Firefox edition was checked in a real Firefox: Mozilla's add-on linter reports no errors, and the packaged zip was installed in Firefox 158 and used against live data.
+- **Fix.** Just above its year's low, the year range read "more than on 0% of the past year's days". Inside the range it now stays between 1% and 99%.
+- **Maintenance.** The README badges showed version 2.8.3 and FastAPI 0.116. They are current again, and CI now fails if the version badge disagrees with the manifest.
 
 ## What's new in 2.10.0
 
@@ -234,6 +241,14 @@ FX Pulse is not in the Chrome Web Store yet, so it is added as an unpacked exten
 6. Click the FX Pulse icon. Rates appear immediately.
 
 **Microsoft Edge**: go to `edge://extensions`, turn on **Developer mode** in the left sidebar, click **Load unpacked**, then follow steps 4–6.
+
+**Firefox** (140 or later): the Firefox edition is built from the same files, with a Firefox manifest. It needs [Node.js](https://nodejs.org/) 22 or later.
+
+1. In the `FX-Pulses-main` folder, run `npm run package:firefox`. This writes `dist/fx-pulse-firefox-<version>.zip`.
+2. Open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and choose that zip.
+3. Pin FX Pulse from the extensions button in the toolbar.
+
+Firefox removes a temporary add-on when it quits. A permanent install needs a copy signed by Mozilla through [addons.mozilla.org](https://addons.mozilla.org/developers/). Alternatively, Firefox Developer Edition, Nightly and ESR can set `xpinstall.signatures.required` to `false` in `about:config` and then install the zip from `about:addons` → ⚙ → **Install Add-on From File**. Everything works as in Chrome. The one difference is that address-bar suggestions show as plain text, without bold for the result.
 
 **Updating**: download the ZIP again and replace the old `FX-Pulses-main` folder **at the same location** (or run `git pull` if you cloned it), then click the reload button ↻ on the FX Pulse card in `chrome://extensions`. Your watchlist and settings are kept. The browser identifies an unpacked extension by its folder path, so loading the new copy from a different place installs a second, empty FX Pulse instead.
 
@@ -454,7 +469,10 @@ npm run check:parser
 npm run lint
 npm test
 npm run test:userscript
+npm run lint:firefox      # builds dist/firefox and checks it as addons.mozilla.org would
 ```
+
+`extension/` is the one source for both browsers. `tools/build-firefox.mjs` copies it to `dist/firefox` and rewrites only the manifest. The worker's `importScripts()` list becomes Firefox's `background.scripts`, `options_page` becomes `options_ui`, and the manifest gains the add-on ID `fx-pulse@shianjeng.github.io` with Firefox 140 as the minimum. `npm run package:firefox` zips it for loading or for submission to addons.mozilla.org.
 
 Backend checks:
 
@@ -517,6 +535,13 @@ FX Pulse 是一个免登录、重视隐私的汇率浏览器插件与 FastAPI �
 
 Edge 用户：打开 `edge://extensions`，在左侧打开 **开发人员模式**，点击 **加载解压缩的扩展**，然后按第 7、8 步操作。
 
+Firefox 用户（需要 Firefox 140 或以上）：火狐版用同一套文件生成，只是清单文件不同。需要先安装 [Node.js](https://nodejs.org/) 22 或以上。
+1. 在 `FX-Pulses-main` 文件夹里运行 `npm run package:firefox`，生成 `dist/fx-pulse-firefox-<版本号>.zip`。
+2. 打开 `about:debugging#/runtime/this-firefox`，点击 **临时载入附加组件…**，选择这个 zip。
+3. 在工具栏的扩展按钮里固定 FX Pulse。
+
+临时载入的附加组件在关闭 Firefox 后会被移除。要长期安装，需要通过 [addons.mozilla.org](https://addons.mozilla.org/developers/) 取得 Mozilla 签名。Firefox 开发者版、Nightly 和 ESR 也可以在 `about:config` 里把 `xpinstall.signatures.required` 设为 `false`，再从 `about:addons` → ⚙ → **从文件安装附加组件** 安装这个 zip。功能与 Chrome 版相同，只是地址栏换算的候选结果显示为纯文本，结果不加粗。
+
 更新：重新下载 ZIP，**在原来的位置**替换旧的 `FX-Pulses-main` 文件夹，再到 `chrome://extensions` 点击 FX Pulse 卡片上的刷新按钮 ↻，自选和设置会保留。浏览器是按文件夹路径识别这类插件的，如果换了位置重新加载，会变成另一个全新的 FX Pulse，之前的自选不会带过去。
 
 如果提示「清单文件缺失或不可读取」，说明选成了外层文件夹，请改选 `extension` 文件夹。Chrome 提醒停用开发者模式扩展程序属于正常现象，保留 FX Pulse 即可。如果弹窗提示无法连接，先检查网络再点刷新；若曾在设置页改过后端地址，填回 `https://shianjeng.github.io/FX-Pulses/api/v1` 即可恢复默认。
@@ -526,6 +551,8 @@ Edge 用户：打开 `edge://extensions`，在左侧打开 **开发人员模式*
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
 
 同一币对有多家央行报价时，2.8.4 起按实测准确度挑选（加拿大央行、欧洲央行优先，其次人民银行、日本银行，最后是晚一周发布的美联储），日期只在最新报价前后四天内的来源之间起作用。此前按“日期最新”挑选，周一早上几乎总会选中人民银行的中间价，与市场偏差 0.3%～0.4%。
+
+2.11.0 新增火狐版：FX Pulse 现在可以在 Firefox 140 或以上运行，功能与 Chrome 版完全相同，包括实时汇率、换算和算式、1年走势与一年区间、网页悬停与划词换算、工具栏图标、目标价提醒和地址栏 `fx` 换算。火狐版用同一套文件生成，两个版本不会各走各的。安装方法见上面的「安装到浏览器」。火狐版在真实 Firefox 中测试过：Mozilla 的附加组件检查器没有报错，打包后的 zip 在 Firefox 158 中安装并用实时数据实际运行过。另外修复了一年区间在接近一年低点时显示「多于过去一年 0% 的日子」的问题，并更新了 README 里过时的版本标识。
 
 2.10.0 增加了一些日常使用的小巧思：
 - 地址栏换算：在地址栏输入 `fx` 加空格，再输入 `100 usd jpy`、`¥26,990 to usd`、`5万日元` 或 `26,990円 cny`，候选栏直接显示结果，不用按回车；下面几行是同一金额换成自选里其他货币的结果。只写一种货币时换成网页悬停的目标货币，只写数字（如 `2k`）时使用弹窗里的币对。按回车会在弹窗中打开这次换算（Chrome 127 及以上）。输入的内容不会离开浏览器。

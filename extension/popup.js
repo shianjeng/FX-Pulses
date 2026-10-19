@@ -583,7 +583,8 @@ async function loadYearRange(version) {
   const values = series.map(point => point.midpoint);
   const low = Math.min(...values), high = Math.max(...values);
   const now = Number(shownRate()?.midpoint) || (converterQuote?.kind === "identity" ? 0 : converterQuote?.rate) || values.at(-1);
-  const share = Math.round(values.filter(value => value < now).length / values.length * 100);
+  // Inside the range the share is never 0% or 100%: a day below and a day above exist.
+  const share = Math.min(99, Math.max(1, Math.round(values.filter(value => value < now).length / values.length * 100)));
   $("year-range-note").textContent = now > high ? t("yearRangeMost", base, quote)
     : now < low ? t("yearRangeLeast", base, quote) : t("yearRangeShare", base, quote, `${share}%`);
   $("year-range-low").textContent = formatRate(low);

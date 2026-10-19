@@ -7,7 +7,10 @@
     "check:config": "node tools/check-config.mjs",
     "check:parser": "node userscript/build-extension-parser.mjs --check",
     "test:userscript": "node userscript/dom-smoke.cjs",
-    "test": "node --test tests/*.test.cjs"
+    "test": "node --test tests/*.test.cjs",
+    "build:firefox": "node tools/build-firefox.mjs",
+    "lint:firefox": "node tools/build-firefox.mjs && npx --yes web-ext@10.8.0 lint --source-dir dist/firefox",
+    "package:firefox": "node tools/build-firefox.mjs && npx --yes web-ext@10.8.0 build --source-dir dist/firefox --artifacts-dir dist --filename fx-pulse-firefox-{version}.zip --overwrite-dest"
   },
   "devDependencies": {"eslint": "^10.13.0", "jsdom": "^30.1.3"}
 }

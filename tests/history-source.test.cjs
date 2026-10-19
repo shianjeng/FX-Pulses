@@ -129,6 +129,12 @@ test('beyond the year\'s range it says most or least; a short history shows noth
   const low = await popup(t, {referenceDays: 370, midpoint: '150'});
   assert.equal(low.el('year-range-note').textContent, '1 USD 能换的 JPY 是一年来最少的');
   assert.equal(low.el('year-range-dot').style.left, '0%');
+  // Just above the year's low: one day in 250 is below it, which rounds to 0%, and "more than on 0% of days" reads wrong.
+  const reference = referenceFile(370);
+  const lowest = Math.min(...reference.dates.map((date, index) => reference.rates.JPY[index] / reference.rates.USD[index])
+    .filter((value, index) => Date.parse(`${reference.dates[index]}T12:00:00Z`) >= Date.now() - 365 * DAY));
+  const edge = await popup(t, {referenceDays: 370, midpoint: String(lowest + 0.001)});
+  assert.equal(edge.el('year-range-note').textContent, '1 USD 能换的 JPY 多于过去一年 1% 的日子');
   const short = await popup(t);
   assert.equal(short.el('year-range').hidden, true, 'three months is not a year');
 });
