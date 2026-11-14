@@ -33,7 +33,7 @@
     "message": "正在读取行情…"
   },
   "refreshHint": {
-    "message": "刷新会重新获取实时汇率；走势图等历史行情约每 3 小时采集一次。"
+    "message": "刷新会重新获取实时汇率；走势图等历史行情每隔几小时采集一次。"
   },
   "eyebrowOfficial": {
     "message": "官方参考价"
@@ -99,7 +99,7 @@
     "message": "换算结果"
   },
   "converterHint": {
-    "message": "优先使用实时中间价（Coinbase），其次是约每 3 小时采集的市场中间价，再其次是标明来源和日期的官方日参考价。不包含手续费与点差。"
+    "message": "优先使用实时中间价（Coinbase），其次是每隔几小时采集的市场中间价，再其次是标明来源和日期的官方日参考价。不包含手续费与点差。"
   },
   "targetTitle": {
     "message": "目标价状态"
@@ -564,7 +564,7 @@
     "message": "实时汇率"
   },
   "liveDescription": {
-    "message": "打开插件、网页悬停换算或图标显示汇率时，最多每分钟从 Coinbase 的公开接口获取一次最新中间价（约 160 种货币，无需账号，不会发送网页内容或任何设置）。Coinbase 会看到你的 IP 地址。走势图仍使用采集的历史数据。关闭后改用约每 3 小时更新一次的行情。"
+    "message": "打开插件、网页悬停换算或图标显示汇率时，最多每分钟从 Coinbase 的公开接口获取一次最新中间价（约 160 种货币，无需账号，不会发送网页内容或任何设置）。Coinbase 会看到你的 IP 地址。走势图仍使用采集的历史数据。关闭后改用每隔几小时更新一次的行情。"
   },
   "liveEnable": {
     "message": "使用实时汇率"
@@ -573,7 +573,7 @@
     "message": "已开启实时汇率"
   },
   "liveOff": {
-    "message": "已关闭实时汇率，改用约每 3 小时更新的行情"
+    "message": "已关闭实时汇率，改用每隔几小时更新的行情"
   },
   "liveSource": {
     "message": "实时 · Coinbase"
@@ -591,7 +591,10 @@
     "message": "5分钟"
   },
   "chartSourceMarket": {
-    "message": "市场中间价 · 约每 3 小时采集一次"
+    "message": "市场中间价 · 约每 $1 小时采集一次"
+  },
+  "chartSourceMarketSparse": {
+    "message": "市场中间价"
   },
   "chartSourceReference": {
     "message": "欧洲央行每日参考价 · 每个工作日一个数据点"
