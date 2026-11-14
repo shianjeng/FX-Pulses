@@ -22,16 +22,10 @@
     <main>
       <!-- The one card a casual reader needs: pick a pair, read the rate, convert. -->
       <section class="hero">
-        <div class="hero-head">
-          <div>
-            <p class="eyebrow" data-i18n="explorerEyebrow">货币查询</p>
-            <h1 data-i18n="explorerTitle">汇率查询</h1>
-            <p id="status" class="status" data-i18n="loadingRates">正在读取行情…</p>
-          </div>
-          <button id="refresh-button" class="icon" type="button" data-i18n-attr="title:refresh,aria-label:refresh" title="刷新" aria-label="刷新">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
-          </button>
-        </div>
+        <!-- The popup is the rate lookup; a visible title saying so was a label
+             on the obvious. The heading stays for screen readers. -->
+        <p class="eyebrow" data-i18n="explorerEyebrow">货币查询</p>
+        <h1 class="sr-only" data-i18n="explorerTitle">汇率查询</h1>
 
         <div class="pair-picker">
           <label class="currency"><span class="sr-only" data-i18n="converterFromCurrency">从</span><select id="converter-from" data-i18n-attr="aria-label:converterFromCurrency" aria-label="源货币"></select></label>
@@ -39,9 +33,15 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h13l-4-4"/><path d="M17 17H4l4 4"/></svg>
           </button>
           <label class="currency"><span class="sr-only" data-i18n="converterToCurrency">到</span><select id="converter-to" data-i18n-attr="aria-label:converterToCurrency" aria-label="目标货币"></select></label>
+          <button id="refresh-button" class="icon" type="button" data-i18n-attr="title:refresh,aria-label:refresh" title="刷新" aria-label="刷新">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+          </button>
         </div>
 
-        <section id="rates" class="rate-list" aria-live="polite"></section>
+        <div class="readout">
+          <section id="rates" class="rate-list" aria-live="polite"></section>
+          <p id="status" class="status" data-i18n="loadingRates">正在读取行情…</p>
+        </div>
 
         <div class="converter-block">
           <div class="converter">
@@ -55,7 +55,7 @@
               <p id="conversion-rate" class="unit-rate" aria-live="polite"></p>
               <p id="converter-status" class="source" role="status"></p>
             </div>
-            <button id="copy-button" class="ghost" type="button" data-i18n="copyRate">复制当前汇率</button>
+            <button id="copy-button" class="text-button" type="button" data-i18n="copyRate">复制当前汇率</button>
           </div>
           <label id="copy-fallback" class="hidden copy-fallback"><span data-i18n="copyManual">自动复制失败，请按 Ctrl/Cmd+C 手动复制</span><input id="copy-value" readonly /></label>
         </div>

@@ -214,12 +214,13 @@ test("small rates agree across card, history and converter without rounding calc
     assert.equal(el('rates').querySelector('strong').textContent, '0.042575');
     assert.equal(el('stat-low').textContent, '0.042575');
     assert.equal(el('official-rates').querySelector('strong').textContent, '0.042575');
-    assert.equal(el('conversion-rate').textContent, '1 JPY ≈ 0.042575 CNY');
+    // The figure above reads JPY in CNY; the line under the converter gives the other way round.
+    assert.equal(el('conversion-rate').textContent, '1 CNY ≈ 23.4880 JPY');
     assert.equal(shown(el('converted')), '42.57 CNY');
     el('amount').value = '1000000';
     el('amount').dispatchEvent(new app.w.Event('input'));
     assert.equal(shown(el('converted')), '42,574.90 CNY');
-    assert.match(el('conversion-rate').title, /0\.0425749/);
+    assert.match(el('conversion-rate').title, /1 JPY = 0\.0425749 CNY\n1 CNY = 23\.488/);
     assert.notEqual(app.w.eval('formatRate(1e-14)'), '0.000000');
     assert.match(app.w.eval('formatRate(1e-14)'), /E-14/i);
   } finally { app.close(); }
@@ -247,5 +248,18 @@ test("the rate card and the pickers keep their structure", async () => {
   assert.ok(from.includes("EUR") && from.includes("JPY"));
   assert.equal(d.getElementById("converter-from").value, "USD");
   assert.equal(d.getElementById("converter-to").value, "CNY");
+  app.close();
+});
+
+test("a move that rounds to nothing is neither a rise nor a fall", async () => {
+  const app = await setup();
+  const card = change => app.w.eval(`rateCard(${JSON.stringify({base_currency: "USD", quote_currency: "CNY",
+    midpoint: 7.12, bid: 7.119, ask: 7.121, captured_at: "2026-11-14T00:00:00Z", change_percent: change})})`);
+  const classes = change => [...card(change).querySelector(".change").classList];
+  assert.deepEqual(classes(0.004), ["change", "flat"]);
+  assert.deepEqual(classes(-0.004), ["change", "flat"]);
+  assert.deepEqual(classes(0.006), ["change", "positive"]);
+  assert.deepEqual(classes("-0.1"), ["change", "negative"]);
+  assert.deepEqual(classes(null), ["change"]);
   app.close();
 });
