@@ -11,6 +11,11 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 3.12 is what the Docker image and the publishing job run; 3.13 is
+        # the canary, so the move is a one-line change when 3.12 ages out.
+        python: ["3.12", "3.13"]
     env:
       FX_PROVIDER: mock
     defaults:
@@ -20,7 +25,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python }}
           cache: pip
       - run: pip install ".[dev]"
       - run: ruff check .

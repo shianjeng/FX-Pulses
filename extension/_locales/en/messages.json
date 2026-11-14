@@ -33,7 +33,7 @@
     "message": "Loading rates…"
   },
   "refreshHint": {
-    "message": "Refresh fetches live rates again; history for the chart is collected about every three hours."
+    "message": "Refresh fetches live rates again; history for the chart is collected every few hours."
   },
   "eyebrowOfficial": {
     "message": "OFFICIAL REFERENCE"
@@ -99,7 +99,7 @@
     "message": "You receive"
   },
   "converterHint": {
-    "message": "Uses live mid-market rates (Coinbase) first, then market midpoints collected about every three hours, then an official daily reference with source and date. Fees and spreads excluded."
+    "message": "Uses live mid-market rates (Coinbase) first, then market midpoints collected every few hours, then an official daily reference with source and date. Fees and spreads excluded."
   },
   "targetTitle": {
     "message": "Rate alerts"
@@ -564,7 +564,7 @@
     "message": "Live rates"
   },
   "liveDescription": {
-    "message": "While the popup is open, a hover card is shown or the icon shows a rate, the latest mid-market rates are fetched from Coinbase's public API at most once a minute (about 160 currencies, no account; nothing from the page and no settings are sent). Coinbase sees your IP address. Charts still use collected history. Turned off, rates come from the backend, updated about every three hours."
+    "message": "While the popup is open, a hover card is shown or the icon shows a rate, the latest mid-market rates are fetched from Coinbase's public API at most once a minute (about 160 currencies, no account; nothing from the page and no settings are sent). Coinbase sees your IP address. Charts still use collected history. Turned off, rates come from the backend, updated every few hours."
   },
   "liveEnable": {
     "message": "Use live rates"
@@ -573,7 +573,7 @@
     "message": "Live rates on"
   },
   "liveOff": {
-    "message": "Live rates off; using rates updated about every three hours"
+    "message": "Live rates off; using rates updated every few hours"
   },
   "liveSource": {
     "message": "Live · Coinbase"
@@ -591,7 +591,10 @@
     "message": "5 minutes"
   },
   "chartSourceMarket": {
-    "message": "Market midpoint · collected about every three hours"
+    "message": "Market midpoint · collected at roughly $1-hour intervals"
+  },
+  "chartSourceMarketSparse": {
+    "message": "Market midpoint"
   },
   "chartSourceReference": {
     "message": "ECB daily reference rate · one point per business day"

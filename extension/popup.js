@@ -617,6 +617,19 @@ async function loadYearRange(version) {
   $("year-range").hidden = false;
 }
 
+/* How often the collector has actually managed a point, read off the points
+   themselves. The line used to say "about every three hours", which is what
+   the publishing job asks for; GitHub starts it when it likes, and over the
+   three weeks to 14 November 2026 the median gap was five hours. The median
+   gap of the range shown is the truth for that range, and it corrects itself
+   if the schedule ever improves. */
+function marketSource(points) {
+  const times = points.map(point => parseUtc(point.captured_at)).filter(Number.isFinite).sort((a, b) => a - b);
+  const gaps = times.slice(1).map((time, index) => time - times[index]).sort((a, b) => a - b);
+  if (gaps.length < 2) return t("chartSourceMarketSparse");
+  return t("chartSourceMarket", Math.max(1, Math.round(gaps[Math.floor(gaps.length / 2)] / 3600000)));
+}
+
 function showHistory(points, source, daily = false) {
   drawChart(points, {daily});
   $("chart-source").textContent = source;
@@ -649,13 +662,13 @@ async function loadHistory() {
     // does not track, the ECB's daily reference rates give the real line.
     const first = market.length ? parseUtc(market[0].captured_at) : Infinity;
     if (market.length && (historyDays === 1 || first <= Date.now() - historyDays * 86400000 * 0.85)) {
-      showHistory(market, t("chartSourceMarket"));
+      showHistory(market, marketSource(market));
       return;
     }
     const reference = referenceSeries(await request("/reference-history").catch(() => null), base, quote, historyDays);
     if (version !== historyVersion) return;
     if (reference.length > 1) showHistory(reference, t("chartSourceReference"), true);
-    else if (market.length) showHistory(market, t("chartSourceMarket"));
+    else if (market.length) showHistory(market, marketSource(market));
     else {
       drawChart([]);
       $("chart").textContent = t("noMarketHistory");

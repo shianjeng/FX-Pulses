@@ -7,11 +7,11 @@
 
   A privacy-friendly extension for Chrome, Edge and Firefox that works out of the box: rates come from a free static backend on GitHub Pages, or from your own FastAPI server.
 
-  [What's New](#whats-new-in-2120) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
+  [What's New](#whats-new-in-2121) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
 
   <p>
     <a href="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml"><img src="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
-    <img src="https://img.shields.io/badge/version-2.12.0-36D9A0" alt="Version 2.12.0" />
+    <img src="https://img.shields.io/badge/version-2.12.1-36D9A0" alt="Version 2.12.1" />
     <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
     <img src="https://img.shields.io/badge/FastAPI-0.162-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.162" />
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Manifest V3" />
@@ -30,6 +30,13 @@ FX Pulse brings a compact exchange-rate dashboard and webpage hover converter in
 The extension and hover converter share the same backend, one-minute cache, watchlist, target currency, and language preference. No Tampermonkey script is required. The optional 2.5.0 userscript also reads quotes through the extension; it no longer requests ER-API or Frankfurter or keeps a separate persistent quote cache.
 
 > **Market midpoint** = `(bid + ask) / 2`. It is not a bank settlement rate, card-network rate, or central-bank fixing.
+
+## What's new in 2.12.1
+
+Maintenance release; the extension behaves as in 2.12.0.
+
+- **The chart says how often it is really fed.** Its source line read "collected about every three hours", which is what the publishing job asks for; GitHub starts that job when it likes, and over the three weeks to 14 November 2026 it ran 4.7 times a day, a median 5.2 hours apart (longest gap 10.6 hours). The line now states the median gap between the points on screen, so it is true for the range shown and corrects itself if the schedule improves. The four other places that promised three hours now say "every few hours". With live rates on, which is the default, none of this touches the quote or the converter.
+- **CI.** The backend tests also run on Python 3.13, so the move off 3.12 is a one-line change when the time comes. Dependencies are unchanged: the newer ESLint and jsdom releases are a day old and wait out the one-week rule.
 
 ## What's new in 2.12.0
 
@@ -306,7 +313,7 @@ Then open the extension's settings page and enter `http://localhost:8000/api/v1`
 
 ### 3. Upgrading
 
-**From any 2.x**: reload the extension in `chrome://extensions` and verify version **2.12.0**. If you come from before 2.8 and never changed the backend address, the extension now reads the public backend and you can stop a local stack you ran only for it. If you saved your own address, nothing changes.
+**From any 2.x**: reload the extension in `chrome://extensions` and verify version **2.12.1**. If you come from before 2.8 and never changed the backend address, the extension now reads the public backend and you can stop a local stack you ran only for it. If you saved your own address, nothing changes.
 
 **Self-hosted, from 2.6.x** no database migration is needed. Pull, rebuild, and reload the extension:
 
@@ -315,7 +322,7 @@ git pull
 docker compose up -d --build
 ```
 
-Reload the extension in `chrome://extensions` and verify version **2.12.0**. Since 2.7.0 the popup opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
+Reload the extension in `chrome://extensions` and verify version **2.12.1**. Since 2.7.0 the popup opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
 
 **From 2.5.0**, the notes below also apply. The 2.6.0 compatibility patch is based on commit `5816065` (including PR #14). It preserves the opt-in userscript bridge, per-source health checks, triangulated official rates, stale-source labels, and saved unavailable currencies.
 
@@ -326,7 +333,7 @@ docker compose up -d --build --force-recreate
 docker compose logs --tail=100 collector
 ```
 
-Reload the extension in `chrome://extensions`, verify version **2.12.0**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
+Reload the extension in `chrome://extensions`, verify version **2.12.1**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
 
 Confirm that `/health` reports `"provider": "alpha_vantage"`. Its `collector` array carries one heartbeat per configured official source, so a source that quietly stopped publishing surfaces instead of hiding behind the ones that still work. Initial collection may take time; existing demo observations remain marked as mock until replaced. The userscript keeps separate appearance, target-currency and calibration preferences; only the data service is shared.
 
@@ -565,6 +572,8 @@ Firefox 用户（需要 Firefox 140 或以上）：火狐版用同一套文件�
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
 
 同一币对有多家央行报价时，2.8.4 起按实测准确度挑选（加拿大央行、欧洲央行优先，其次人民银行、日本银行，最后是晚一周发布的美联储），日期只在最新报价前后四天内的来源之间起作用。此前按“日期最新”挑选，周一早上几乎总会选中人民银行的中间价，与市场偏差 0.3%～0.4%。
+
+2.12.1 为维护版本，插件功能与 2.12.0 相同。走势图下面原来写着「约每 3 小时采集一次」，这是发布任务申请的频率，但 GitHub 实际按自己的节奏启动它：截至 2026 年 11 月 14 日的三周里平均每天只跑 4.7 次，相邻两次中位间隔 5.2 小时，最长 10.6 小时。现在这一行直接按屏幕上数据点的中位间隔计算，对当前区间是准确的，将来调度改善也会自动跟着变；其他四处承诺「3 小时」的文案改为「每隔几小时」。实时汇率开着时（默认），汇率和换算不受影响。另外 CI 的后端测试增加了 Python 3.13，依赖这次没有变动。
 
 2.12.0 换了新外观：弹窗、设置页和网页悬停卡片都做成台式计算器的样子——暖灰色机身、反射式液晶屏上右对齐的等宽数字、像真按键一样能按下去的按钮，对调键是唯一的橙色圆键；详细模式里的走势图放在第二块液晶屏上，像图形计算器。深色模式是夜里的同一台机器，屏幕带背光。同时去掉了重复信息：原来同一屏里「实时 · Coinbase」出现三次、汇率写两遍，现在实时标记只在时间那一行出现一次，换算框下面改为显示反向汇率（如 1 CNY ≈ 23.94 JPY）；没有涨跌数据时不再显示「暂无对比」，四舍五入后为 +0.00% 的变动也不再标成上涨。另外修复了走势图价格标签可能超出右边缘的问题。
 

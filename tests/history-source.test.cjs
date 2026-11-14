@@ -102,9 +102,24 @@ test('one year: the ECB line, with the year on the axis and in the tooltip', asy
 test('seven days: the collected quotes, which already span the range', async t => {
   const app = await popup(t);
   assert.match(app.el('chart-source').textContent, /市场中间价/);
+  // The interval is read off the points (four hours apart here), not asserted.
+  assert.match(app.el('chart-source').textContent, /约每 4 小时采集一次/);
   assert.equal(app.samples(), marketHistory(7).length);
   // The chart needs nothing more; the one file asked for is the year range's.
   assert.equal(app.asked.filter(path => path === '/reference-history').length, 1);
+});
+
+test('the collection interval is the median gap between the points shown', async t => {
+  const app = await popup(t);
+  const at = hours => ({midpoint: '157', captured_at: new Date(Date.UTC(2026, 10, 1) + hours * 3600000).toISOString()});
+  const source = points => app.w.eval(`marketSource(${JSON.stringify(points)})`);
+  // GitHub's real cadence: a run every 5.2 hours with one 10-hour gap rounds to 5.
+  assert.equal(source([0, 5.2, 10.4, 20.4, 25.6, 30.8].map(at)), '市场中间价 · 约每 5 小时采集一次');
+  // Order of arrival does not matter.
+  assert.equal(source([10.4, 0, 5.2, 15.6].map(at)), '市场中间价 · 约每 5 小时采集一次');
+  // One gap is not an interval; the line then names the source without one.
+  assert.equal(source([0, 6].map(at)), '市场中间价');
+  assert.equal(source([at(0)]), '市场中间价');
 });
 
 test('the year range says where the rate sits in its past year', async t => {
