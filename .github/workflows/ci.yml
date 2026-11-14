@@ -62,6 +62,24 @@ jobs:
           badge=$(grep -m1 -Po '(?<=badge/version-)[0-9.]+(?=-)' README.md)
           echo "manifest=$manifest api=$api app=$app readme=$badge"
           test "$manifest" = "$api" && test "$api" = "$app" && test "$app" = "$badge"
+      - name: The README matches the release
+        run: |
+          manifest=$(node -p 'require("./extension/manifest.json").version')
+          fail=0
+          # The What's New link at the top goes to the newest section, which is this release's.
+          newest=$(grep -m1 -Po "(?<=^## What's new in )[0-9.]+" README.md)
+          link=$(grep -m1 -Po "(?<=\(#whats-new-in-)[0-9]+(?=\))" README.md)
+          [ "$newest" = "$manifest" ] || { echo "::error file=README.md::newest What's new section is $newest, manifest is $manifest"; fail=1; }
+          [ "$link" = "${manifest//./}" ] || { echo "::error file=README.md::What's New link goes to #whats-new-in-$link"; fail=1; }
+          # Every upgrade step names the current version.
+          for v in $(grep -Po '(?<=verify version \*\*)[0-9.]+(?=\*\*)' README.md); do
+            [ "$v" = "$manifest" ] || { echo "::error file=README.md::an upgrade step asks for version $v"; fail=1; }
+          done
+          # The FastAPI badge shows the pinned minor version.
+          fastapi=$(grep -m1 -Po '(?<="fastapi==)[0-9]+\.[0-9]+' backend/pyproject.toml)
+          shown=$(grep -m1 -Po '(?<=badge/FastAPI-)[0-9.]+(?=-)' README.md)
+          [ "$fastapi" = "$shown" ] || { echo "::error file=README.md::FastAPI badge says $shown, pyproject pins $fastapi"; fail=1; }
+          exit $fail
 
   docker:
     runs-on: ubuntu-latest
