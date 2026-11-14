@@ -12,5 +12,5 @@
     "lint:firefox": "node tools/build-firefox.mjs && npx --yes web-ext@10.8.0 lint --source-dir dist/firefox",
     "package:firefox": "node tools/build-firefox.mjs && npx --yes web-ext@10.8.0 build --source-dir dist/firefox --artifacts-dir dist --filename fx-pulse-firefox-{version}.zip --overwrite-dest"
   },
-  "devDependencies": {"eslint": "^10.13.0", "jsdom": "^30.1.3"}
+  "devDependencies": {"eslint": "^10.14.0", "jsdom": "^30.1.3"}
 }

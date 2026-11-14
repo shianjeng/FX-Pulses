@@ -7,13 +7,13 @@
 
   A privacy-friendly extension for Chrome, Edge and Firefox that works out of the box: rates come from a free static backend on GitHub Pages, or from your own FastAPI server.
 
-  [What's New](#whats-new-in-283) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
+  [What's New](#whats-new-in-2111) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
 
   <p>
     <a href="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml"><img src="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
-    <img src="https://img.shields.io/badge/version-2.11.0-36D9A0" alt="Version 2.11.0" />
+    <img src="https://img.shields.io/badge/version-2.11.1-36D9A0" alt="Version 2.11.1" />
     <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
-    <img src="https://img.shields.io/badge/FastAPI-0.147-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.147" />
+    <img src="https://img.shields.io/badge/FastAPI-0.162-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.162" />
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Manifest V3" />
     <img src="https://img.shields.io/badge/Firefox-140%2B-FF7139?logo=firefoxbrowser&logoColor=white" alt="Firefox 140+" />
     <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL 16" />
@@ -30,6 +30,14 @@ FX Pulse brings a compact exchange-rate dashboard and webpage hover converter in
 The extension and hover converter share the same backend, one-minute cache, watchlist, target currency, and language preference. No Tampermonkey script is required. The optional 2.5.0 userscript also reads quotes through the extension; it no longer requests ER-API or Frankfurter or keeps a separate persistent quote cache.
 
 > **Market midpoint** = `(bid + ask) / 2`. It is not a bank settlement rate, card-network rate, or central-bank fixing.
+
+## What's new in 2.11.1
+
+Maintenance release; the extension behaves as in 2.11.0.
+
+- **Dependencies.** FastAPI 0.162, SQLAlchemy 2.1.8, psycopg 3.3.8, pydantic-settings 2.16.2, pytest 9.2, Ruff 0.17.4, httpx2 2.16 and ESLint 10.14. Each is the newest release that had been out for at least a week, so a hijacked release has had time to be caught before it lands here. pytest-asyncio's event-loop scope is now set explicitly, ahead of a default that will change.
+- **Firefox review.** The popup now builds its rate card, pickers and placeholders from DOM nodes instead of HTML strings. The values were already validated, but Mozilla's add-on linter flagged each `innerHTML` it could not check; its warnings drop from 7 to 1. The one left is the chart's SVG, in which every value is a number, a translated message or a validated pair.
+- **README.** The "What's New" link at the top still pointed to 2.8.3, and the upgrade steps still asked for version 2.8.3. Both are current, and CI now also fails when the FastAPI badge, the What's New link or an upgrade step disagrees with the release.
 
 ## What's new in 2.11.0
 
@@ -292,7 +300,7 @@ Then open the extension's settings page and enter `http://localhost:8000/api/v1`
 
 ### 3. Upgrading
 
-**To 2.8.x**: reload the extension in `chrome://extensions` and verify version **2.8.3**. If you never changed the backend address, the extension now reads the public backend and you can stop a local stack you ran only for it. If you saved your own address, nothing changes.
+**From any 2.x**: reload the extension in `chrome://extensions` and verify version **2.11.1**. If you come from before 2.8 and never changed the backend address, the extension now reads the public backend and you can stop a local stack you ran only for it. If you saved your own address, nothing changes.
 
 **Self-hosted, from 2.6.x** no database migration is needed. Pull, rebuild, and reload the extension:
 
@@ -301,7 +309,7 @@ git pull
 docker compose up -d --build
 ```
 
-Reload the extension in `chrome://extensions` and verify version **2.8.3**. Since 2.7.0 the popup opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
+Reload the extension in `chrome://extensions` and verify version **2.11.1**. Since 2.7.0 the popup opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
 
 **From 2.5.0**, the notes below also apply. The 2.6.0 compatibility patch is based on commit `5816065` (including PR #14). It preserves the opt-in userscript bridge, per-source health checks, triangulated official rates, stale-source labels, and saved unavailable currencies.
 
@@ -312,7 +320,7 @@ docker compose up -d --build --force-recreate
 docker compose logs --tail=100 collector
 ```
 
-Reload the extension in `chrome://extensions`, verify version **2.8.3**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
+Reload the extension in `chrome://extensions`, verify version **2.11.1**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
 
 Confirm that `/health` reports `"provider": "alpha_vantage"`. Its `collector` array carries one heartbeat per configured official source, so a source that quietly stopped publishing surfaces instead of hiding behind the ones that still work. Initial collection may take time; existing demo observations remain marked as mock until replaced. The userscript keeps separate appearance, target-currency and calibration preferences; only the data service is shared.
 
@@ -551,6 +559,8 @@ Firefox 用户（需要 Firefox 140 或以上）：火狐版用同一套文件�
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
 
 同一币对有多家央行报价时，2.8.4 起按实测准确度挑选（加拿大央行、欧洲央行优先，其次人民银行、日本银行，最后是晚一周发布的美联储），日期只在最新报价前后四天内的来源之间起作用。此前按“日期最新”挑选，周一早上几乎总会选中人民银行的中间价，与市场偏差 0.3%～0.4%。
+
+2.11.1 为维护版本，插件功能与 2.11.0 相同：后端与开发工具升级到发布满一周的最新版（FastAPI 0.162、SQLAlchemy 2.1.8 等），新版本先观察一周再用，降低遇到被劫持版本的风险；弹窗的汇率卡、下拉列表和提示文字改为直接创建页面元素，不再拼接 HTML，火狐附加组件检查器的警告从 7 条降到 1 条；修正了 README 里仍指向 2.8.3 的「What's New」链接和升级说明，并让 CI 检查这些地方与版本号一致。
 
 2.11.0 新增火狐版：FX Pulse 现在可以在 Firefox 140 或以上运行，功能与 Chrome 版完全相同，包括实时汇率、换算和算式、1年走势与一年区间、网页悬停与划词换算、工具栏图标、目标价提醒和地址栏 `fx` 换算。火狐版用同一套文件生成，两个版本不会各走各的。安装方法见上面的「安装到浏览器」。火狐版在真实 Firefox 中测试过：Mozilla 的附加组件检查器没有报错，打包后的 zip 在 Firefox 158 中安装并用实时数据实际运行过。另外修复了一年区间在接近一年低点时显示「多于过去一年 0% 的日子」的问题，并更新了 README 里过时的版本标识。
 

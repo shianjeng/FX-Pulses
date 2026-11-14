@@ -224,3 +224,28 @@ test("small rates agree across card, history and converter without rounding calc
     assert.match(app.w.eval('formatRate(1e-14)'), /E-14/i);
   } finally { app.close(); }
 });
+
+// Built from DOM nodes rather than markup (AMO flags innerHTML); the layout
+// and the detailed view depend on these exact classes.
+test("the rate card and the pickers keep their structure", async () => {
+  const app = await setup();
+  const d = app.w.document;
+  const card = d.querySelector("#rates > button.rate-card.selected");
+  assert.ok(card, "one selected card, as a button");
+  assert.equal(card.dataset.pair, "USD/CNY");
+  assert.equal(card.querySelector(".rate-top .pair").textContent, "USD/CNY");
+  assert.deepEqual([...card.querySelector(".rate-top .change").classList], ["change"], "no direction without a comparison");
+  assert.match(card.querySelector("strong").textContent, /^7\.12/);
+  assert.match(card.querySelector(".rate-bottom > .pro-only").textContent, /7\.119.*7\.121/);
+  assert.equal(card.querySelectorAll(".rate-bottom > span").length, 2);
+  assert.ok(card.querySelector("small.quote-time").textContent.length > 0);
+  assert.deepEqual([...d.querySelectorAll("#target-pair option")].map(o => [o.value, o.textContent]),
+    [["USD/CNY", "USD/CNY"], ["USD/JPY", "USD/JPY"], ["CNY/JPY", "CNY/JPY"]]);
+  const from = [...d.querySelectorAll("#converter-from option")].map(o => o.value);
+  const to = [...d.querySelectorAll("#converter-to option")].map(o => o.value);
+  assert.deepEqual(from, to, "each picker gets its own copy of the list");
+  assert.ok(from.includes("EUR") && from.includes("JPY"));
+  assert.equal(d.getElementById("converter-from").value, "USD");
+  assert.equal(d.getElementById("converter-to").value, "CNY");
+  app.close();
+});

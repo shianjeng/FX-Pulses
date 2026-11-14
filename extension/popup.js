@@ -108,20 +108,31 @@ async function request(path) {
   }
 }
 
+// An element with a class and text. Text from the backend goes in as text,
+// never as markup, so it cannot add elements to the popup.
+function tag(name, className = "", text = "") {
+  const node = document.createElement(name);
+  if (className) node.className = className;
+  if (text) node.textContent = text;
+  return node;
+}
+
 function rateCard(rate) {
   const pair = pairOf(rate);
   const change = Number(rate.change_percent || 0);
   // A live rate has no bid or ask of its own; the backend's would be hours older.
-  const detail = rate.live ? `<span class="pro-only">${t("converterLiveSource")}</span>`
-    : `<span class="pro-only">${t("bid")} ${formatRate(rate.bid)} · ${t("ask")} ${formatRate(rate.ask)}</span>`;
+  const detail = rate.live ? t("converterLiveSource") : `${t("bid")} ${formatRate(rate.bid)} · ${t("ask")} ${formatRate(rate.ask)}`;
   const [state, label] = rate.live ? ["live", t("liveBadge")] : offline ? ["stale", t("offlineCache")]
     : rate.is_stale ? ["stale", t("outdated")] : ["", t("updated")];
-  return `<button class="rate-card ${pair === selectedPair ? "selected" : ""}" data-pair="${pair}">
-    <div class="rate-top"><span class="pair">${pair}</span><span class="change ${rate.change_percent === null || rate.change_percent === undefined ? "" : change >= 0 ? "positive" : "negative"}">${changeText(rate.change_percent)}</span></div>
-    <strong>${formatRate(rate.midpoint)}</strong>
-    <div class="rate-bottom">${detail}<span class="${state}">${label}</span></div>
-    <small class="quote-time">${chartTimeLabel(rate.captured_at)}</small>
-  </button>`;
+  const direction = rate.change_percent === null || rate.change_percent === undefined ? "" : change >= 0 ? "positive" : "negative";
+  const card = tag("button", pair === selectedPair ? "rate-card selected" : "rate-card");
+  card.dataset.pair = pair;
+  const top = tag("div", "rate-top");
+  top.append(tag("span", "pair", pair), tag("span", `change ${direction}`.trim(), changeText(rate.change_percent)));
+  const bottom = tag("div", "rate-bottom");
+  bottom.append(tag("span", "pro-only", detail), tag("span", state, label));
+  card.append(top, tag("strong", "", formatRate(rate.midpoint)), bottom, tag("small", "quote-time", chartTimeLabel(rate.captured_at)));
+  return card;
 }
 
 function currentRate() {
@@ -262,7 +273,7 @@ async function loadWatchRates() {
 
 function renderRates() {
   const rate = shownRate();
-  if (rate) $("rates").innerHTML = rateCard(rate);
+  if (rate) $("rates").replaceChildren(rateCard(rate));
   else {
     $("rates").replaceChildren();
     const card = document.createElement("div");
@@ -286,12 +297,17 @@ function renderRates() {
   renderWatchlist();
 }
 
+function option(value, label = value) {
+  const item = tag("option", "", label);
+  item.value = value;
+  return item;
+}
+
 function renderSelects() {
   const pairs = [...new Set([...supportedPairs, ...settings.watchlist])];
   // Alerts are checked against market quotes only; an official-only pair in this
   // list would accept a target that can never fire.
-  const options = supportedPairs.map(pair => `<option value="${pair}">${pair}</option>`).join("");
-  $("target-pair").innerHTML = options;
+  $("target-pair").replaceChildren(...supportedPairs.map(pair => option(pair)));
   $("target-pair").value = supportedPairs.includes(selectedPair) ? selectedPair : supportedPairs[0] || "";
   const available = [...new Set([
     ...pairs.flatMap(pair => pair.split("/")),
@@ -305,10 +321,10 @@ function renderSelects() {
   const chosen = [settings.converterFrom, settings.converterTo]
     .filter(currency => /^[A-Z]{3}$/.test(currency) && !available.includes(currency));
   const currencies = [...new Set([...available, ...chosen])].sort();
-  const currencyOptions = currencies.map(currency =>
-    `<option value="${currency}">${available.includes(currency) ? currency : t("converterUnavailableCurrency", currency)}</option>`).join("");
-  $("converter-from").innerHTML = currencyOptions;
-  $("converter-to").innerHTML = currencyOptions;
+  const currencyOptions = () => currencies.map(currency =>
+    option(currency, available.includes(currency) ? currency : t("converterUnavailableCurrency", currency)));
+  $("converter-from").replaceChildren(...currencyOptions());
+  $("converter-to").replaceChildren(...currencyOptions());
   const [fallbackFrom, fallbackTo] = selectedPair.split("/");
   $("converter-from").value = currencies.includes(settings.converterFrom) ? settings.converterFrom : fallbackFrom;
   $("converter-to").value = currencies.includes(settings.converterTo) ? settings.converterTo : fallbackTo;
@@ -407,7 +423,7 @@ function drawChart(points, {daily = false} = {}) {
   const root = $("chart");
   points = points.filter(point => Number.isFinite(Number(point.midpoint)) && Number(point.midpoint) > 0 && Number.isFinite(parseUtc(point.captured_at))).sort((a,b) => parseUtc(a.captured_at) - parseUtc(b.captured_at));
   if (!points.length) {
-    root.innerHTML = `<span>${t("chartCollecting")}</span>`;
+    root.replaceChildren(tag("span", "", t("chartCollecting")));
     resetChartStats();
     return;
   }
@@ -461,6 +477,8 @@ function drawChart(points, {daily = false} = {}) {
     .map(([share, time]) => `<span style="left:${f(share * plotWidth)}px;transform:translateX(-${share * 100}%)">${stamp(time)}</span>`).join("");
   const line = segments.map(smoothPath).join(" ");
 
+  // Markup, for the SVG. Every value in it is a number formatted here, a
+  // translated message or the selected pair, which validPair has vetted.
   root.innerHTML = `
     <div class="chart-plot">
       <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${t("chartAria", selectedPair, t(`range${historyDays}`))}">
@@ -605,7 +623,7 @@ async function loadHistory() {
   void loadOfficial();
   const version = ++historyVersion;
   $("trend-title").textContent = t("trendTitleFor", selectedPair);
-  $("chart").innerHTML = `<span>${t("loadingChart")}</span>`;
+  $("chart").replaceChildren(tag("span", "", t("loadingChart")));
   $("chart-source").textContent = "";
   resetChartStats();
   void loadYearRange(version);

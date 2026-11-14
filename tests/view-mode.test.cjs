@@ -97,7 +97,8 @@ test('specialist content is marked for folding and the disclaimer never is', () 
     assert.ok(html.includes(marker), `missing: ${marker}`);
   }
   assert.match(html, /class="hint pro-only" data-i18n="refreshHint"/);
-  assert.match(js, /<span class="pro-only">\$\{t\("bid"\)\}/, 'bid/ask belongs to the detailed view');
+  assert.match(js, /const detail = rate\.live \? t\("converterLiveSource"\) : `\$\{t\("bid"\)\}/);
+  assert.match(js, /tag\("span", "pro-only", detail\)/, 'bid/ask belongs to the detailed view');
   // Hiding the one line that says this is not a bank rate would be a real loss.
   assert.match(html, /<p class="hint" data-i18n="midpointDisclaimer">/);
   assert.match(css, /body\[data-view="simple"\] \.pro-only\s*\{\s*display:\s*none/);
