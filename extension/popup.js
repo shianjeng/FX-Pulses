@@ -124,7 +124,9 @@ function rateCard(rate) {
   const detail = rate.live ? t("converterLiveSource") : `${t("bid")} ${formatRate(rate.bid)} · ${t("ask")} ${formatRate(rate.ask)}`;
   const [state, label] = rate.live ? ["live", t("liveBadge")] : offline ? ["stale", t("offlineCache")]
     : rate.is_stale ? ["stale", t("outdated")] : ["", t("updated")];
-  const direction = rate.change_percent === null || rate.change_percent === undefined ? "" : change >= 0 ? "positive" : "negative";
+  // A move that rounds to +0.00% is no move, and is not coloured as a rise.
+  const direction = rate.change_percent === null || rate.change_percent === undefined ? ""
+    : Math.abs(change) < 0.005 ? "flat" : change > 0 ? "positive" : "negative";
   const card = tag("button", pair === selectedPair ? "rate-card selected" : "rate-card");
   card.dataset.pair = pair;
   const top = tag("div", "rate-top");
@@ -432,7 +434,11 @@ function drawChart(points, {daily = false} = {}) {
   const low = Math.min(...values);
   const high = Math.max(...values);
   // Measured, so one SVG unit is one pixel and the labels line up with the line.
-  const width = root.clientWidth || 340 + CHART_GUTTER;
+  // The content box: the chart sits on a padded display, and labels placed by
+  // the padded width ran off its right edge.
+  const box = globalThis.getComputedStyle(root);
+  const inner = root.clientWidth - (parseFloat(box.paddingLeft) || 0) - (parseFloat(box.paddingRight) || 0);
+  const width = inner > 0 ? inner : 340 + CHART_GUTTER;
   const plotWidth = width - CHART_GUTTER;
   const height = CHART_HEIGHT;
   // Headroom above the high and below the low; a flat period sits mid-height.
@@ -806,17 +812,21 @@ function updateConverter() {
   worked.parentElement.classList.add("computed");
   $("amount-error").textContent = "";
   $("converter-status").textContent = converterStatus();
+  // The big figure above already reads 1 base in quote; this line gives the
+  // other way round, which is the one people work out in their heads.
   $("conversion-rate").textContent = converterQuote
-    ? `1 ${base} ≈ ${formatRate(converterQuote.rate)} ${quote}` : "";
+    ? `1 ${quote} ≈ ${formatRate(1 / converterQuote.rate)} ${base}` : "";
   $("conversion-rate").title = converterQuote
-    ? `1 ${base} = ${converterQuote.rate} ${quote}` : "";
+    ? `1 ${base} = ${converterQuote.rate} ${quote}\n1 ${quote} = ${1 / converterQuote.rate} ${base}` : "";
   renderRates();
   const shown = shownRate();
   $("status").textContent = shown ? t("statusLine", chartTimeLabel(shown.captured_at) + timeAgo(shown.captured_at),
     shown.live ? t("liveSource") : shown.provider === "mock" ? t("mockData") : t("providerLive")) : converterStatus();
   // Same reason: for an official-only pair the subtitle states the source, so a
   // third copy under the converter was noise. A market pair's line differs.
-  $("converter-status").hidden = !shown;
+  // A live quote's line under the converter repeated the subtitle word for word.
+  $("converter-status").hidden = !shown || Boolean(shown.live);
+  $("status").classList.toggle("live", Boolean(shown?.live) && !offline);
   if (offline && !shown?.live) $("status").textContent += " · " + t("offlineCache");
   if (!converterQuote) { worked.value = ""; return; }
   const amount = readAmount(typed.value);

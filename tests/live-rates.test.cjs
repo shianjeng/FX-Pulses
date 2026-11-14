@@ -204,6 +204,9 @@ test('the popup converts with the live rate and says where it comes from', async
   assert.match(app.el('rates').textContent, /7\.2000/);
   assert.equal(app.el('rates').querySelector('.rate-bottom .live').textContent, '实时');
   assert.equal(app.el('converter-status').textContent, '实时中间价 · Coinbase');
+  // Said once: the subtitle carries the live mark, the line under the converter stays hidden.
+  assert.equal(app.el('status').classList.contains('live'), true);
+  assert.equal(app.el('converter-status').hidden, true);
 });
 
 test('live rates cover pairs the backend has no quote for, without asking it', async t => {

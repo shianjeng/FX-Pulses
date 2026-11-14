@@ -7,11 +7,11 @@
 
   A privacy-friendly extension for Chrome, Edge and Firefox that works out of the box: rates come from a free static backend on GitHub Pages, or from your own FastAPI server.
 
-  [What's New](#whats-new-in-2111) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
+  [What's New](#whats-new-in-2120) · [Quick Start](#quick-start) · [Features](#features) · [Data Sources](#data-sources) · [API](#api) · [中文简介](#中文简介)
 
   <p>
     <a href="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml"><img src="https://github.com/shianjeng/FX-Pulses/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
-    <img src="https://img.shields.io/badge/version-2.11.1-36D9A0" alt="Version 2.11.1" />
+    <img src="https://img.shields.io/badge/version-2.12.0-36D9A0" alt="Version 2.12.0" />
     <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
     <img src="https://img.shields.io/badge/FastAPI-0.162-009688?logo=fastapi&logoColor=white" alt="FastAPI 0.162" />
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome Manifest V3" />
@@ -30,6 +30,12 @@ FX Pulse brings a compact exchange-rate dashboard and webpage hover converter in
 The extension and hover converter share the same backend, one-minute cache, watchlist, target currency, and language preference. No Tampermonkey script is required. The optional 2.5.0 userscript also reads quotes through the extension; it no longer requests ER-API or Frankfurter or keeps a separate persistent quote cache.
 
 > **Market midpoint** = `(bid + ask) / 2`. It is not a bank settlement rate, card-network rate, or central-bank fixing.
+
+## What's new in 2.12.0
+
+- **A new look.** The popup, the settings page and the hover card are now built like a desk calculator, because a converter is one: a warm grey case, a reflective LCD that shows the rate flush right in a monospaced face, keys that look and press like keys, and one orange key for the swap. In the detailed view the trend chart sits on a second LCD, as on a graphing calculator. Dark mode is the same case at night, with a backlit display. The old design was the stock web-app kit (cards on grey, soft shadows, pill buttons, a mint result box) and read like it.
+- **Each fact said once.** "Live · Coinbase" appeared three times on one screen and the rate twice. The live mark is now a small square on the time line, and the line under the converter gives the rate the other way round (1 CNY ≈ 23.94 JPY), which is the one people work out in their heads. A rate with nothing to compare against leaves the change blank instead of saying "No comparison", and a move that rounds to +0.00% is no longer shown as a rise.
+- **Fix.** On a padded chart the price labels were placed by the padded width and could run off the right edge.
 
 ## What's new in 2.11.1
 
@@ -300,7 +306,7 @@ Then open the extension's settings page and enter `http://localhost:8000/api/v1`
 
 ### 3. Upgrading
 
-**From any 2.x**: reload the extension in `chrome://extensions` and verify version **2.11.1**. If you come from before 2.8 and never changed the backend address, the extension now reads the public backend and you can stop a local stack you ran only for it. If you saved your own address, nothing changes.
+**From any 2.x**: reload the extension in `chrome://extensions` and verify version **2.12.0**. If you come from before 2.8 and never changed the backend address, the extension now reads the public backend and you can stop a local stack you ran only for it. If you saved your own address, nothing changes.
 
 **Self-hosted, from 2.6.x** no database migration is needed. Pull, rebuild, and reload the extension:
 
@@ -309,7 +315,7 @@ git pull
 docker compose up -d --build
 ```
 
-Reload the extension in `chrome://extensions` and verify version **2.11.1**. Since 2.7.0 the popup opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
+Reload the extension in `chrome://extensions` and verify version **2.12.0**. Since 2.7.0 the popup opens in the simple view; choose **Show details** once to bring back the full layout. The choice is remembered.
 
 **From 2.5.0**, the notes below also apply. The 2.6.0 compatibility patch is based on commit `5816065` (including PR #14). It preserves the opt-in userscript bridge, per-source health checks, triangulated official rates, stale-source labels, and saved unavailable currencies.
 
@@ -320,7 +326,7 @@ docker compose up -d --build --force-recreate
 docker compose logs --tail=100 collector
 ```
 
-Reload the extension in `chrome://extensions`, verify version **2.11.1**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
+Reload the extension in `chrome://extensions`, verify version **2.12.0**, then refresh open webpages. The optional Tampermonkey interface remains compatible with `userscript/fx-pulse-hover.user.js` version 2.5.0. Enable hover, approve website access, and opt in to userscript compatibility in extension settings. Without the bridge, the userscript reports unavailable data instead of contacting another provider.
 
 Confirm that `/health` reports `"provider": "alpha_vantage"`. Its `collector` array carries one heartbeat per configured official source, so a source that quietly stopped publishing surfaces instead of hiding behind the ones that still work. Initial collection may take time; existing demo observations remain marked as mock until replaced. The userscript keeps separate appearance, target-currency and calibration preferences; only the data service is shared.
 
@@ -559,6 +565,8 @@ Firefox 用户（需要 Firefox 140 或以上）：火狐版用同一套文件�
 项目会明确区分 Alpha Vantage 市场买卖价、市场中间价，以及欧洲央行、加拿大央行、美联储、日本银行和中国人民银行发布的官方参考价。自选列表、目标价、语言和网页权限只保存在浏览器本地；API Key 始终保留在后端。
 
 同一币对有多家央行报价时，2.8.4 起按实测准确度挑选（加拿大央行、欧洲央行优先，其次人民银行、日本银行，最后是晚一周发布的美联储），日期只在最新报价前后四天内的来源之间起作用。此前按“日期最新”挑选，周一早上几乎总会选中人民银行的中间价，与市场偏差 0.3%～0.4%。
+
+2.12.0 换了新外观：弹窗、设置页和网页悬停卡片都做成台式计算器的样子——暖灰色机身、反射式液晶屏上右对齐的等宽数字、像真按键一样能按下去的按钮，对调键是唯一的橙色圆键；详细模式里的走势图放在第二块液晶屏上，像图形计算器。深色模式是夜里的同一台机器，屏幕带背光。同时去掉了重复信息：原来同一屏里「实时 · Coinbase」出现三次、汇率写两遍，现在实时标记只在时间那一行出现一次，换算框下面改为显示反向汇率（如 1 CNY ≈ 23.94 JPY）；没有涨跌数据时不再显示「暂无对比」，四舍五入后为 +0.00% 的变动也不再标成上涨。另外修复了走势图价格标签可能超出右边缘的问题。
 
 2.11.1 为维护版本，插件功能与 2.11.0 相同：后端与开发工具升级到发布满一周的最新版（FastAPI 0.162、SQLAlchemy 2.1.8 等），新版本先观察一周再用，降低遇到被劫持版本的风险；弹窗的汇率卡、下拉列表和提示文字改为直接创建页面元素，不再拼接 HTML，火狐附加组件检查器的警告从 7 条降到 1 条；修正了 README 里仍指向 2.8.3 的「What's New」链接和升级说明，并让 CI 检查这些地方与版本号一致。
 
